@@ -11,6 +11,7 @@
  */
 
 import type { ClientProfileInput } from "@/lib/domain";
+import { getBrokerContext } from "@/lib/supabase/auth";
 import type { BrokerContext } from "@/lib/supabase/client";
 import { stateStore } from "@/lib/supabase/env";
 import { SupabaseSessionStore } from "./supabaseStore";
@@ -67,14 +68,16 @@ class InMemorySessionStore implements SessionStore {
 const globalForStore = globalThis as unknown as { __SMG_SESSION_STORE__?: SessionStore };
 
 /**
- * Returns the session store. With a broker context (auth wired + STATE_STORE=supabase)
- * it returns a fresh, RLS-scoped Supabase store for that request; otherwise it
- * returns the in-memory singleton (local dev / current default). Existing callers
- * that pass no argument keep the in-memory behavior unchanged.
+ * Returns the session store. In supabase mode it resolves the signed-in broker
+ * (auth.uid() → brokers row) and returns a fresh, RLS-scoped Supabase store for
+ * that request; otherwise it returns the in-memory singleton. `getBrokerContext()`
+ * is a fast no-op (returns null, no I/O) in memory mode, so this stays cheap and
+ * backward-compatible — callers just await it.
  */
-export function getSessionStore(ctx?: BrokerContext): SessionStore {
-  if (ctx && stateStore() === "supabase") {
-    return new SupabaseSessionStore(ctx);
+export async function getSessionStore(ctx?: BrokerContext): Promise<SessionStore> {
+  const resolved = ctx ?? (await getBrokerContext()) ?? undefined;
+  if (resolved && stateStore() === "supabase") {
+    return new SupabaseSessionStore(resolved);
   }
   if (!globalForStore.__SMG_SESSION_STORE__) {
     globalForStore.__SMG_SESSION_STORE__ = new InMemorySessionStore();

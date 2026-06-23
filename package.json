@@ -14,22 +14,25 @@
     "test:score": "tsx scripts/test-score.ts",
     "test:audit": "tsx scripts/test-audit.ts",
     "test:health": "tsx scripts/test-health.ts",
+    "sim:health-future": "tsx scripts/simulate-health-future.ts",
     "test": "npm run validate:fixtures && npm run test:normalize && npm run test:rules && npm run test:sim && npm run test:score && npm run test:audit && npm run test:health"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.105.0",
+    "@supabase/ssr": "^0.12.0",
+    "@supabase/supabase-js": "^2.48.1",
     "next": "^15.1.6",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "@supabase/supabase-js": "^2.48.1"
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
-    "typescript": "^5.7.3",
     "@types/node": "^22.10.7",
     "@types/react": "^19.0.7",
     "@types/react-dom": "^19.0.3",
-    "tailwindcss": "^3.4.17",
-    "postcss": "^8.5.1",
     "autoprefixer": "^10.4.20",
-    "tsx": "^4.19.2"
+    "postcss": "^8.5.1",
+    "tailwindcss": "^3.4.17",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
   }
 }

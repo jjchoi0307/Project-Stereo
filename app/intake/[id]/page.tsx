@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 /** Patient self-entry page (the shareable link / handed-over tablet). */
 export default async function PatientIntakePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const session = await getSessionStore().get(id);
+  const session = await (await getSessionStore()).get(id);
   if (!session) notFound();
 
   const reference = await getIntakeReference();

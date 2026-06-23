@@ -198,18 +198,41 @@ function simulateReplica(
   };
 }
 
+/** The raw simulated population at a horizon — each replica a projected future. */
+export interface ReplicaSet {
+  replicas: ProfileReplica[];
+  seed: number;
+  years: number;
+  count: number;
+}
+
+/**
+ * Replicate the client into N seeded synthetic copies and project each one's
+ * clinical trajectory over the horizon. This is the population the across-futures
+ * recommendation scores (lib/engine/horizonRecommendation.ts); simulateHealthFutures
+ * is the aggregate view over the same population.
+ */
+export function simulateReplicas(
+  profile: ClientProfileInput,
+  normalized: NormalizedProfile,
+  opts: { replicas?: number; years?: number; seed?: number } = {},
+): ReplicaSet {
+  const count = clamp(opts.replicas ?? HEALTH_SIM.defaultReplicas, HEALTH_SIM.minReplicas, HEALTH_SIM.maxReplicas);
+  const years = clamp(opts.years ?? HEALTH_SIM.defaultHorizonYears, HEALTH_SIM.minYears, HEALTH_SIM.maxYears);
+  const seed = opts.seed ?? clinicalSeed(profile, ":health");
+  const rng = mulberry32(seed);
+
+  const replicas: ProfileReplica[] = [];
+  for (let i = 0; i < count; i++) replicas.push(simulateReplica(i, profile, normalized, years, rng));
+  return { replicas, seed, years, count };
+}
+
 export function simulateHealthFutures(
   profile: ClientProfileInput,
   normalized: NormalizedProfile,
   opts: { replicas?: number; years?: number; seed?: number } = {},
 ): HealthFutures {
-  const replicas = clamp(opts.replicas ?? HEALTH_SIM.defaultReplicas, HEALTH_SIM.minReplicas, HEALTH_SIM.maxReplicas);
-  const years = clamp(opts.years ?? HEALTH_SIM.defaultHorizonYears, HEALTH_SIM.minYears, HEALTH_SIM.maxYears);
-  const seed = opts.seed ?? clinicalSeed(profile, ":health");
-  const rng = mulberry32(seed);
-
-  const all: ProfileReplica[] = [];
-  for (let i = 0; i < replicas; i++) all.push(simulateReplica(i, profile, normalized, years, rng));
+  const { replicas: all, seed, years, count: replicas } = simulateReplicas(profile, normalized, opts);
 
   // Outcome incidence (share of replicas with ≥1 of each outcome).
   const outcomes = Object.keys(HUMAN) as HealthOutcome[];

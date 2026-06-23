@@ -5,12 +5,17 @@
 
 import Link from "next/link";
 import StartSessionButton from "@/components/StartSessionButton";
+import { signOut } from "@/app/login/actions";
 import { getSessionStore } from "@/lib/session/store";
+import { getBrokerContext } from "@/lib/supabase/auth";
 
-export const dynamic = "force-dynamic"; // sessions are in-memory + per-request
+export const dynamic = "force-dynamic"; // per-request; in-memory or RLS-scoped Supabase
 
 export default async function Home() {
-  const sessions = await getSessionStore().list();
+  // Resolve the broker once (null in memory mode) and reuse it for the store,
+  // so we don't resolve auth twice per render.
+  const ctx = await getBrokerContext();
+  const sessions = await (await getSessionStore(ctx ?? undefined)).list();
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-10">
@@ -22,9 +27,16 @@ export default async function Home() {
             client), and get a ranked recommendation.
           </p>
         </div>
-        <div className="flex shrink-0 gap-4 text-sm">
+        <div className="flex shrink-0 items-center gap-4 text-sm">
           <Link href="/audit" className="text-accent hover:underline">Audit log →</Link>
           <Link href="/plans" className="text-accent hover:underline">Plan data →</Link>
+          {ctx && (
+            <form action={signOut}>
+              <button type="submit" className="text-slate-500 hover:text-slate-700 hover:underline">
+                Sign out
+              </button>
+            </form>
+          )}
         </div>
       </header>
 

@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AuditPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const record = await getAuditStore().get(id);
+  const record = await (await getAuditStore()).get(id);
   if (!record) notFound();
 
   const plans = await getDataStore().listPlans();

@@ -43,12 +43,30 @@ export interface EngineRun {
   nearMiss?: NearMiss | null;
 }
 
+/**
+ * Catalog inputs the engine reads. Building these (plans + rules context) is the
+ * only I/O in a run, so callers that invoke runEngine many times against the same
+ * catalog — e.g. the across-futures horizon recommendation, which projects the
+ * client into many simulated futures and scores each — can build them once and
+ * pass them in. The computation is byte-identical either way; this only skips
+ * rebuilding the immutable catalog. Use `buildEngineCatalog(db)` to produce it.
+ */
+export interface EngineCatalog {
+  plans: Plan[];
+  ctx: RulesContext;
+}
+
+export async function buildEngineCatalog(db: DataStore): Promise<EngineCatalog> {
+  const [plans, ctx] = await Promise.all([db.listPlans(), buildRulesContext(db)]);
+  return { plans, ctx };
+}
+
 export async function runEngine(
   profile: ClientProfileInput,
   db: DataStore,
-  opts: { preferenceWeighting: boolean; count?: number },
+  opts: { preferenceWeighting: boolean; count?: number; catalog?: EngineCatalog },
 ): Promise<EngineRun> {
-  const [plans, ctx] = await Promise.all([db.listPlans(), buildRulesContext(db)]);
+  const { plans, ctx } = opts.catalog ?? (await buildEngineCatalog(db));
   const drugs = [...ctx.drugsById.values()];
 
   const normalized = normalizeProfile(profile, drugs);

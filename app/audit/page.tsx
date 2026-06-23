@@ -5,7 +5,7 @@ import { getDataStore } from "@/lib/data";
 export const dynamic = "force-dynamic";
 
 export default async function AuditLogPage() {
-  const [records, plans] = await Promise.all([getAuditStore().list(), getDataStore().listPlans()]);
+  const [records, plans] = await Promise.all([(await getAuditStore()).list(), getDataStore().listPlans()]);
   const planName = new Map(plans.map((p) => [p.id, p.name]));
 
   return (
