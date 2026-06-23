@@ -111,8 +111,17 @@ export default function BrokerSession({
     };
   }, [session.id, session.status, session.profile?.capturedAt]);
 
+  // Mint (or reuse) the capability token for the patient self-entry link.
   useEffect(() => {
-    setPatientLink(`${window.location.origin}/intake/${session.id}`);
+    let active = true;
+    fetch(`/api/sessions/${session.id}/intake-token`, { method: "POST" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (active && d?.token) setPatientLink(`${window.location.origin}/intake/${d.token}`);
+      });
+    return () => {
+      active = false;
+    };
   }, [session.id]);
 
   // While awaiting facts, poll so a patient submitting on their own device flows

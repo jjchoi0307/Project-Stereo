@@ -5,10 +5,10 @@ import type { IntakeReference } from "@/lib/intake/types";
 import IntakeForm from "./IntakeForm";
 
 export default function PatientIntake({
-  sessionId,
+  token,
   reference,
 }: {
-  sessionId: string;
+  token: string;
   reference: IntakeReference;
 }) {
   const [done, setDone] = useState(false);
@@ -30,7 +30,7 @@ export default function PatientIntake({
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-6 sm:p-8">
       <IntakeForm
-        sessionId={sessionId}
+        submitUrl={`/api/intake/${token}`}
         capturedBy="patient"
         reference={reference}
         variant="patient"

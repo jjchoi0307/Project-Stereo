@@ -25,6 +25,7 @@ const COPY = {
 
 export default function IntakeForm({
   sessionId,
+  submitUrl,
   capturedBy,
   reference,
   initialValues,
@@ -32,7 +33,10 @@ export default function IntakeForm({
   submitLabel,
   onSubmitted,
 }: {
-  sessionId: string;
+  /** Broker path: the session id (used to build the default submit URL). */
+  sessionId?: string;
+  /** Patient path: the capability-token submit URL (`/api/intake/[token]`). */
+  submitUrl?: string;
   capturedBy: CaptureSource;
   reference: IntakeReference;
   initialValues?: IntakeFormValues;
@@ -91,7 +95,8 @@ export default function IntakeForm({
 
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/sessions/${sessionId}/intake`, {
+      const url = submitUrl ?? `/api/sessions/${sessionId}/intake`;
+      const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ capturedBy, values: v }),

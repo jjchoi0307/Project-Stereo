@@ -164,10 +164,15 @@ Env (`.env.example`): `STATE_STORE`, `NEXT_PUBLIC_SUPABASE_URL`,
    (`getSessionStore`/`getAuditStore`) resolve it themselves, so it's all
    env-gated: `STATE_STORE=memory` (default) keeps auth off and stores in-memory;
    `=supabase` turns both on. Login UI: `/login` + `app/login/actions.ts`.
-5. ⏭ Patient intake → `/intake/[token]` + a service-role server route. NOTE: with
-   auth on, the current anonymous `/intake/[id]` → `POST /api/sessions/[id]/intake`
-   path is gated (broker-entered intake works; patient self-entry needs this route).
-6. ⏭ Deploy (Vercel + BAA) once the patient path is in.
+5. ✅ **Patient self-entry capability token.** The shareable link carries a random
+   token (`sessions.intake_token`, broker-minted via `POST …/intake-token`), not
+   the raw session id. The anonymous patient page `/intake/[token]` and submit
+   `POST /api/intake/[token]` are public (token is the credential) and write that
+   one profile through a service-role path that validates the token + expiry
+   (`lib/session/patientIntake.ts`). Mode-aware: in memory mode the session id is
+   the token and writes hit the in-memory store; in supabase mode it's a random
+   capability written via service-role (RLS-bypass, server-only, narrow).
+6. ⏭ Deploy (Vercel + BAA) — auth + persistence + patient path are now in.
 
 ### Auth provisioning — bootstrap policy to revisit
 First login auto-creates the broker's OWN org and makes them `org_admin`. Right for
@@ -176,7 +181,6 @@ org by invitation (role `broker`). Change `resolveBroker()` in `lib/supabase/aut
 when the invite flow exists.
 
 ### Not yet done (tracked)
-- Patient capability-token route (step 5 above).
 - Threading the session's real `facts_version` into the audit row (skeleton uses 1).
 - Persisting near-miss alternatives is supported (they're in the audit payload),
   pending the broader audit-on-Supabase switch.

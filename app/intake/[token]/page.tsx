@@ -1,15 +1,19 @@
 import { notFound } from "next/navigation";
 import PatientIntake from "@/components/PatientIntake";
 import { getIntakeReference } from "@/lib/intake/reference";
-import { getSessionStore } from "@/lib/session/store";
+import { resolvePatientIntake } from "@/lib/session/patientIntake";
 
 export const dynamic = "force-dynamic";
 
-/** Patient self-entry page (the shareable link / handed-over tablet). */
-export default async function PatientIntakePage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const session = await (await getSessionStore()).get(id);
-  if (!session) notFound();
+/**
+ * Patient self-entry (the shareable link / handed-over tablet). The URL carries a
+ * capability TOKEN, not the raw session id — validated server-side. PUBLIC: not
+ * gated by auth middleware; the token is the credential.
+ */
+export default async function PatientIntakePage({ params }: { params: Promise<{ token: string }> }) {
+  const { token } = await params;
+  const resolved = await resolvePatientIntake(token);
+  if (!resolved) notFound();
 
   const reference = await getIntakeReference();
 
@@ -19,7 +23,7 @@ export default async function PatientIntakePage({ params }: { params: Promise<{ 
         <p className="text-xs font-semibold uppercase tracking-wide text-accent">Seoul Medical Group</p>
         <h1 className="mt-1 text-xl font-semibold text-ink">A few quick facts</h1>
       </header>
-      <PatientIntake sessionId={session.id} reference={reference} />
+      <PatientIntake token={token} reference={reference} />
     </main>
   );
 }
