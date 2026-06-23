@@ -83,8 +83,9 @@ export default function RecommendationView({ sessionId }: { sessionId: string })
     let active = true;
     setLoading(true);
     fetch(`/api/sessions/${sessionId}/recommendation?preference=${preference ? "on" : "off"}`, { cache: "no-store" })
-      .then((r) => r.json())
+      .then((r) => (r.ok ? r.json() : null))
       .then((d) => active && setData(d))
+      .catch(() => active && setData(null))
       .finally(() => active && setLoading(false));
     return () => { active = false; };
   }, [sessionId, preference]);

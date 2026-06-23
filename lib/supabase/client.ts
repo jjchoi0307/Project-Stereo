@@ -8,6 +8,7 @@
  * @supabase/ssr + Next middleware) is the auth-wiring follow-up; for now a broker
  * client is built from an access token the route already has.
  */
+import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_URL } from "./env";
 

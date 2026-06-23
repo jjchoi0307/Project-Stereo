@@ -13,6 +13,7 @@
  *
  * SERVER-ONLY.
  */
+import "server-only";
 import type { BrokerContext } from "@/lib/supabase/client";
 import { serviceClient } from "@/lib/supabase/client";
 import { stateStore, supabaseConfigured } from "@/lib/supabase/env";
@@ -128,12 +129,25 @@ export async function submitPatientIntake(token: string, values: IntakeFormValue
       },
       { onConflict: "session_id" },
     );
-    if (pErr) return { ok: false, status: 500, error: pErr.message };
+    if (pErr) {
+      console.error("patient intake profile upsert failed:", pErr);
+      return { ok: false, status: 500, error: "Could not save your facts. Please try again." };
+    }
+    // Mark complete AND burn the capability token (single-use): a leaked or
+    // forwarded link can't be replayed to overwrite the profile afterward.
     const { error: sErr } = await svc
       .from("sessions")
-      .update({ status: "intake_complete", updated_at: new Date().toISOString() })
+      .update({
+        status: "intake_complete",
+        intake_token: null,
+        intake_token_expires_at: null,
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", resolved.sessionId);
-    if (sErr) return { ok: false, status: 500, error: sErr.message };
+    if (sErr) {
+      console.error("patient intake session update failed:", sErr);
+      return { ok: false, status: 500, error: "Could not save your facts. Please try again." };
+    }
     return { ok: true };
   }
 

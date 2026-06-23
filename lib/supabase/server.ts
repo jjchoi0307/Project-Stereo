@@ -4,6 +4,7 @@
  * cookies, so every query runs as the signed-in broker (auth.uid()) and the
  * owner-only policies enforce the PHI boundary. SERVER-ONLY (uses next/headers).
  */
+import "server-only";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";

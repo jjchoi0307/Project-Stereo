@@ -13,7 +13,6 @@ import type { ClientProfileInput } from "@/lib/domain";
 export interface DeidentifiedFacts {
   age: number;
   conditions: string[];
-  conditionsFreeText?: string[];
   medications: string[]; // normalized names only (no raw free-text the patient typed)
   heightCm?: number;
   weightKg?: number;
@@ -31,7 +30,9 @@ export function deidentifyForSim(profile: ClientProfileInput): DeidentifiedFacts
   return {
     age: profile.age,
     conditions: [...profile.conditions].sort(),
-    conditionsFreeText: profile.conditionsFreeText?.length ? profile.conditionsFreeText : undefined,
+    // conditionsFreeText is deliberately NOT sent: it's unconstrained patient-typed
+    // text that can carry identifiers (provider names, places, dates). The
+    // structured `conditions` controlled vocab already carries the clinical signal.
     // name only — the raw `m.raw` string is what the patient typed and may carry
     // dosing notes / identifiers, so we drop it.
     medications: profile.medications.map((m) => m.name ?? m.drugId ?? "").filter(Boolean),

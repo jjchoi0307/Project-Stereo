@@ -211,7 +211,16 @@ function validateProjection(o: unknown): HealthFutureProjection {
   for (const h of p.horizons as Record<string, unknown>[]) {
     if (typeof h.years !== "number") bad("horizon missing years");
     if (typeof h.headline !== "string" || typeof h.narrative !== "string") bad("horizon missing text");
+    if (typeof h.careOutlook !== "string") bad("horizon missing careOutlook");
+    if (h.confidence !== "low" && h.confidence !== "moderate" && h.confidence !== "high") {
+      bad("horizon has invalid confidence");
+    }
     if (!Array.isArray(h.watchItems)) bad("horizon missing watchItems");
+    for (const w of h.watchItems as Record<string, unknown>[]) {
+      if (typeof w.event !== "string" || typeof w.rationale !== "string" || typeof w.groundedIn !== "string") {
+        bad("watchItem missing event/rationale/groundedIn");
+      }
+    }
     if (!Array.isArray(h.planConsiderations)) bad("horizon missing planConsiderations");
   }
   return o as HealthFutureProjection;

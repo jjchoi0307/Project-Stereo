@@ -77,6 +77,7 @@ export default function BrokerSession({
   const [session, setSession] = useState<Session>(initialSession);
   const [editing, setEditing] = useState(false);
   const [patientLink, setPatientLink] = useState("");
+  const [linkError, setLinkError] = useState(false);
   const [copied, setCopied] = useState(false);
   const [normalized, setNormalized] = useState<NormalizedProfile | null>(null);
   const [rules, setRules] = useState<RulesView | null>(null);
@@ -111,18 +112,24 @@ export default function BrokerSession({
     };
   }, [session.id, session.status, session.profile?.capturedAt]);
 
-  // Mint (or reuse) the capability token for the patient self-entry link.
+  // Mint (or reuse) the capability token for the patient self-entry link — only
+  // while awaiting facts (that's the only state where the link is shown/usable).
   useEffect(() => {
+    if (session.status !== "awaiting_intake") return;
     let active = true;
+    setLinkError(false);
     fetch(`/api/sessions/${session.id}/intake-token`, { method: "POST" })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
-        if (active && d?.token) setPatientLink(`${window.location.origin}/intake/${d.token}`);
-      });
+        if (!active) return;
+        if (d?.token) setPatientLink(`${window.location.origin}/intake/${d.token}`);
+        else setLinkError(true);
+      })
+      .catch(() => active && setLinkError(true));
     return () => {
       active = false;
     };
-  }, [session.id]);
+  }, [session.id, session.status]);
 
   // While awaiting facts, poll so a patient submitting on their own device flows
   // straight into the broker's view.
@@ -215,11 +222,16 @@ export default function BrokerSession({
           answers flow straight into this session.
         </p>
         <div className="mt-4 flex gap-2">
-          <input readOnly value={patientLink} className="w-full rounded-md border border-slate-300 bg-slate-50 px-2 py-1.5 text-xs text-slate-600" />
-          <button onClick={copyLink} className="shrink-0 rounded-md bg-slate-800 px-3 text-xs font-medium text-white hover:bg-slate-700">
+          <input readOnly value={patientLink || (linkError ? "" : "Generating link…")}
+            className="w-full rounded-md border border-slate-300 bg-slate-50 px-2 py-1.5 text-xs text-slate-600" />
+          <button onClick={copyLink} disabled={!patientLink}
+            className="shrink-0 rounded-md bg-slate-800 px-3 text-xs font-medium text-white hover:bg-slate-700 disabled:opacity-50">
             {copied ? "Copied" : "Copy"}
           </button>
         </div>
+        {linkError && (
+          <p className="mt-1 text-xs text-rose-600">Couldn&apos;t generate the link. Reload to retry.</p>
+        )}
         <div className="mt-4 flex items-center gap-2 text-xs text-slate-500">
           <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-amber-400" />
           Waiting for the client to submit…
@@ -249,8 +261,8 @@ function ProfileSummary({ profile, reference }: { profile: ClientProfileInput; r
         <Item label="Gender" prov={prov("gender")}>{profile.gender ?? "—"}</Item>
         <Item label="Medications" prov={prov("medications")} full>
           {profile.medications.length
-            ? profile.medications.map((m) => (
-                <span key={m.raw} className="mr-1 inline-block rounded bg-slate-100 px-1.5 py-0.5 text-xs">
+            ? profile.medications.map((m, i) => (
+                <span key={`${m.raw}-${i}`} className="mr-1 inline-block rounded bg-slate-100 px-1.5 py-0.5 text-xs">
                   {m.raw}{m.drugId ? "" : " (unmatched)"}
                 </span>
               ))

@@ -10,6 +10,8 @@
  *
  * SERVER-ONLY.
  */
+import "server-only";
+import { cache } from "react";
 import type { BrokerContext } from "./client";
 import { serviceClient } from "./client";
 import { stateStore, supabaseConfigured } from "./env";
@@ -20,7 +22,12 @@ interface BrokerRow {
   org_id: string;
 }
 
-export async function getBrokerContext(): Promise<BrokerContext | null> {
+/**
+ * Resolve the signed-in broker. Wrapped in React `cache()` so it runs at most
+ * once per request even though several store factories call it — without this,
+ * an audit POST resolved auth (cookie read + getUser + brokers select) 2-3×.
+ */
+export const getBrokerContext = cache(async (): Promise<BrokerContext | null> => {
   if (stateStore() !== "supabase" || !supabaseConfigured()) return null;
 
   const client = await getServerSupabase();
@@ -31,7 +38,7 @@ export async function getBrokerContext(): Promise<BrokerContext | null> {
 
   const broker = await resolveBroker(user.id, user.email ?? "");
   return { client, brokerId: broker.id, orgId: broker.org_id };
-}
+});
 
 /**
  * Find the broker row for this auth user, provisioning it on first login.
@@ -66,7 +73,14 @@ async function resolveBroker(userId: string, email: string): Promise<BrokerRow> 
     .insert({ id: userId, org_id: org.id, email, role: "org_admin" })
     .select("id,org_id")
     .single();
-  if (brokerErr || !broker) throw brokerErr ?? new Error("broker provisioning failed");
+  if (brokerErr || !broker) {
+    // Two concurrent first-logins can both pass the existence check above; the
+    // loser's broker insert conflicts on the PK. Re-fetch before failing (the
+    // loser's freshly-created org is harmless/orphaned).
+    const { data: raced } = await svc.from("brokers").select("id,org_id").eq("id", userId).maybeSingle();
+    if (raced) return raced as BrokerRow;
+    throw brokerErr ?? new Error("broker provisioning failed");
+  }
 
   return broker as BrokerRow;
 }

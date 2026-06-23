@@ -72,7 +72,10 @@ export const HEALTH_SIM = {
 export const HORIZON_REC = {
   horizonsYears: [5, 10],
   replicas: 120, // number of simulated futures per horizon
-  scenarioCount: 500, // inner financial scenarios per future (matches the live engine)
+  // Single source of truth — MUST equal the live engine default so each future is
+  // scored at the same resolution as "today" (else sampling noise → spurious
+  // "changes vs today"). Referenced, not copied.
+  scenarioCount: SIM_CONFIG.defaultScenarioCount,
   assumptionIncidence: 0.2,
   maxDistribution: 5, // plans shown in the win-share distribution
 } as const;
