@@ -7,6 +7,7 @@
  * Skeleton: runs once auth provides a BrokerContext and STATE_STORE=supabase.
  */
 import type { AuditRecord } from "@/lib/domain";
+import { logAccess } from "@/lib/security/accessLog";
 import type { BrokerContext } from "@/lib/supabase/client";
 import type { AuditStore } from "./store";
 
@@ -33,6 +34,7 @@ export class SupabaseAuditStore implements AuditStore {
       { onConflict: "id" },
     );
     if (error) throw error;
+    logAccess({ actor: this.ctx.brokerId, action: "audit.write", sessionId: sessionIdOf(record) });
     return record;
   }
 
@@ -42,7 +44,9 @@ export class SupabaseAuditStore implements AuditStore {
       .select("payload")
       .eq("id", id)
       .maybeSingle();
-    return (data?.payload as AuditRecord) ?? null;
+    const record = (data?.payload as AuditRecord) ?? null;
+    if (record) logAccess({ actor: this.ctx.brokerId, action: "audit.read", sessionId: sessionIdOf(record) });
+    return record;
   }
 
   async list(): Promise<AuditRecord[]> {
@@ -50,6 +54,7 @@ export class SupabaseAuditStore implements AuditStore {
       .from("audit_records")
       .select("payload")
       .order("created_at", { ascending: false });
+    logAccess({ actor: this.ctx.brokerId, action: "audit.list" });
     return ((data as { payload: AuditRecord }[]) ?? []).map((r) => r.payload);
   }
 }

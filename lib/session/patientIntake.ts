@@ -23,9 +23,12 @@ import { mergeProvenance, toProfileInput } from "@/lib/intake/toProfile";
 import type { IntakeFormValues } from "@/lib/intake/types";
 import { validateIntake } from "@/lib/intake/validate";
 import type { ClientProfileInput } from "@/lib/domain";
+import { logAccess } from "@/lib/security/accessLog";
 import { getSessionStore } from "./store";
 
-const TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+// Short-lived capability: a broker shares the link and the patient fills it soon
+// after. 48h balances convenience against a leaked-link exposure window.
+const TOKEN_TTL_MS = 48 * 60 * 60 * 1000;
 
 const supabaseMode = () => stateStore() === "supabase" && supabaseConfigured();
 
@@ -54,6 +57,7 @@ export async function issueIntakeToken(sessionId: string, ctx: BrokerContext | n
       .update({ intake_token: token, intake_token_expires_at: new Date(Date.now() + TOKEN_TTL_MS).toISOString() })
       .eq("id", sessionId);
     if (error) throw error;
+    logAccess({ actor: ctx.brokerId, action: "intake.token_issue", sessionId });
     return token;
   }
   return sessionId; // memory mode: id is the capability
@@ -79,6 +83,7 @@ export async function resolvePatientIntake(token: string): Promise<ResolvedSessi
     if (!data) return null;
     if (data.intake_token_expires_at && new Date(data.intake_token_expires_at).getTime() < Date.now()) return null;
     const { data: p } = await svc.from("profiles").select("data").eq("session_id", data.id).maybeSingle();
+    logAccess({ actor: "patient", action: "intake.resolve", sessionId: data.id as string });
     return {
       sessionId: data.id as string,
       brokerId: data.broker_id as string,
@@ -148,6 +153,7 @@ export async function submitPatientIntake(token: string, values: IntakeFormValue
       console.error("patient intake session update failed:", sErr);
       return { ok: false, status: 500, error: "Could not save your facts. Please try again." };
     }
+    logAccess({ actor: "patient", action: "intake.submit", sessionId: resolved.sessionId });
     return { ok: true };
   }
 

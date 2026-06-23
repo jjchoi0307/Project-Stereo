@@ -18,7 +18,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <h1 className="mt-1 text-xl font-semibold text-ink">Broker sign in</h1>
         <p className="mt-1 text-sm text-slate-500">Your clients and audit records are private to your account.</p>
       </header>
-      <LoginForm next={dest} />
+      <LoginForm next={dest} allowSignup={process.env.ALLOW_SIGNUP === "true"} />
     </main>
   );
 }

@@ -3,29 +3,31 @@
 import { useActionState, useState } from "react";
 import { signIn, signUp, type AuthState } from "@/app/login/actions";
 
-export default function LoginForm({ next }: { next: string }) {
+export default function LoginForm({ next, allowSignup }: { next: string; allowSignup: boolean }) {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const action = mode === "signin" ? signIn : signUp;
   const [state, formAction, pending] = useActionState<AuthState, FormData>(action, {});
 
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-6 sm:p-8">
-      <div className="mb-5 inline-flex rounded-md border border-slate-200 p-1 text-sm">
-        <button
-          type="button"
-          onClick={() => setMode("signin")}
-          className={`rounded px-3 py-1 font-medium ${mode === "signin" ? "bg-accent text-white" : "text-slate-600"}`}
-        >
-          Sign in
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode("signup")}
-          className={`rounded px-3 py-1 font-medium ${mode === "signup" ? "bg-accent text-white" : "text-slate-600"}`}
-        >
-          Create account
-        </button>
-      </div>
+      {allowSignup && (
+        <div className="mb-5 inline-flex rounded-md border border-slate-200 p-1 text-sm">
+          <button
+            type="button"
+            onClick={() => setMode("signin")}
+            className={`rounded px-3 py-1 font-medium ${mode === "signin" ? "bg-accent text-white" : "text-slate-600"}`}
+          >
+            Sign in
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("signup")}
+            className={`rounded px-3 py-1 font-medium ${mode === "signup" ? "bg-accent text-white" : "text-slate-600"}`}
+          >
+            Create account
+          </button>
+        </div>
+      )}
 
       <form action={formAction} className="space-y-3">
         <input type="hidden" name="next" value={next} />

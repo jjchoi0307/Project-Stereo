@@ -51,6 +51,7 @@ ARCHITECTURE.md §2 "Auth provisioning — bootstrap policy to revisit".)
 - The app is all dynamic (`force-dynamic`) server rendering — no static export concerns.
 
 ## Pre-deploy checklist
+- [ ] **Work through `SECURITY.md` → "Operational requirements"** (the HIPAA items code can't satisfy: rate limiting/WAF, MFA, automatic logoff, backups, retention/disposal, log monitoring, risk analysis/policies/training).
 - [ ] BAAs in place (Vercel + Supabase) **before** any real PHI.
 - [ ] All env vars set (table above); `SUPABASE_SERVICE_ROLE_KEY` not exposed to the client.
 - [ ] Supabase Site URL / redirect URLs point at the deployed origin.
