@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import RecommendationView from "./RecommendationView";
+import { HORIZON_REC } from "@/lib/engine/config";
 
 // ── Shapes returned by the routes ───────────────────────────────────────────
 interface PlanMeta {
@@ -98,11 +99,15 @@ export default function RecommendationTabs({ sessionId }: { sessionId: string })
     return () => { active = false; };
   }, [tab, sessionId, horizons, hStatus]);
 
-  const years = horizons?.horizons.map((h) => h.years) ?? [5, 10];
+  // Default tabs come from config (not a hardcoded [5,10]) until the data lands.
+  const years = horizons?.horizons.map((h) => h.years) ?? [...HORIZON_REC.horizonsYears];
+  // Guarded lookup — never assert; if a selected horizon isn't in the payload, render a fallback.
+  const activeHorizon =
+    typeof tab === "number" && horizons ? horizons.horizons.find((h) => h.years === tab) : undefined;
 
   return (
     <div className="space-y-6">
-      <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1 text-sm">
+      <div role="tablist" aria-label="Recommendation horizon" className="inline-flex rounded-lg border border-slate-200 bg-white p-1 text-sm">
         <TabButton active={tab === "today"} onClick={() => setTab("today")}>Today</TabButton>
         {years.map((y) => (
           <TabButton key={y} active={tab === y} onClick={() => setTab(y)}>{y} years</TabButton>
@@ -111,12 +116,12 @@ export default function RecommendationTabs({ sessionId }: { sessionId: string })
 
       {/* Kept mounted (hidden when inactive) so its on-mount audit POST fires once,
           not on every return to this tab. */}
-      <div className={tab === "today" ? "" : "hidden"}>
+      <div role="tabpanel" hidden={tab !== "today"}>
         <RecommendationView sessionId={sessionId} />
       </div>
 
       {tab !== "today" && (
-        <>
+        <div role="tabpanel">
           {hStatus === "loading" && !horizons && (
             <p className="text-sm text-slate-500">
               Scoring the recommendation across simulated futures…
@@ -125,20 +130,23 @@ export default function RecommendationTabs({ sessionId }: { sessionId: string })
           {hStatus === "error" && (
             <p className="text-sm text-rose-600">Could not load the horizon recommendation.</p>
           )}
-          {horizons && (
-            <HorizonPanel
-              horizon={horizons.horizons.find((h) => h.years === tab)!}
-              todayName={horizons.todayTopPlanName}
-              narrative={{
-                status: nStatus,
-                error: nError,
-                horizon: narrative?.horizons.find((h) => h.years === tab),
-                overallCaveat: narrative?.overallCaveat,
-                onGenerate: generateNarrative,
-              }}
-            />
-          )}
-        </>
+          {horizons &&
+            (activeHorizon ? (
+              <HorizonPanel
+                horizon={activeHorizon}
+                todayName={horizons.todayTopPlanName}
+                narrative={{
+                  status: nStatus,
+                  error: nError,
+                  horizon: narrative?.horizons.find((h) => h.years === tab),
+                  overallCaveat: narrative?.overallCaveat,
+                  onGenerate: generateNarrative,
+                }}
+              />
+            ) : (
+              <p className="text-sm text-slate-500">No data for this horizon.</p>
+            ))}
+        </div>
       )}
     </div>
   );
@@ -147,6 +155,9 @@ export default function RecommendationTabs({ sessionId }: { sessionId: string })
 function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
+      type="button"
+      role="tab"
+      aria-selected={active}
       onClick={onClick}
       className={`rounded-md px-4 py-1.5 font-medium ${active ? "bg-accent text-white" : "text-slate-600 hover:bg-slate-50"}`}
     >

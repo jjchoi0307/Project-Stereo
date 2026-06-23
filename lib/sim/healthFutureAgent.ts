@@ -176,12 +176,13 @@ export async function projectHealthFuture(
     throw new Error(`Empty projection (stop_reason=${response.stop_reason}).`);
   }
 
-  let projection: HealthFutureProjection;
+  let parsed: unknown;
   try {
-    projection = JSON.parse(text) as HealthFutureProjection;
+    parsed = JSON.parse(text);
   } catch (e) {
     throw new Error(`Projection was not valid JSON: ${(e as Error).message}`);
   }
+  const projection = validateProjection(parsed);
 
   return {
     profileId: profile.id,
@@ -192,4 +193,26 @@ export async function projectHealthFuture(
     projection,
     notForAudit: true,
   };
+}
+
+/**
+ * Minimal runtime shape check on the model output. The json_schema output config
+ * constrains the happy path, but a refusal-with-text or schema-cache edge could
+ * still slip through — validate before downstream code trusts the shape.
+ */
+function validateProjection(o: unknown): HealthFutureProjection {
+  const bad = (m: string): never => {
+    throw new Error(`Projection had an unexpected shape: ${m}`);
+  };
+  if (!o || typeof o !== "object") bad("not an object");
+  const p = o as Record<string, unknown>;
+  if (typeof p.overallCaveat !== "string") bad("missing overallCaveat");
+  if (!Array.isArray(p.horizons) || p.horizons.length === 0) bad("missing horizons");
+  for (const h of p.horizons as Record<string, unknown>[]) {
+    if (typeof h.years !== "number") bad("horizon missing years");
+    if (typeof h.headline !== "string" || typeof h.narrative !== "string") bad("horizon missing text");
+    if (!Array.isArray(h.watchItems)) bad("horizon missing watchItems");
+    if (!Array.isArray(h.planConsiderations)) bad("horizon missing planConsiderations");
+  }
+  return o as HealthFutureProjection;
 }

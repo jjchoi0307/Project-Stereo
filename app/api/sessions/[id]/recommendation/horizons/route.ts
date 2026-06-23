@@ -41,38 +41,47 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const result = await recommendAcrossHorizons(session.profile, db);
   const planById = new Map((await db.listPlans()).map((p) => [p.id, p]));
   const nameOf = (pid: string | null) => (pid ? planById.get(pid)?.name ?? pid : null);
+  const metaOf = (pid: string) => {
+    const p = planById.get(pid);
+    return p ? meta(p) : null;
+  };
 
-  const horizons = result.horizons.map((h) => ({
-    years: h.years,
-    replicas: h.replicas,
-    scenarioCount: h.scenarioCount,
-    winShare: h.winShare,
-    noneEligibleRate: h.noneEligibleRate,
-    changedVsToday: h.recommendedPlanId !== result.todayTopPlanId,
-    recommended: h.recommendedPlanId
-      ? {
-          plan: meta(planById.get(h.recommendedPlanId)!),
-          winShare: h.winShare,
-          reasons: h.representativeReasonCodes.map((code) => ({
-            code,
-            text: REASON_TEXT[code],
-            positive: POSITIVE_REASONS.has(code),
-          })),
-          exposure: h.representativeExposure,
-        }
-      : null,
-    distribution: h.distribution.map((d) => ({
-      plan: meta(planById.get(d.planId)!),
-      share: d.share,
-    })),
-    projectedAssumptions: {
-      conditions: h.projectedAssumptions.conditions.map((c) => ({
-        label: condLabel(c.flag),
-        incidence: c.incidence,
-      })),
-      medications: h.projectedAssumptions.medications,
-    },
-  }));
+  const horizons = result.horizons.map((h) => {
+    const recMeta = h.recommendedPlanId ? metaOf(h.recommendedPlanId) : null;
+    return {
+      years: h.years,
+      replicas: h.replicas,
+      scenarioCount: h.scenarioCount,
+      winShare: h.winShare,
+      noneEligibleRate: h.noneEligibleRate,
+      changedVsToday: h.recommendedPlanId !== result.todayTopPlanId,
+      recommended: recMeta
+        ? {
+            plan: recMeta,
+            winShare: h.winShare,
+            reasons: h.representativeReasonCodes.map((code) => ({
+              code,
+              text: REASON_TEXT[code],
+              positive: POSITIVE_REASONS.has(code),
+            })),
+            exposure: h.representativeExposure,
+          }
+        : null,
+      distribution: h.distribution
+        .map((d) => {
+          const p = metaOf(d.planId);
+          return p ? { plan: p, share: d.share } : null;
+        })
+        .filter((x): x is { plan: ReturnType<typeof meta>; share: number } => x !== null),
+      projectedAssumptions: {
+        conditions: h.projectedAssumptions.conditions.map((c) => ({
+          label: condLabel(c.flag),
+          incidence: c.incidence,
+        })),
+        medications: h.projectedAssumptions.medications,
+      },
+    };
+  });
 
   return NextResponse.json({
     todayTopPlanId: result.todayTopPlanId,
