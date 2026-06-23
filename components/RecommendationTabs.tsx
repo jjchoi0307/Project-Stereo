@@ -105,23 +105,40 @@ export default function RecommendationTabs({ sessionId }: { sessionId: string })
   const activeHorizon =
     typeof tab === "number" && horizons ? horizons.horizons.find((h) => h.years === tab) : undefined;
 
+  const tabKeys: Tab[] = ["today", ...years];
+  const onTabKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const i = tabKeys.indexOf(tab);
+    let next = i;
+    if (e.key === "ArrowRight") next = (i + 1) % tabKeys.length;
+    else if (e.key === "ArrowLeft") next = (i - 1 + tabKeys.length) % tabKeys.length;
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = tabKeys.length - 1;
+    else return;
+    e.preventDefault();
+    const nt = tabKeys[next];
+    setTab(nt);
+    document.getElementById(`tab-${nt}`)?.focus();
+  };
+
   return (
     <div className="space-y-6">
-      <div role="tablist" aria-label="Recommendation horizon" className="inline-flex rounded-lg border border-slate-200 bg-white p-1 text-sm">
-        <TabButton active={tab === "today"} onClick={() => setTab("today")}>Today</TabButton>
-        {years.map((y) => (
-          <TabButton key={y} active={tab === y} onClick={() => setTab(y)}>{y} years</TabButton>
+      <div role="tablist" aria-label="Recommendation horizon" onKeyDown={onTabKeyDown}
+        className="inline-flex rounded-lg border border-slate-200 bg-white p-1 text-sm">
+        {tabKeys.map((t) => (
+          <TabButton key={String(t)} tabKey={t} active={tab === t} onSelect={() => setTab(t)}>
+            {t === "today" ? "Today" : `${t} years`}
+          </TabButton>
         ))}
       </div>
 
       {/* Kept mounted (hidden when inactive) so its on-mount audit POST fires once,
           not on every return to this tab. */}
-      <div role="tabpanel" hidden={tab !== "today"}>
+      <div role="tabpanel" id="panel-today" aria-labelledby="tab-today" hidden={tab !== "today"}>
         <RecommendationView sessionId={sessionId} />
       </div>
 
-      {tab !== "today" && (
-        <div role="tabpanel">
+      {typeof tab === "number" && (
+        <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} tabIndex={0}>
           {hStatus === "loading" && !horizons && (
             <p className="text-sm text-slate-500">
               Scoring the recommendation across simulated futures…
@@ -152,13 +169,16 @@ export default function RecommendationTabs({ sessionId }: { sessionId: string })
   );
 }
 
-function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+function TabButton({ tabKey, active, onSelect, children }: { tabKey: Tab; active: boolean; onSelect: () => void; children: React.ReactNode }) {
   return (
     <button
       type="button"
       role="tab"
+      id={`tab-${tabKey}`}
       aria-selected={active}
-      onClick={onClick}
+      aria-controls={`panel-${tabKey}`}
+      tabIndex={active ? 0 : -1}
+      onClick={onSelect}
       className={`rounded-md px-4 py-1.5 font-medium ${active ? "bg-accent text-white" : "text-slate-600 hover:bg-slate-50"}`}
     >
       {children}
