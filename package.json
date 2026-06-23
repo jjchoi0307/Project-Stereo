@@ -1,0 +1,35 @@
+{
+  "name": "smg-broker-engagement-tool",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "validate:fixtures": "tsx scripts/validate-fixtures.ts",
+    "test:normalize": "tsx scripts/test-normalize.ts",
+    "test:rules": "tsx scripts/test-rules.ts",
+    "test:sim": "tsx scripts/test-sim.ts",
+    "test:score": "tsx scripts/test-score.ts",
+    "test:audit": "tsx scripts/test-audit.ts",
+    "test:health": "tsx scripts/test-health.ts",
+    "test": "npm run validate:fixtures && npm run test:normalize && npm run test:rules && npm run test:sim && npm run test:score && npm run test:audit && npm run test:health"
+  },
+  "dependencies": {
+    "next": "^15.1.6",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "@supabase/supabase-js": "^2.48.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "@types/node": "^22.10.7",
+    "@types/react": "^19.0.7",
+    "@types/react-dom": "^19.0.3",
+    "tailwindcss": "^3.4.17",
+    "postcss": "^8.5.1",
+    "autoprefixer": "^10.4.20",
+    "tsx": "^4.19.2"
+  }
+}

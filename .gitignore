@@ -1,0 +1,35 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# next.js
+/.next/
+/out/
+next-env.d.ts
+
+# typescript incremental build cache
+*.tsbuildinfo
+
+# production
+/build
+
+# env & secrets — never commit PHI or keys
+.env
+.env*.local
+
+# misc
+.DS_Store
+*.pem
+npm-debug.log*
+
+# third-party carrier source PDFs — provenance only; not redistributed.
+# The transcribed source of truth lives in lib/data/source/plans-2026.json.
+# (Folder name has a trailing space, escaped below so the pattern matches.)
+SMG Healthplans\ /
+SMG Healthplans/
+
+# python reference (RLM base) — keep source, ignore its venv/caches
+reference/**/__pycache__/
+reference/**/*.pyc
+reference/**/.venv/
