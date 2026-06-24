@@ -64,4 +64,13 @@ export const networks: Network[] = [
     systemIds: ["sys-smg", "sys-ucsd"],
     providerIds: ["prov-smg-la", "prov-ucsd-hillcrest"],
   },
+  {
+    // Humana Gold Plus / USAA Honor family (H5619). ASSUMPTION: contracts Seoul
+    // Medical Group + MemorialCare in the LA/OC area; no UCLA, no Cedars. Verify
+    // against Humana's real provider directory and adjust systemIds/providerIds.
+    id: "net-humana",
+    name: "Humana Gold Plus Network (SoCal)",
+    systemIds: ["sys-smg", "sys-memorialcare"],
+    providerIds: ["prov-smg-la", "prov-memorialcare-lb"],
+  },
 ];
