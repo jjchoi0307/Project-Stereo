@@ -37,9 +37,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const result = await projectHealthFuture(session.profile, drugs);
     return NextResponse.json(result);
   } catch (e) {
-    return NextResponse.json(
-      { error: "projection failed", detail: (e as Error).message },
-      { status: 502 },
-    );
+    // PHI-free: log the error name/message only, never the profile.
+    const err = e as Error;
+    console.error("health-future projection failed:", err?.name, err?.message);
+    return NextResponse.json({ error: "projection failed" }, { status: 502 });
   }
 }

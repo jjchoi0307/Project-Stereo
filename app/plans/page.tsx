@@ -43,6 +43,9 @@ function toRow(p: Plan): PlanRow {
     carrier: p.carrier,
     type: p.planType,
     snpType: p.snpType,
+    // Geography section. Every current plan serves California (all counties are CA);
+    // when other-state plans are added, carry an explicit state on the plan data.
+    state: "California",
     smg: p.smgSupported,
     premiumLabel: b.monthlyPremium === 0 ? "$0" : `$${b.monthlyPremium}`,
     oopLabel: "$" + b.annualOOPMax.toLocaleString(),

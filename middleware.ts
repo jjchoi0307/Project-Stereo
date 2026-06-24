@@ -9,6 +9,7 @@ export async function middleware(request: NextRequest) {
   // matches the Host. (Server actions have their own framework CSRF protection.)
   if (MUTATING.has(request.method) && request.nextUrl.pathname.startsWith("/api/")) {
     const origin = request.headers.get("origin");
+    const reject = () => NextResponse.json({ error: "cross-origin request rejected" }, { status: 403 });
     if (origin) {
       let originHost: string | null = null;
       try {
@@ -16,9 +17,13 @@ export async function middleware(request: NextRequest) {
       } catch {
         originHost = null;
       }
-      if (originHost !== request.headers.get("host")) {
-        return NextResponse.json({ error: "cross-origin request rejected" }, { status: 403 });
-      }
+      if (originHost !== request.headers.get("host")) return reject();
+    } else {
+      // No Origin header — don't let a forged request bypass the check by simply
+      // omitting it. Require the browser's Fetch-Metadata same-origin signal; a
+      // legitimate same-origin fetch/XHR always sends `sec-fetch-site: same-origin`.
+      const site = request.headers.get("sec-fetch-site");
+      if (site !== "same-origin") return reject();
     }
   }
   return updateSession(request);
