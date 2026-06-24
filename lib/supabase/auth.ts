@@ -43,13 +43,30 @@ export const getBrokerContext = cache(async (): Promise<BrokerContext | null> =>
 /**
  * Find the broker row for this auth user, provisioning it on first login.
  *
- * BOOTSTRAP POLICY (revisit for the multi-agency model): a brand-new login gets
- * its OWN organization and is made `org_admin` of it. That's the right default
- * for a solo broker or a demo, but real agencies will want new brokers to JOIN
- * an existing org by invitation (role `broker`) instead — wire that here when the
- * onboarding/invite flow exists. Reads + writes go through the service-role
- * client (RLS-bypass, server-only): the trusted path for creating broker/org rows.
+ * ACCESS MODEL (single SMG org): a first login JOINS the SMG organization. Role
+ * is `broker` by default — self-signup (gated by ALLOW_SIGNUP) only ever mints
+ * brokers. Org admins are added BY HAND: list their email in ORG_ADMIN_EMAILS, or
+ * set role='org_admin' on their brokers row directly. Reads + writes go through
+ * the service-role client (RLS-bypass, server-only): the trusted provisioning path.
  */
+function adminEmails(): Set<string> {
+  return new Set(
+    (process.env.ORG_ADMIN_EMAILS ?? "")
+      .split(",")
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean),
+  );
+}
+
+/** The one SMG org all brokers join. SMG_ORG_ID pins it; falls back to the sole org. */
+async function defaultOrgId(svc: ReturnType<typeof serviceClient>): Promise<string> {
+  const pinned = process.env.SMG_ORG_ID?.trim();
+  if (pinned) return pinned;
+  const { data } = await svc.from("organizations").select("id");
+  if (data && data.length === 1) return data[0].id as string;
+  throw new Error("SMG_ORG_ID is not set and the organization is ambiguous");
+}
+
 async function resolveBroker(userId: string, email: string): Promise<BrokerRow> {
   const svc = serviceClient();
 
@@ -60,23 +77,18 @@ async function resolveBroker(userId: string, email: string): Promise<BrokerRow> 
     .maybeSingle();
   if (existing) return existing as BrokerRow;
 
-  const orgName = email.includes("@") ? email.split("@")[1] : "Agency";
-  const { data: org, error: orgErr } = await svc
-    .from("organizations")
-    .insert({ name: orgName })
-    .select("id")
-    .single();
-  if (orgErr || !org) throw orgErr ?? new Error("organization provisioning failed");
+  // First login → join the SMG org. Admin only if explicitly allowlisted by hand.
+  const orgId = await defaultOrgId(svc);
+  const role = adminEmails().has(email.toLowerCase()) ? "org_admin" : "broker";
 
   const { data: broker, error: brokerErr } = await svc
     .from("brokers")
-    .insert({ id: userId, org_id: org.id, email, role: "org_admin" })
+    .insert({ id: userId, org_id: orgId, email, role })
     .select("id,org_id")
     .single();
   if (brokerErr || !broker) {
     // Two concurrent first-logins can both pass the existence check above; the
-    // loser's broker insert conflicts on the PK. Re-fetch before failing (the
-    // loser's freshly-created org is harmless/orphaned).
+    // loser's insert conflicts on the PK. Re-fetch before failing.
     const { data: raced } = await svc.from("brokers").select("id,org_id").eq("id", userId).maybeSingle();
     if (raced) return raced as BrokerRow;
     throw brokerErr ?? new Error("broker provisioning failed");
