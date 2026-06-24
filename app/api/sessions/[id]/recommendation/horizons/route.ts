@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getDataStore } from "@/lib/data";
 import { recommendAcrossHorizons } from "@/lib/engine/horizonRecommendation";
 import { citationFor, describeReason, POSITIVE_REASONS, type ReasonFacts } from "@/lib/engine/reasons";
+import { getHorizonPayload, setHorizonPayload } from "@/lib/engine/horizonCacheStore";
+import { DATA_VERSION, ENGINE_VERSION } from "@/lib/version";
 import { buildRulesContext } from "@/lib/engine/rules";
 import { getSessionStore } from "@/lib/session/store";
 import { CONDITION_OPTIONS } from "@/lib/intake/options";
@@ -84,8 +86,16 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (!session) return NextResponse.json({ error: "session not found" }, { status: 404 });
   if (!session.profile) return NextResponse.json({ error: "no profile yet" }, { status: 409 });
 
-  const db = getDataStore();
   const profile = session.profile;
+
+  // Deterministic + keyed by facts/version → serve the persisted result instantly
+  // (survives serverless cold starts, unlike the in-memory cache). Session was
+  // already authorized above, and the key is namespaced by this session id.
+  const cacheKey = `horizon:${id}:${profile.capturedAt}:${ENGINE_VERSION}:${DATA_VERSION}`;
+  const cached = await getHorizonPayload(cacheKey);
+  if (cached) return NextResponse.json(cached);
+
+  const db = getDataStore();
   const [result, ctx] = await Promise.all([
     recommendAcrossHorizons(profile, db),
     buildRulesContext(db),
@@ -139,9 +149,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     };
   });
 
-  return NextResponse.json({
+  const payload = {
     todayTopPlanId: result.todayTopPlanId,
     todayTopPlanName: nameOf(result.todayTopPlanId),
     horizons,
-  });
+  };
+  await setHorizonPayload(cacheKey, payload);
+  return NextResponse.json(payload);
 }
