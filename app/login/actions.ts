@@ -57,6 +57,14 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   redirect(safeNext(formData.get("next")));
 }
 
+/**
+ * Single entry point the form binds to, so the dispatched action never depends on
+ * a swapped function reference. Branches on the hidden `mode` field set by the UI.
+ */
+export async function submitAuth(prev: AuthState, formData: FormData): Promise<AuthState> {
+  return String(formData.get("mode")) === "signup" ? signUp(prev, formData) : signIn(prev, formData);
+}
+
 export async function signOut(): Promise<void> {
   const supabase = await getServerSupabase();
   await supabase.auth.signOut();
