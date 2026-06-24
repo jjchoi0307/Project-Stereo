@@ -24,12 +24,14 @@ interface RankedItem {
   planId: string; expectedFit: number; downsideRisk: number; confidence: number;
   preferenceContribution: number; total: number; reasons: Reason[];
   plan: PlanMeta; exposure: Exposure; providerGaps?: string[]; breakdown: Breakdown;
+  networkStatus?: "in" | "gap" | "keeps";
 }
 interface NearMiss {
   reason: string; requiredProviders: string[]; regionName: string; ranked: RankedItem[];
 }
 interface RecData {
   seed: number; scenarioCount: number;
+  model?: string; aiPowered?: boolean;
   preferenceWeightingEnabled: boolean; preferenceChangedTop: boolean; topPlanId: string | null;
   ranked: RankedItem[];
   excluded: { plan: PlanMeta; reasons: { detail: string }[] }[];
@@ -72,26 +74,36 @@ function PlanChips({ plan }: { plan: PlanMeta }) {
 export default function RecommendationView({ sessionId }: { sessionId: string }) {
   const [data, setData] = useState<RecData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<{ message: string; notConfigured: boolean } | null>(null);
   const [auditId, setAuditId] = useState<string | null>(null);
   const [scenarios, setScenarios] = useState<ScenarioData | null>(null);
 
-  // Every recommendation produces a reproducible audit record (the delivered,
-  // preference-on recommendation), upserted by facts-version.
-  useEffect(() => {
-    let active = true;
-    fetch(`/api/sessions/${sessionId}/audit`, { method: "POST" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => active && d && setAuditId(d.auditId));
-    return () => { active = false; };
-  }, [sessionId]);
-
+  // The delivered recommendation is AI-powered, so the audit record preserves the
+  // exact AI output + citations. POST it AFTER the recommendation loads, so the
+  // server has cached the AI result and the audit can store the same delivered
+  // ranking ("reproducibility by record"). Upserted by facts-version.
   useEffect(() => {
     let active = true;
     setLoading(true);
+    setLoadError(null);
     fetch(`/api/sessions/${sessionId}/recommendation`, { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => active && setData(d))
-      .catch(() => active && setData(null))
+      .then(async (r) => {
+        const d = await r.json().catch(() => null);
+        if (!active) return;
+        if (r.ok) {
+          setData(d);
+          // Now that the AI recommendation is warm in the server cache, snapshot it.
+          fetch(`/api/sessions/${sessionId}/audit`, { method: "POST" })
+            .then((res) => (res.ok ? res.json() : null))
+            .then((a) => active && a && setAuditId(a.auditId));
+        } else {
+          setLoadError({
+            message: d?.detail ?? d?.error ?? "Could not load a recommendation.",
+            notConfigured: r.status === 503,
+          });
+        }
+      })
+      .catch(() => active && setLoadError({ message: "Could not reach the recommendation service.", notConfigured: false }))
       .finally(() => active && setLoading(false));
     return () => { active = false; };
   }, [sessionId]);
@@ -106,7 +118,20 @@ export default function RecommendationView({ sessionId }: { sessionId: string })
     return () => { active = false; };
   }, [sessionId]);
 
-  if (loading && !data) return <p className="text-sm text-slate-500">Running the recommendation…</p>;
+  if (loading && !data)
+    return (
+      <p className="text-sm text-slate-500">
+        Generating the AI recommendation from the 2026 plan files… (~30s)
+      </p>
+    );
+  if (loadError && !data)
+    return loadError.notConfigured ? (
+      <div className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-900">
+        The AI recommendation is not enabled for this account. {loadError.message}
+      </div>
+    ) : (
+      <p className="text-sm text-rose-600">{loadError.message}</p>
+    );
   if (!data || !data.ranked) return <p className="text-sm text-rose-600">Could not load a recommendation.</p>;
 
   const noneEligible = data.ranked.length === 0;
@@ -118,11 +143,13 @@ export default function RecommendationView({ sessionId }: { sessionId: string })
     <div>
       <div className="mb-[18px] flex flex-wrap items-center gap-3">
         <span className="rounded-md bg-[#f6fdfb] px-2.5 py-1 text-[12px] font-medium text-accent ring-1 ring-[#ccebe6]">
-          Ranked on pure fit — no carrier preference
+          AI-ranked on fit — grounded in the 2026 plan files, no carrier preference
         </span>
-        <span className="num ml-auto text-[11px] text-slate-400">
-          {data.scenarioCount} scenarios · seed {data.seed}
-        </span>
+        {data.model && (
+          <span className="num ml-auto text-[11px] text-slate-400">
+            AI-powered · {data.model}
+          </span>
+        )}
       </div>
 
       {/* No eligible plan — explain, then offer the closest near-misses. */}
@@ -277,9 +304,12 @@ function TopCard({ item, rank, highlight }: { item: RankedItem; rank: number; hi
   const positives = item.reasons.filter((r) => r.positive);
   const caveats = item.reasons.filter((r) => !r.positive);
   const e = item.exposure;
-  const keepsProviders = item.reasons.some((r) => r.code === "keeps_required_providers");
-  const networkGap = item.reasons.some((r) => r.code === "network_gap_risk");
-  const networkLabel = networkGap ? "gap risk" : keepsProviders ? "keeps required" : "in network";
+  const networkLabel =
+    item.networkStatus === "gap"
+      ? "gap risk"
+      : item.networkStatus === "keeps"
+        ? "keeps required"
+        : "in network";
 
   return (
     <div

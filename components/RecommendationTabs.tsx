@@ -7,7 +7,7 @@ import Spinner from "@/components/ui/Spinner";
 import PlanKind from "@/components/ui/PlanKind";
 import { Ref, Sources, type Citation } from "@/components/ui/Citation";
 
-// ── Shapes returned by the routes ───────────────────────────────────────────
+// ── Shapes returned by the AI horizon route ──────────────────────────────────
 interface PlanMeta {
   id: string; name: string; carrier: string; planType: string; snpType?: string;
   smgSupported: boolean; isScan: boolean; isCompetitor: boolean;
@@ -18,25 +18,30 @@ interface Exposure {
   mean: number; worst: number; medCoverageRate: number; catastrophicRate: number;
   topUncoveredDrugs: { name: string; rate: number }[];
 }
+interface RankedPlan {
+  planId: string; total: number; confidence: number; plan: PlanMeta;
+  reasons: Reason[]; exposure: Exposure; providerGaps?: string[]; networkStatus?: "in" | "gap" | "keeps";
+}
+type Likelihood = "low" | "moderate" | "high";
+interface HorizonProjection {
+  headline: string; summary: string;
+  conditions: { label: string; likelihood: Likelihood }[];
+  medications: { name: string; likelihood: Likelihood }[];
+}
 interface HorizonRec {
-  years: number; replicas: number; scenarioCount: number;
-  winShare: number; noneEligibleRate: number; changedVsToday: boolean;
-  recommended: { plan: PlanMeta; winShare: number; reasons: Reason[]; exposure: Exposure | null } | null;
-  distribution: { plan: PlanMeta; share: number }[];
-  projectedAssumptions: { conditions: { label: string; incidence: number }[]; medications: { name: string; incidence: number }[] };
+  years: number; changedVsToday: boolean;
+  projection: HorizonProjection;
+  recommended: RankedPlan | null;
+  distribution: { plan: PlanMeta; fitScore: number }[];
 }
-interface HorizonsData { todayTopPlanId: string | null; todayTopPlanName: string | null; horizons: HorizonRec[] }
-
-interface NarrativeWatch { event: string; rationale: string; groundedIn: string }
-interface NarrativeHorizon {
-  years: number; headline: string; narrative: string; watchItems: NarrativeWatch[];
-  careOutlook: string; planConsiderations: string[]; confidence: "low" | "moderate" | "high";
+interface HorizonsData {
+  model?: string; todayTopPlanId: string | null; todayTopPlanName: string | null; horizons: HorizonRec[];
 }
-interface NarrativeData { overallCaveat: string; horizons: NarrativeHorizon[] }
 
 const usd = (n: number) => "$" + n.toLocaleString();
 const pct = (n: number) => Math.round(n * 100) + "%";
 const premiumLabel = (n: number) => (n === 0 ? "$0/mo" : "$" + n + "/mo");
+const confLabel = (c: number) => (c >= 66 ? "High" : c >= 33 ? "Moderate" : "Low");
 
 type Tab = "today" | number;
 
@@ -45,36 +50,9 @@ export default function RecommendationTabs({ sessionId }: { sessionId: string })
   const [horizons, setHorizons] = useState<HorizonsData | null>(null);
   const [hStatus, setHStatus] = useState<"idle" | "loading" | "error">("idle");
 
-  // The AI narrative covers BOTH horizons in one call, so fetch it once here and
-  // share it across the horizon tabs rather than calling the LLM per tab.
-  const [narrative, setNarrative] = useState<NarrativeData | null>(null);
-  const [nStatus, setNStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
-  const [nError, setNError] = useState<{ message: string; notConfigured: boolean } | null>(null);
-
-  const generateNarrative = async () => {
-    setNStatus("loading");
-    setNError(null);
-    try {
-      const res = await fetch(`/api/sessions/${sessionId}/health-future/projection`, { cache: "no-store" });
-      const d = await res.json();
-      if (!res.ok) {
-        setNError({ message: d.detail ?? d.error ?? "Projection failed.", notConfigured: res.status === 503 });
-        setNStatus("error");
-        return;
-      }
-      setNarrative(d.projection as NarrativeData);
-      setNStatus("done");
-    } catch (e) {
-      setNError({ message: (e as Error).message, notConfigured: false });
-      setNStatus("error");
-    }
-  };
-
-  // Lazy-load the deterministic across-futures recommendation when a horizon tab
-  // is first opened (it's a heavier nested simulation; no need on the Today tab).
-  // Eager prefetch: start computing horizons on mount (not only when a horizon tab
-  // is opened), so they're usually ready by the time the broker switches. The
-  // engine caches the deterministic result, so this is computed at most once.
+  // Prefetch the AI across-horizon recommendation on mount (cached server-side,
+  // so this is at most one Claude call per facts-version). It projects the
+  // member's future AND recommends the best plan at each horizon.
   useEffect(() => {
     if (horizons || hStatus === "loading") return;
     let active = true;
@@ -84,18 +62,8 @@ export default function RecommendationTabs({ sessionId }: { sessionId: string })
       .then((d) => active && (setHorizons(d), setHStatus("idle")))
       .catch(() => active && setHStatus("error"));
     return () => { active = false; };
-  }, [tab, sessionId, horizons, hStatus]);
+  }, [sessionId, horizons, hStatus]);
 
-  // Auto-run the AI health-future projection when the recommendation opens
-  // ("starts at Continue to recommendation"), so it's prominent and ready rather
-  // than a button to hunt for. Cached server-side, so this is at most one call
-  // per facts-version. Skips quietly if the key isn't configured.
-  useEffect(() => {
-    generateNarrative();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Default tabs come from config (not a hardcoded [5,10]) until the data lands.
   const years = horizons?.horizons.map((h) => h.years) ?? [...HORIZON_REC.horizonsYears];
   const activeHorizon =
     typeof tab === "number" && horizons ? horizons.horizons.find((h) => h.years === tab) : undefined;
@@ -119,13 +87,6 @@ export default function RecommendationTabs({ sessionId }: { sessionId: string })
     <div>
       <CriteriaPanel />
 
-      <AiProjection
-        status={nStatus}
-        error={nError}
-        data={narrative}
-        onGenerate={generateNarrative}
-      />
-
       <div
         role="tablist"
         aria-label="Recommendation horizon"
@@ -148,7 +109,7 @@ export default function RecommendationTabs({ sessionId }: { sessionId: string })
         <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} tabIndex={0}>
           {hStatus === "loading" && !horizons && (
             <div className="flex items-center gap-2.5 text-sm text-slate-500">
-              <Spinner /> Scoring the recommendation across simulated futures…
+              <Spinner /> Projecting the member&apos;s future and re-ranking the plans with AI… (~40s)
             </div>
           )}
           {hStatus === "error" && (
@@ -184,39 +145,67 @@ function TabButton({ tabKey, active, onSelect, children }: { tabKey: Tab; active
   );
 }
 
-interface AiProjectionProps {
-  status: "idle" | "loading" | "done" | "error";
-  error: { message: string; notConfigured: boolean } | null;
-  data: NarrativeData | null;
-  onGenerate: () => void;
-}
+const LIKELIHOOD_STYLE: Record<Likelihood, string> = {
+  low: "text-slate-400",
+  moderate: "text-amber-500",
+  high: "text-orange-500",
+};
 
 function HorizonPanel({ horizon: h, todayName }: { horizon: HorizonRec; todayName: string | null }) {
   const rec = h.recommended;
-  const hasAssumptions =
-    h.projectedAssumptions.conditions.length > 0 || h.projectedAssumptions.medications.length > 0;
+  const hasAssumptions = h.projection.conditions.length > 0 || h.projection.medications.length > 0;
 
   return (
     <div>
+      {/* AI future projection for this horizon */}
+      <section className="mb-6 rounded-[13px] border border-[#ddd6fe] bg-[#faf8ff] p-[22px]">
+        <div className="mb-1.5 flex flex-wrap items-center gap-2.5">
+          <span className="inline-flex h-6 w-6 items-center justify-center rounded-[7px] bg-violet-600 text-[13px] text-white">✦</span>
+          <h3 className="m-0 text-[15px] font-semibold text-violet-900">{h.years}-year health projection</h3>
+          <span className="rounded-md bg-violet-100 px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-[.03em] text-violet-700">
+            AI · grounded in the member&apos;s facts
+          </span>
+        </div>
+        {h.projection.headline && (
+          <h4 className="m-0 mb-1.5 text-[15px] font-semibold leading-[1.35] text-[#1f1147]">{h.projection.headline}</h4>
+        )}
+        {h.projection.summary && (
+          <p className="mb-3 text-[13px] leading-[1.6] text-[#3f3357]">{h.projection.summary}</p>
+        )}
+        {hasAssumptions && (
+          <div className="flex flex-wrap gap-2">
+            {h.projection.conditions.map((c) => (
+              <span key={c.label} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600">
+                {c.label} <span className={LIKELIHOOD_STYLE[c.likelihood]}>· {c.likelihood} likelihood</span>
+              </span>
+            ))}
+            {h.projection.medications.map((m) => (
+              <span key={m.name} className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-medium text-sky-700">
+                + {m.name} <span className={LIKELIHOOD_STYLE[m.likelihood]}>· {m.likelihood}</span>
+              </span>
+            ))}
+          </div>
+        )}
+      </section>
+
       {/* Changes-vs-today banner */}
       {h.changedVsToday ? (
         <div className="mb-[18px] rounded-[10px] border border-amber-200 bg-amber-50 px-4 py-3">
           <div className="mb-0.5 text-[13px] font-bold text-amber-800">⚑ Changes vs today</div>
           <div className="text-[12.5px] leading-[1.5] text-amber-700">
-            Today&apos;s pick{todayName ? ` (${todayName})` : ""} wins fewer {h.years}-year futures as the
-            client&apos;s health evolves. {rec ? `${rec.plan.name} wins the most futures at this horizon.` : ""}
+            As the member&apos;s health evolves, today&apos;s pick{todayName ? ` (${todayName})` : ""} is no longer the
+            best fit at {h.years} years. {rec ? `${rec.plan.name} fits the projected member better.` : ""}
           </div>
         </div>
       ) : (
         <div className="mb-[18px] rounded-[10px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-[13px] font-semibold text-emerald-900">
-          ✓ Same as today — the recommended plan still wins the most simulated futures at this horizon.
+          ✓ Same as today — the recommended plan still fits best at this horizon.
         </div>
       )}
 
       {!rec ? (
         <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-          No plan stays eligible in most {h.years}-year futures
-          {h.noneEligibleRate > 0 && ` (${pct(h.noneEligibleRate)} of futures had no eligible plan)`}.
+          No plan stays eligible for the projected member at {h.years} years.
         </div>
       ) : (
         <>
@@ -225,7 +214,7 @@ function HorizonPanel({ horizon: h, todayName }: { horizon: HorizonRec; todayNam
             <div className="flex flex-wrap items-start gap-5">
               <div className="min-w-[220px] flex-1">
                 <div className="mb-1.5 text-[11px] font-bold uppercase tracking-[.05em] text-accent">
-                  Wins the most {h.years}-year futures
+                  Best fit at {h.years} years
                 </div>
                 <div className="mb-1 flex flex-wrap items-center gap-2.5">
                   <h3 className="text-xl font-semibold">{rec.plan.name}</h3>
@@ -237,10 +226,8 @@ function HorizonPanel({ horizon: h, todayName }: { horizon: HorizonRec; todayNam
                 </div>
               </div>
               <div className="flex-none text-right">
-                <div className="num text-[38px] font-bold leading-none text-accent">{pct(rec.winShare)}</div>
-                <div className="text-[11px] text-slate-400">
-                  of <span className="num">{h.replicas}</span> futures
-                </div>
+                <div className="num text-[38px] font-bold leading-none text-accent">{rec.total}</div>
+                <div className="text-[11px] text-slate-400">fit score · {confLabel(rec.confidence)} confidence</div>
               </div>
             </div>
 
@@ -262,14 +249,12 @@ function HorizonPanel({ horizon: h, todayName }: { horizon: HorizonRec; todayNam
                         </div>
                       ))}
                     </div>
-                    {rec.exposure && (
-                      <div className="grid grid-cols-2 content-start gap-2.5">
-                        <HeroStat label="Mean / yr">{usd(rec.exposure.mean)}</HeroStat>
-                        <HeroStat label="Worst / yr">{usd(rec.exposure.worst)}</HeroStat>
-                        <HeroStat label="Meds covered">{pct(rec.exposure.medCoverageRate)}</HeroStat>
-                        <HeroStat label="Catastrophic">{pct(rec.exposure.catastrophicRate)}</HeroStat>
-                      </div>
-                    )}
+                    <div className="grid grid-cols-2 content-start gap-2.5">
+                      <HeroStat label="Est. / yr">{usd(rec.exposure.mean)}</HeroStat>
+                      <HeroStat label="OOP max">{usd(rec.exposure.worst)}</HeroStat>
+                      <HeroStat label="Meds covered">{pct(rec.exposure.medCoverageRate)}</HeroStat>
+                      <HeroStat label="Catastrophic est.">{pct(rec.exposure.catastrophicRate)}</HeroStat>
+                    </div>
                   </div>
                   {cited.length > 0 && <Sources cited={cited} />}
                 </>
@@ -277,60 +262,36 @@ function HorizonPanel({ horizon: h, todayName }: { horizon: HorizonRec; todayNam
             })()}
           </div>
 
-          {/* Win-share distribution */}
+          {/* Fit-score comparison across the projected candidates */}
           {h.distribution.length > 1 && (
             <>
               <div className="mb-3 text-xs font-bold uppercase tracking-[.04em] text-slate-500">
-                Win-share distribution
+                Fit at {h.years} years
               </div>
               <div className="mb-6 flex flex-col gap-[11px] rounded-[11px] border border-slate-200 bg-white p-[18px]">
-                {h.distribution.map((d) => (
-                  <div key={d.plan.id} className="flex items-center gap-3">
-                    <span className="flex-[0_0_220px] truncate text-[12.5px] text-slate-700">{d.plan.name}</span>
-                    <span className="h-[9px] flex-1 overflow-hidden rounded-full bg-slate-100">
-                      <span
-                        className="block h-full rounded-full"
-                        style={{
-                          width: `${Math.round(d.share * 100)}%`,
-                          background: d.plan.id === rec.plan.id ? "#0d6e6e" : "#cbd5e1",
-                        }}
-                      />
-                    </span>
-                    <span className="num flex-[0_0_38px] text-right text-[12.5px] font-semibold text-slate-600">
-                      {pct(d.share)}
-                    </span>
-                  </div>
-                ))}
+                {(() => {
+                  const max = Math.max(...h.distribution.map((d) => d.fitScore), 1);
+                  return h.distribution.map((d) => (
+                    <div key={d.plan.id} className="flex items-center gap-3">
+                      <span className="flex-[0_0_220px] truncate text-[12.5px] text-slate-700">{d.plan.name}</span>
+                      <span className="h-[9px] flex-1 overflow-hidden rounded-full bg-slate-100">
+                        <span
+                          className="block h-full rounded-full"
+                          style={{
+                            width: `${Math.round((d.fitScore / max) * 100)}%`,
+                            background: d.plan.id === rec.plan.id ? "#0d6e6e" : "#cbd5e1",
+                          }}
+                        />
+                      </span>
+                      <span className="num flex-[0_0_38px] text-right text-[12.5px] font-semibold text-slate-600">
+                        {d.fitScore}
+                      </span>
+                    </div>
+                  ));
+                })()}
               </div>
             </>
           )}
-        </>
-      )}
-
-      {/* Assumptions */}
-      {hasAssumptions && (
-        <>
-          <div className="mb-2.5 text-xs font-bold uppercase tracking-[.04em] text-slate-500">
-            What the futures assumed by year {h.years}
-          </div>
-          <div className="mb-7 flex flex-wrap gap-2">
-            {h.projectedAssumptions.conditions.map((c) => (
-              <span
-                key={c.label}
-                className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600"
-              >
-                {c.label} <span className="text-slate-400">{pct(c.incidence)}</span>
-              </span>
-            ))}
-            {h.projectedAssumptions.medications.map((m) => (
-              <span
-                key={m.name}
-                className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-medium text-sky-700"
-              >
-                + {m.name} <span className="text-sky-400">{pct(m.incidence)}</span>
-              </span>
-            ))}
-          </div>
         </>
       )}
     </div>
@@ -346,140 +307,38 @@ function HeroStat({ label, children }: { label: string; children: React.ReactNod
   );
 }
 
-/**
- * Prominent, auto-run AI health-future projection — shown at the top of the
- * recommendation (it starts when the page opens). Renders BOTH horizons so the
- * broker sees the projection up front instead of hunting for a button.
- */
-function AiProjection({ status, error, data, onGenerate }: AiProjectionProps) {
-  return (
-    <section className="mb-6 rounded-[13px] border border-[#ddd6fe] bg-[#faf8ff] p-[22px]">
-      <div className="mb-1.5 flex flex-wrap items-center gap-2.5">
-        <span className="inline-flex h-6 w-6 items-center justify-center rounded-[7px] bg-violet-600 text-[13px] text-white">
-          ✦
-        </span>
-        <h3 className="m-0 text-[15px] font-semibold text-violet-900">AI health-future projection</h3>
-        <span className="rounded-md bg-violet-100 px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-[.03em] text-violet-700">
-          Interpretive · grounded in the client&apos;s facts
-        </span>
-      </div>
-      <p className="mb-4 text-[12.5px] leading-[1.5] text-violet-400">
-        Generated from the captured facts when you open the recommendation. It adds clinical context only — it
-        never changes the deterministic, auditable plan ranking below.
-      </p>
-
-      {status === "loading" && (
-        <div className="flex items-center gap-2.5 text-[13.5px] font-medium text-violet-700">
-          <span
-            className="inline-block h-4 w-4 rounded-full"
-            style={{ border: "2px solid #ddd6fe", borderTopColor: "#7c3aed", animation: "spin .7s linear infinite" }}
-          />
-          Reasoning over the client&apos;s profile… (~30s)
-        </div>
-      )}
-      {status === "idle" && (
-        <button
-          onClick={onGenerate}
-          className="rounded-[9px] bg-violet-600 px-5 py-[11px] text-[13.5px] font-semibold text-white hover:opacity-90"
-        >
-          ✦ Generate projection
-        </button>
-      )}
-      {status === "error" && error && (
-        error.notConfigured ? (
-          <div className="rounded-[9px] border border-[#ddd6fe] bg-violet-50 px-3.5 py-3 text-[12.5px] text-violet-900">
-            The AI projection is not enabled for this account. {error.message}
-          </div>
-        ) : (
-          <div>
-            <div className="mb-3 rounded-[9px] border border-rose-200 bg-rose-50 px-3.5 py-3 text-[12.5px] text-rose-700">
-              The model call didn&apos;t complete: {error.message}
-            </div>
-            <button
-              onClick={onGenerate}
-              className="rounded-[9px] bg-violet-600 px-[18px] py-2.5 text-[13px] font-semibold text-white"
-            >
-              Retry
-            </button>
-          </div>
-        )
-      )}
-      {status === "done" && data && (
-        <div data-fade className="flex flex-col gap-6">
-          {data.horizons.map((horizon) => (
-            <div key={horizon.years}>
-              <div className="mb-2 text-[11px] font-bold uppercase tracking-[.05em] text-violet-500">
-                {horizon.years}-year outlook
-              </div>
-              <div className="mb-3 flex items-start gap-2.5">
-                <h4 className="m-0 flex-1 text-[15px] font-semibold leading-[1.35] text-[#1f1147]">{horizon.headline}</h4>
-                <span className="flex-none whitespace-nowrap rounded-md bg-violet-100 px-2.5 py-[3px] text-[11px] font-semibold text-violet-700">
-                  {horizon.confidence} confidence
-                </span>
-              </div>
-              <p className="mb-4 text-[13px] leading-[1.6] text-[#3f3357]">{horizon.narrative}</p>
-
-              {horizon.watchItems.length > 0 && (
-                <>
-                  <div className="mb-2 text-[11px] font-bold uppercase tracking-[.04em] text-violet-400">Watch items</div>
-                  <div className="mb-4 flex flex-col gap-2">
-                    {horizon.watchItems.map((w, i) => (
-                      <div key={i} className="rounded-[9px] border border-violet-100 bg-white px-3.5 py-[11px]">
-                        <div className="mb-0.5 text-[13px] font-semibold text-[#1f1147]">{w.event}</div>
-                        <div className="text-xs leading-[1.45] text-violet-400">
-                          {w.rationale} <span className="font-semibold">Grounding:</span> {w.groundedIn}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              <div className="rounded-[9px] border border-violet-100 bg-white px-3.5 py-3">
-                <div className="mb-1 text-[11px] font-bold uppercase text-violet-400">Care outlook</div>
-                <div className="text-[12.5px] leading-[1.5] text-[#3f3357]">{horizon.careOutlook}</div>
-              </div>
-            </div>
-          ))}
-          {data.overallCaveat && (
-            <p className="text-[11px] italic leading-[1.5] text-[#a99fc4]">{data.overallCaveat}</p>
-          )}
-        </div>
-      )}
-    </section>
-  );
-}
-
 const WEIGHT_DEFS: { key: keyof typeof SCORING.weights; label: string; def: string; sign: "+" | "−" }[] = [
-  { key: "coverageFit", label: "Coverage fit", def: "OOP protection + acupuncture / mental-health / specialist cost matched to this client's needs", sign: "+" },
+  { key: "coverageFit", label: "Coverage fit", def: "OOP protection + acupuncture / mental-health / specialist cost matched to this member's needs", sign: "+" },
   { key: "networkFit", label: "Network fit", def: "required + likely-needed providers stay in network", sign: "+" },
-  { key: "medicationFit", label: "Medication fit", def: "current + likely-future prescriptions covered across simulated futures", sign: "+" },
+  { key: "medicationFit", label: "Medication fit", def: "current + likely-future prescriptions covered", sign: "+" },
   { key: "mismatchPenalty", label: "Mismatch penalty", def: "expected coverage gaps + expected annual cost", sign: "−" },
-  { key: "catastrophicDownside", label: "Catastrophic downside", def: "worst-case out-of-pocket exposure across futures", sign: "−" },
+  { key: "catastrophicDownside", label: "Catastrophic downside", def: "worst-case out-of-pocket exposure", sign: "−" },
 ];
 
 /**
- * The published, rigid scoring criteria — rendered live from the engine config so
- * what brokers read is exactly what the engine computes. Shown above every tab.
+ * The scoring criteria. The AI assigns each eligible plan a 0–1 fit on each
+ * dimension below, reasoning ONLY over the 2026 plan files, and the fit score is
+ * those sub-scores × the published weights — so brokers read exactly the rubric
+ * the recommendation is built on.
  */
 function CriteriaPanel() {
   const W = SCORING.weights;
   return (
     <details className="mb-6 rounded-xl border border-slate-200 bg-white p-[18px]">
       <summary className="flex cursor-pointer list-none items-center gap-2 text-[13px] font-semibold text-ink">
-        <span className="text-accent">ⓘ</span> How plans are scored — deterministic, fact-based &amp; auditable
+        <span className="text-accent">ⓘ</span> How plans are scored — AI-powered, grounded in the 2026 plan files &amp; cited
       </summary>
 
       <div className="mt-3 space-y-4 text-[12.5px] leading-[1.55] text-slate-600">
         <div>
           <div className="mb-1 text-[11px] font-bold uppercase tracking-[.04em] text-slate-500">1 · Eligibility (hard rules, run before any scoring)</div>
-          A plan is excluded — never ranked — if it fails any of: not sold in the client&apos;s region; doesn&apos;t
+          A plan is excluded — never ranked — if it fails any of: not sold in the member&apos;s region; doesn&apos;t
           keep a <strong>must-keep</strong> provider in network; or leaves a <strong>critical medication</strong>{" "}
-          (insulin, oncology) off formulary. These are pass/fail, not weighted.
+          (insulin, oncology) off formulary. These are pass/fail facts read straight from the plan files.
         </div>
 
         <div>
-          <div className="mb-1.5 text-[11px] font-bold uppercase tracking-[.04em] text-slate-500">2 · Fit score (eligible plans scored on weighted, simulated facts)</div>
+          <div className="mb-1.5 text-[11px] font-bold uppercase tracking-[.04em] text-slate-500">2 · Fit score (AI scores eligible plans on the member&apos;s facts)</div>
           <div className="flex flex-col gap-1">
             {WEIGHT_DEFS.map((w) => (
               <div key={w.key} className="flex items-baseline gap-2">
@@ -492,16 +351,15 @@ function CriteriaPanel() {
           </div>
           <div className="mt-2 text-[12px] text-slate-500">
             <span className="num">Fit = Coverage + Network + Medication − Mismatch − Catastrophic downside</span>.
-            Every input is a real simulation statistic across hundreds of futures — no hand-set rankings. Expand any
-            plan&apos;s “How this fit score is built” to see its exact arithmetic.
+            The AI reasons strictly over the benefits in the 2026 plan files; every bullet cites the source PDF +
+            page, and a programmatic check drops any figure not present in the plan&apos;s data.
           </div>
         </div>
 
         <div className="rounded-lg border border-[#ccebe6] bg-[#f6fdfb] p-3 text-[12px] text-slate-600">
           <strong className="text-accent">No plan preference.</strong> Eligible plans are ranked purely on the fit
           score above. The tool applies <strong>no carrier or plan preference of any kind</strong> — the ranking is
-          determined only by how each plan fits the client&apos;s captured facts, and is fully reproducible from the
-          audit record.
+          determined only by how each plan fits the member&apos;s captured facts, sourced from the plan files.
         </div>
       </div>
     </details>

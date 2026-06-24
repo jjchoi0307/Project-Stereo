@@ -373,6 +373,40 @@ export interface Recommendation {
 // ───────────────────────────────────────────────────────────────────────────
 // 7. Audit record  (SHAPE ONLY — produced in step 8)
 // ───────────────────────────────────────────────────────────────────────────
+
+/**
+ * Snapshot of the AI-delivered recommendation, preserved verbatim in the audit
+ * record. Reproducibility for the AI path is "by record": the exact model, the
+ * delivered ranking, and every reason + its source citation are stored, so the
+ * recommendation a member saw can always be reviewed and traced to a plan PDF +
+ * page — even though an LLM call is not bit-for-bit recomputable.
+ */
+export interface AuditAiCitation {
+  sourceFile: string;
+  sourcePage?: number | null;
+  quote: string;
+}
+export interface AuditAiReason {
+  text: string;
+  positive: boolean;
+  citation: AuditAiCitation | null;
+}
+export interface AuditAiPlan {
+  planId: string;
+  planName: string;
+  fitScore: number;
+  reasons: AuditAiReason[];
+}
+export interface AuditAiRecommendation {
+  model: string;
+  generatedAt: string;
+  topPlanId: string | null;
+  ranked: AuditAiPlan[];
+  excluded: { planId: string; planName: string; reasons: string[] }[];
+  /** Identity of the grounding plan-facts pack the AI reasoned over. */
+  groundingPlanIds: string[];
+}
+
 export interface AuditRecord {
   id: string;
   createdAt: string;
@@ -390,4 +424,6 @@ export interface AuditRecord {
   preferenceWeightingEnabled: boolean;
   /** True if preference weighting changed the top pick vs the pure-fit ranking. */
   preferenceChangedTop: boolean;
+  /** The AI-delivered recommendation, preserved verbatim (present once AI is enabled). */
+  aiRecommendation?: AuditAiRecommendation | null;
 }

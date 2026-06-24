@@ -1,168 +1,106 @@
 import { NextResponse } from "next/server";
 import { getDataStore } from "@/lib/data";
-import { runEngine } from "@/lib/engine/pipeline";
-import { citationFor, describeReason, POSITIVE_REASONS, type ReasonFacts } from "@/lib/engine/reasons";
 import { getSessionStore } from "@/lib/session/store";
-import type { ClientProfileInput, Plan } from "@/lib/domain";
-import type { RulesContext } from "@/lib/engine/rules";
-import type { PlanSimulationSummary } from "@/lib/engine/simulate";
+import { recommendPlans } from "@/lib/ai/recommend";
+import { planMeta, shapeRankedPlan } from "@/lib/ai/toResponse";
+import { getHorizonPayload, setHorizonPayload } from "@/lib/engine/horizonCacheStore";
+import { simConfigured, SIM_MODEL } from "@/lib/sim/env";
+import { DATA_VERSION } from "@/lib/version";
 
-const meta = (p: Plan) => ({
-  id: p.id,
-  name: p.name,
-  carrier: p.carrier,
-  planType: p.planType,
-  snpType: p.snpType,
-  smgSupported: p.smgSupported,
-  isScan: p.isScan,
-  isCompetitor: p.isCompetitor,
-  monthlyPremium: p.benefits.monthlyPremium,
-  annualOOPMax: p.benefits.annualOOPMax,
-});
+export const dynamic = "force-dynamic";
+// Two grounded Claude passes (generate + verify) over the eligible candidates.
+export const maxDuration = 120;
 
-/** Build the specific-reason facts for a plan from its benefits, sim summary, the client profile, and cross-plan context. */
-const buildReasonFacts = (
-  plan: Plan,
-  summary: PlanSimulationSummary,
-  profile: ClientProfileInput,
-  ctx: RulesContext,
-  cross: { isLowestCatastrophic: boolean; eligibleCount: number },
-): ReasonFacts => {
-  const medNames = profile.medications
-    .map((m) => m.name ?? m.raw)
-    .filter((n): n is string => Boolean(n));
-  const requiredProviderNames = profile.providerConstraints
-    .filter((c) => c.hardRequirement)
-    .map((c) => (c.systemId ? ctx.systemsById.get(c.systemId)?.name ?? c.label : c.label));
-  // Verbatim drug-tier line from the plan PDF, for the medication citations.
-  const drugTierSummary = ([1, 2, 3, 4, 5, 6] as const)
-    .map((t) => ({ t, d: plan.benefits.drugTierDisplay[t] }))
-    .filter((x) => Boolean(x.d))
-    .map((x) => `T${x.t} ${x.d}`)
-    .join(" · ");
-  return {
-    currentMedNames: medNames,
-    currentMedCount: profile.medications.length,
-    specialistCopay: plan.benefits.specialistCopay,
-    mentalHealthOutpatientCopay: plan.benefits.mentalHealthOutpatientCopay,
-    acupunctureVisitsPerYear: plan.benefits.acupunctureVisitsPerYear,
-    requiredProviderNames,
-    specialistVisits12mo: profile.utilization?.specialistVisits12mo,
-    acupunctureVisits12mo: profile.utilization?.acupunctureVisits12mo,
-    medCoverageRate: summary.medCoverageRate,
-    networkGapRate: summary.networkGapRate,
-    catastrophicRate: summary.catastrophicRate,
-    topUncoveredDrug: summary.topUncoveredDrugs[0],
-    isLowestCatastrophic: cross.isLowestCatastrophic,
-    eligibleCount: cross.eligibleCount,
-    sourceFile: plan.sourceFile,
-    sourcePage: plan.sourcePage,
-    annualOOPMax: plan.benefits.annualOOPMax,
-    drugTierSummary: drugTierSummary || undefined,
-  };
-};
-
-export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+/**
+ * AI-powered recommendation for "today" — Claude ranks the eligible plans and
+ * produces the fit score, scoring reasons, bullets, and source citations,
+ * reasoning ONLY over the 2026 plan files (lib/ai/recommend.ts). Eligibility
+ * stays a deterministic gate so an ineligible plan can never be recommended.
+ *
+ * Cached per facts-version + model + data-version: one Claude run per client,
+ * instant + stable thereafter (also keeps the same client → same recommendation,
+ * which the broker needs, and survives serverless cold starts).
+ */
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const session = await (await getSessionStore()).get(id);
   if (!session) return NextResponse.json({ error: "session not found" }, { status: 404 });
   if (!session.profile) return NextResponse.json({ error: "no profile yet" }, { status: 409 });
-
-  const url = new URL(req.url);
-  const preferenceWeighting = url.searchParams.get("preference") !== "off";
-  const count = Number(url.searchParams.get("count")) || undefined;
-
-  const db = getDataStore();
-  const { plans, ctx, sim, scoring: result, nearMiss } = await runEngine(session.profile, db, {
-    preferenceWeighting,
-    count,
-  });
   const profile = session.profile;
-  const planById = new Map(plans.map((p) => [p.id, p]));
-  const summaryById = new Map(sim.perPlan.map((s) => [s.planId, s]));
 
-  // Cross-plan context for "lowest catastrophic exposure" claims: the minimum
-  // catastrophicRate among the plans in this ranking (presentation only).
-  const crossContext = (
-    rankedScores: typeof result.ranked,
-    summaries: Map<string, PlanSimulationSummary>,
-  ) => {
-    const rates = rankedScores
-      .map((ps) => summaries.get(ps.planId)?.catastrophicRate)
-      .filter((r): r is number => r != null);
-    return { minCatastrophicRate: rates.length ? Math.min(...rates) : null, eligibleCount: rankedScores.length };
-  };
+  const cacheKey = `airec:${id}:${profile.capturedAt}:${SIM_MODEL}:${DATA_VERSION}`;
+  const cached = await getHorizonPayload(cacheKey);
+  if (cached) return NextResponse.json(cached);
 
-  const shapeRanked = (
-    ps: (typeof result.ranked)[number],
-    summaries: Map<string, PlanSimulationSummary>,
-    cross: { minCatastrophicRate: number | null; eligibleCount: number },
-    providerGaps?: string[],
-  ) => {
-    const s = summaries.get(ps.planId)!;
-    const facts = buildReasonFacts(planById.get(ps.planId)!, s, profile, ctx, {
-      isLowestCatastrophic:
-        cross.minCatastrophicRate != null && s.catastrophicRate === cross.minCatastrophicRate,
-      eligibleCount: cross.eligibleCount,
-    });
-    return {
-      ...ps,
-      plan: meta(planById.get(ps.planId)!),
-      providerGaps: providerGaps ?? [],
-      reasons: ps.reasonCodes.map((code) => ({
-        code,
-        text: describeReason(code, facts),
-        positive: POSITIVE_REASONS.has(code),
-        citation: citationFor(code, facts),
-      })),
-      exposure: {
-        mean: s.meanExposure,
-        worst: s.worstExposure,
-        medCoverageRate: s.medCoverageRate,
-        catastrophicRate: s.catastrophicRate,
-        topUncoveredDrugs: s.topUncoveredDrugs,
+  if (!simConfigured()) {
+    return NextResponse.json(
+      {
+        error: "not configured",
+        detail:
+          "The AI recommendation is opt-in. Set ANTHROPIC_API_KEY to enable the grounded, file-sourced recommendation.",
       },
-    };
-  };
-
-  const rankedCross = crossContext(result.ranked, summaryById);
-  const ranked = result.ranked.map((ps) => shapeRanked(ps, summaryById, rankedCross));
-
-  // When nothing survived but relaxing the provider requirement helps, surface
-  // the closest plans (each labelled with which required provider it drops).
-  let nearMissPayload: unknown = null;
-  if (nearMiss) {
-    const nmSummaries = new Map(nearMiss.sim.perPlan.map((s) => [s.planId, s]));
-    const nmCross = crossContext(nearMiss.scoring.ranked, nmSummaries);
-    nearMissPayload = {
-      reason: nearMiss.reason,
-      requiredProviders: nearMiss.requiredProviders,
-      regionName: nearMiss.regionName,
-      ranked: nearMiss.scoring.ranked.map((ps) =>
-        shapeRanked(ps, nmSummaries, nmCross, nearMiss.providerGapsByPlan[ps.planId]),
-      ),
-    };
+      { status: 503 },
+    );
   }
 
-  const excludedByPlan = new Map<string, typeof result.excluded>();
-  for (const e of result.excluded) {
-    const list = excludedByPlan.get(e.planId) ?? [];
-    list.push(e);
-    excludedByPlan.set(e.planId, list);
-  }
-  const excluded = [...excludedByPlan.entries()].map(([pid, reasons]) => ({
-    plan: meta(planById.get(pid)!),
-    reasons,
-  }));
+  try {
+    const db = getDataStore();
+    const plans = await db.listPlans();
+    const planById = new Map(plans.map((p) => [p.id, p]));
+    const mustKeep = profile.providerConstraints.some((c) => c.hardRequirement);
 
-  return NextResponse.json({
-    seed: sim.seed,
-    scenarioCount: sim.count,
-    preferenceWeightingEnabled: result.preferenceWeightingEnabled,
-    preferenceChangedTop: result.preferenceChangedTop,
-    topPlanId: result.topPlanId,
-    ranked,
-    excluded,
-    nearMiss: nearMissPayload,
-  });
+    const rec = await recommendPlans(profile, db);
+
+    const ranked = rec.ranked
+      .map((item) => {
+        const plan = planById.get(item.planId);
+        return plan ? shapeRankedPlan(item, plan, mustKeep) : null;
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
+
+    const excluded = rec.excluded
+      .map((e) => {
+        const plan = planById.get(e.planId);
+        return plan ? { plan: planMeta(plan), reasons: e.reasons.map((detail) => ({ detail })) } : null;
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
+
+    // No eligible plan but the member has a hard provider requirement → near-miss:
+    // re-rank with the provider constraint relaxed and label what each plan drops.
+    let nearMiss: unknown = null;
+    if (ranked.length === 0 && mustKeep) {
+      const relaxed = await recommendPlans(profile, db, { ignoreProviderConstraints: true });
+      const nmRanked = relaxed.ranked
+        .map((item) => {
+          const plan = planById.get(item.planId);
+          return plan ? shapeRankedPlan(item, plan, mustKeep) : null;
+        })
+        .filter((x): x is NonNullable<typeof x> => x !== null);
+      nearMiss = {
+        reason: "provider_relaxed",
+        requiredProviders: profile.providerConstraints.filter((c) => c.hardRequirement).map((c) => c.label),
+        regionName: (await db.listRegions()).find((r) => r.id === profile.marketRegion)?.name ?? profile.marketRegion,
+        ranked: nmRanked,
+      };
+    }
+
+    const payload = {
+      seed: 0,
+      scenarioCount: 0,
+      model: rec.model,
+      aiPowered: true,
+      preferenceWeightingEnabled: false,
+      preferenceChangedTop: false,
+      topPlanId: rec.topPlanId,
+      ranked,
+      excluded,
+      nearMiss,
+    };
+    await setHorizonPayload(cacheKey, payload);
+    return NextResponse.json(payload);
+  } catch (e) {
+    const err = e as Error;
+    console.error("AI recommendation failed:", err?.name, err?.message);
+    return NextResponse.json({ error: "recommendation failed", detail: err?.message }, { status: 502 });
+  }
 }
