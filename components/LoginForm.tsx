@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { signIn, signUp, type AuthState } from "@/app/login/actions";
+import { submitAuth, type AuthState } from "@/app/login/actions";
 import Spinner from "@/components/ui/Spinner";
 
 export default function LoginForm({
@@ -14,8 +14,7 @@ export default function LoginForm({
   initialMode?: "signin" | "signup";
 }) {
   const [mode, setMode] = useState<"signin" | "signup">(initialMode);
-  const action = mode === "signin" ? signIn : signUp;
-  const [state, formAction, pending] = useActionState<AuthState, FormData>(action, {});
+  const [state, formAction, pending] = useActionState<AuthState, FormData>(submitAuth, {});
 
   const isSignup = mode === "signup";
 
@@ -39,6 +38,7 @@ export default function LoginForm({
 
         <form action={formAction}>
           <input type="hidden" name="next" value={next} />
+          <input type="hidden" name="mode" value={mode} />
           {isSignup && (
             <>
               <label className="mb-1.5 block text-xs font-medium text-slate-700">Your name</label>
