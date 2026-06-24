@@ -4,8 +4,16 @@ import { useActionState, useState } from "react";
 import { signIn, signUp, type AuthState } from "@/app/login/actions";
 import Spinner from "@/components/ui/Spinner";
 
-export default function LoginForm({ next, allowSignup }: { next: string; allowSignup: boolean }) {
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+export default function LoginForm({
+  next,
+  allowSignup,
+  initialMode = "signin",
+}: {
+  next: string;
+  allowSignup: boolean;
+  initialMode?: "signin" | "signup";
+}) {
+  const [mode, setMode] = useState<"signin" | "signup">(initialMode);
   const action = mode === "signin" ? signIn : signUp;
   const [state, formAction, pending] = useActionState<AuthState, FormData>(action, {});
 

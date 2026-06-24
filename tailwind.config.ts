@@ -10,7 +10,7 @@ const config: Config = {
         accent: "#0d6e6e",
       },
       fontFamily: {
-        sans: ["'Montserrat'", "system-ui", "sans-serif"],
+        sans: ["'Poppins'", "system-ui", "sans-serif"],
         mono: ["'IBM Plex Mono'", "ui-monospace", "monospace"],
       },
       boxShadow: {
