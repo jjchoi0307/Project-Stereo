@@ -87,13 +87,11 @@ export const HORIZON_REC = {
  *
  *   expectedFit  = coverageFit + networkFit + medicationFit − mismatchPenalty
  *   downsideRisk = catastrophicDownside
- *   total        = expectedFit − downsideRisk + preferenceContribution
+ *   total        = expectedFit − downsideRisk
  *
  * Each component is a 0..1 sub-score × its weight here, so tuning lives in one
- * place. `preference.max` is the hard cap on the SMG/SCAN tiebreaker: because it
- * is small relative to the fit weights, it can only reorder plans whose fit is
- * already within `preference.max` points — it can never lift a clearly worse-fit
- * plan above a clearly better one.
+ * place. Ranking is 100% pure fit — there is NO carrier/plan preference: every
+ * plan is scored purely on how it fits the client's facts, with no SMG/SCAN bias.
  */
 export const SCORING = {
   weights: {
@@ -102,11 +100,6 @@ export const SCORING = {
     medicationFit: 30, // current + likely-future Rx coverage across scenarios
     mismatchPenalty: 25, // expected coverage gaps + expected cost
     catastrophicDownside: 40, // worst-case financial exposure
-  },
-  preference: {
-    max: 5, // hard cap on preferenceContribution
-    smgSupported: 4, // SMG-supported plans
-    scanBonus: 1, // additional for SCAN (→ 5, still ≤ max)
   },
   thresholds: {
     futureMedCoverageStrong: 0.98, // medCoverageRate ≥ → "covers likely future meds"

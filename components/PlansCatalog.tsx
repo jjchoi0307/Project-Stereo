@@ -1,12 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import PlanKind from "@/components/ui/PlanKind";
 
 export interface PlanRow {
   id: string;
   name: string;
   carrier: string;
   type: string;
+  snpType?: string;
   smg: boolean;
   premiumLabel: string;
   oopLabel: string;
@@ -54,6 +56,7 @@ export default function PlansCatalog({ rows }: { rows: PlanRow[] }) {
             <div>
               <div className="mb-[3px] flex flex-wrap items-center gap-2.5">
                 <span className="text-[14.5px] font-semibold">{p.name}</span>
+                <PlanKind snpType={p.snpType} />
                 {p.smg && (
                   <span className="rounded-[5px] bg-emerald-50 px-[7px] py-0.5 text-[10px] font-bold uppercase tracking-[.03em] text-emerald-600">
                     SMG network

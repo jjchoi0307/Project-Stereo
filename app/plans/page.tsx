@@ -42,6 +42,7 @@ function toRow(p: Plan): PlanRow {
     name: p.name,
     carrier: p.carrier,
     type: p.planType,
+    snpType: p.snpType,
     smg: p.smgSupported,
     premiumLabel: b.monthlyPremium === 0 ? "$0" : `$${b.monthlyPremium}`,
     oopLabel: "$" + b.annualOOPMax.toLocaleString(),

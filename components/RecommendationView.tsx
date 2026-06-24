@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Ref, Sources, type Citation } from "@/components/ui/Citation";
+import PlanKind from "@/components/ui/PlanKind";
 
-interface Citation { sourceFile: string; quote: string; kind: "document" | "computed" }
 interface Reason { code: string; text: string; positive: boolean; citation?: Citation | null }
 interface PlanMeta {
-  id: string; name: string; carrier: string; planType: string;
+  id: string; name: string; carrier: string; planType: string; snpType?: string;
   smgSupported: boolean; isScan: boolean; isCompetitor: boolean;
   monthlyPremium: number; annualOOPMax: number;
 }
@@ -69,7 +70,6 @@ function PlanChips({ plan }: { plan: PlanMeta }) {
 }
 
 export default function RecommendationView({ sessionId }: { sessionId: string }) {
-  const [preference, setPreference] = useState(true);
   const [data, setData] = useState<RecData | null>(null);
   const [loading, setLoading] = useState(true);
   const [auditId, setAuditId] = useState<string | null>(null);
@@ -88,23 +88,23 @@ export default function RecommendationView({ sessionId }: { sessionId: string })
   useEffect(() => {
     let active = true;
     setLoading(true);
-    fetch(`/api/sessions/${sessionId}/recommendation?preference=${preference ? "on" : "off"}`, { cache: "no-store" })
+    fetch(`/api/sessions/${sessionId}/recommendation`, { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => active && setData(d))
       .catch(() => active && setData(null))
       .finally(() => active && setLoading(false));
     return () => { active = false; };
-  }, [sessionId, preference]);
+  }, [sessionId]);
 
   // Stress-test: how the recommendation holds up under "what-if" scenarios.
   useEffect(() => {
     let active = true;
     setScenarios(null);
-    fetch(`/api/sessions/${sessionId}/scenarios?preference=${preference ? "on" : "off"}`, { cache: "no-store" })
+    fetch(`/api/sessions/${sessionId}/scenarios`, { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => active && d && !d.error && setScenarios(d));
     return () => { active = false; };
-  }, [sessionId, preference]);
+  }, [sessionId]);
 
   if (loading && !data) return <p className="text-sm text-slate-500">Running the recommendation…</p>;
   if (!data || !data.ranked) return <p className="text-sm text-rose-600">Could not load a recommendation.</p>;
@@ -116,24 +116,14 @@ export default function RecommendationView({ sessionId }: { sessionId: string })
 
   return (
     <div>
-      {/* Preference weighting */}
       <div className="mb-[18px] flex flex-wrap items-center gap-3">
-        <span className="text-[13px] font-medium text-slate-600">Preference weighting</span>
-        <div className="inline-flex rounded-lg bg-[#eef2f5] p-[3px]">
-          <PrefButton on={preference} label="On" onClick={() => setPreference(true)} />
-          <PrefButton on={!preference} label="Off — pure fit" onClick={() => setPreference(false)} />
-        </div>
+        <span className="rounded-md bg-[#f6fdfb] px-2.5 py-1 text-[12px] font-medium text-accent ring-1 ring-[#ccebe6]">
+          Ranked on pure fit — no carrier preference
+        </span>
         <span className="num ml-auto text-[11px] text-slate-400">
           {data.scenarioCount} scenarios · seed {data.seed}
         </span>
       </div>
-
-      {data.preferenceWeightingEnabled && data.preferenceChangedTop && (
-        <div className="mb-[18px] rounded-[9px] border border-amber-200 bg-amber-50 px-3.5 py-[11px] text-[12.5px] leading-[1.5] text-amber-800">
-          ⚑ Turning preference weighting off changed the ordering of eligible plans. The top recommendation is
-          unchanged.
-        </div>
-      )}
 
       {/* No eligible plan — explain, then offer the closest near-misses. */}
       {noneEligible && (
@@ -185,7 +175,10 @@ export default function RecommendationView({ sessionId }: { sessionId: string })
                 {rest.map((item) => (
                   <tr key={item.planId} className="border-t border-slate-100">
                     <td className="px-3.5 py-[11px]">
-                      <div className="font-semibold">{item.plan.name}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">{item.plan.name}</span>
+                        <PlanKind snpType={item.plan.snpType} />
+                      </div>
                       <div className="text-[11.5px] text-slate-400">
                         {item.plan.carrier} · {item.plan.planType}
                       </div>
@@ -238,18 +231,6 @@ export default function RecommendationView({ sessionId }: { sessionId: string })
         </div>
       )}
     </div>
-  );
-}
-
-function PrefButton({ on, label, onClick }: { on: boolean; label: string; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="rounded-md px-3.5 py-1.5 text-[12.5px] font-semibold"
-      style={{ background: on ? "#0d6e6e" : "transparent", color: on ? "#fff" : "#64748b" }}
-    >
-      {label}
-    </button>
   );
 }
 
@@ -318,6 +299,7 @@ function TopCard({ item, rank, highlight }: { item: RankedItem; rank: number; hi
         <div className="min-w-0 flex-1">
           <div className="mb-0.5 flex flex-wrap items-center gap-2.5">
             <h3 className="text-[17px] font-semibold">{item.plan.name}</h3>
+            <PlanKind snpType={item.plan.snpType} />
             <PlanChips plan={item.plan} />
           </div>
           <div className="text-[12.5px] text-slate-500">
@@ -457,37 +439,3 @@ function Stat({ label, children }: { label: string; children: React.ReactNode })
   );
 }
 
-/** Superscript footnote reference, like a book citation. */
-function Ref({ n }: { n: number | null }) {
-  if (!n) return null;
-  return <sup className="ml-0.5 text-[9px] font-bold text-accent">{n}</sup>;
-}
-
-/** Per-plan footnote list: each bullet's source PDF + the exact figure behind it. */
-function Sources({ cited }: { cited: Reason[] }) {
-  return (
-    <div className="mb-1 mt-1 rounded-lg border border-slate-100 bg-slate-50 px-3.5 py-2.5">
-      <div className="mb-1.5 text-[10.5px] font-bold uppercase tracking-[.04em] text-slate-500">Sources</div>
-      <ol className="space-y-1">
-        {cited.map((r, i) => {
-          const c = r.citation!;
-          return (
-            <li key={r.code} className="flex gap-2 text-[11px] leading-[1.45] text-slate-500">
-              <span className="num flex-none font-bold text-accent">{i + 1}.</span>
-              <span>
-                <span className="num text-slate-600">{c.sourceFile}</span>
-                {c.kind === "computed" && (
-                  <span className="ml-1 rounded bg-violet-50 px-1 py-px text-[9px] font-semibold uppercase text-violet-600">
-                    computed
-                  </span>
-                )}
-                {" — "}
-                <span className="italic">“{c.quote}”</span>
-              </span>
-            </li>
-          );
-        })}
-      </ol>
-    </div>
-  );
-}

@@ -4,6 +4,7 @@
     {
       "id": "aln-platinum-instacart-008",
       "sourceFile": "2026_Benefit_Highlights_CA_H3815_008_HMO_016_HMO_POS_EN_508.pdf",
+      "sourcePage": 1,
       "name": "Alignment Health Platinum + Instacart (HMO) 008",
       "carrier": "Alignment Health Plan",
       "planType": "HMO",
@@ -44,6 +45,7 @@
     {
       "id": "aln-platinum-instacart-016",
       "sourceFile": "2026_Benefit_Highlights_CA_H3815_008_HMO_016_HMO_POS_EN_508.pdf",
+      "sourcePage": 1,
       "name": "Alignment Health Platinum + Instacart (HMO-POS) 016",
       "carrier": "Alignment Health Plan",
       "planType": "HMO-POS",
@@ -84,6 +86,7 @@
     {
       "id": "aln-smarthmo-013",
       "sourceFile": "2026_Benefit_Highlights_CA_H3815_013_HMO_EN_508 (2).pdf",
+      "sourcePage": 1,
       "name": "Alignment Health SmartHMO (HMO) 013",
       "carrier": "Alignment Health Plan",
       "planType": "HMO",
@@ -124,6 +127,7 @@
     {
       "id": "aln-harmony-031",
       "sourceFile": "2026_Benefit_Highlights_CA_H3815_031_034_HMO_EN_508.pdf",
+      "sourcePage": 1,
       "name": "Alignment Health Harmony (HMO) 031",
       "carrier": "Alignment Health Plan",
       "planType": "HMO",
@@ -164,6 +168,7 @@
     {
       "id": "aln-the-one-034",
       "sourceFile": "2026_Benefit_Highlights_CA_H3815_031_034_HMO_EN_508.pdf",
+      "sourcePage": 1,
       "name": "Alignment Health The ONE (HMO) 034",
       "carrier": "Alignment Health Plan",
       "planType": "HMO",
@@ -204,6 +209,7 @@
     {
       "id": "aln-smartsavings-047",
       "sourceFile": "2026_Benefit_Highlights_CA_H3815_047_055_056_HMO_EN_508.pdf",
+      "sourcePage": 1,
       "name": "Alignment Health SmartSavings (HMO) 047",
       "carrier": "Alignment Health Plan",
       "planType": "HMO",
@@ -244,6 +250,7 @@
     {
       "id": "aln-la-premium-giveback-055",
       "sourceFile": "2026_Benefit_Highlights_CA_H3815_047_055_056_HMO_EN_508.pdf",
+      "sourcePage": 1,
       "name": "Alignment Health L.A. Premium Giveback (HMO) 055",
       "carrier": "Alignment Health Plan",
       "planType": "HMO",
@@ -284,6 +291,7 @@
     {
       "id": "aln-sd-premium-giveback-056",
       "sourceFile": "2026_Benefit_Highlights_CA_H3815_047_055_056_HMO_EN_508.pdf",
+      "sourcePage": 1,
       "name": "Alignment Health S.D. Premium Giveback (HMO) 056",
       "carrier": "Alignment Health Plan",
       "planType": "HMO",
@@ -324,6 +332,7 @@
     {
       "id": "aln-honor-plus-052",
       "sourceFile": "2026_Benefit_Highlights_CA_H3815_052_053_HMO_EN_508.pdf",
+      "sourcePage": 1,
       "name": "Alignment Health HONOR+ (HMO D-SNP) 052",
       "carrier": "Alignment Health Plan",
       "planType": "HMO",
@@ -364,6 +373,7 @@
     {
       "id": "aln-valorcare-053",
       "sourceFile": "2026_Benefit_Highlights_CA_H3815_052_053_HMO_EN_508.pdf",
+      "sourcePage": 1,
       "name": "Alignment Health ValorCare (HMO) 053",
       "carrier": "Alignment Health Plan",
       "planType": "HMO",
@@ -404,6 +414,7 @@
     {
       "id": "aln-balance-ckd-033",
       "sourceFile": "2026_Benefit_Highlights_CA_H3815_033_048_054_HMO_CSNP_EN_508 (1).pdf",
+      "sourcePage": 1,
       "name": "Alignment Health Balance (HMO C-SNP) 033",
       "carrier": "Alignment Health Plan",
       "planType": "HMO",
@@ -444,6 +455,7 @@
     {
       "id": "aln-heart-diabetes-care-048",
       "sourceFile": "2026_Benefit_Highlights_CA_H3815_033_048_054_HMO_CSNP_EN_508 (1).pdf",
+      "sourcePage": 1,
       "name": "Alignment Health Heart & Diabetes Care (HMO C-SNP) 048",
       "carrier": "Alignment Health Plan",
       "planType": "HMO",
@@ -484,6 +496,7 @@
     {
       "id": "aln-heart-diabetes-care-054",
       "sourceFile": "2026_Benefit_Highlights_CA_H3815_033_048_054_HMO_CSNP_EN_508 (1).pdf",
+      "sourcePage": 1,
       "name": "Alignment Health Heart & Diabetes Care (HMO C-SNP) 054",
       "carrier": "Alignment Health Plan",
       "planType": "HMO",
@@ -524,6 +537,7 @@
     {
       "id": "aln-heart-diabetes-calplus-039",
       "sourceFile": "2026_Benefit_Highlights_CA_H3815_039_044_045_HMO_CSNP_EN_508.pdf",
+      "sourcePage": 1,
       "name": "Alignment Health Heart & Diabetes CalPlus (HMO C-SNP) 039",
       "carrier": "Alignment Health Plan",
       "planType": "HMO",
@@ -564,6 +578,7 @@
     {
       "id": "aln-heart-diabetes-access-044",
       "sourceFile": "2026_Benefit_Highlights_CA_H3815_039_044_045_HMO_CSNP_EN_508.pdf",
+      "sourcePage": 1,
       "name": "Alignment Health Heart & Diabetes Access (HMO C-SNP) 044",
       "carrier": "Alignment Health Plan",
       "planType": "HMO",
@@ -604,6 +619,7 @@
     {
       "id": "aln-silicon-045",
       "sourceFile": "2026_Benefit_Highlights_CA_H3815_039_044_045_HMO_CSNP_EN_508.pdf",
+      "sourcePage": 1,
       "name": "Alignment Health Silicon (HMO C-SNP) 045",
       "carrier": "Alignment Health Plan",
       "planType": "HMO",
@@ -644,6 +660,7 @@
     {
       "id": "aln-breatheasy-041",
       "sourceFile": "2026_Benefit_Highlights_CA_H3815_041_042_HMO_CSNP_EN_508.pdf",
+      "sourcePage": 1,
       "name": "Alignment Health BreathEasy (HMO C-SNP) 041",
       "carrier": "Alignment Health Plan",
       "planType": "HMO",
@@ -684,6 +701,7 @@
     {
       "id": "aln-clarity-042",
       "sourceFile": "2026_Benefit_Highlights_CA_H3815_041_042_HMO_CSNP_EN_508.pdf",
+      "sourcePage": 1,
       "name": "Alignment Health Clarity (HMO C-SNP) 042",
       "carrier": "Alignment Health Plan",
       "planType": "HMO",
@@ -724,6 +742,7 @@
     {
       "id": "clever-longevity",
       "sourceFile": "CY26_SB_LGV_EN_R091125.pdf",
+      "sourcePage": 3,
       "name": "Clever Care Longevity (HMO)",
       "carrier": "Clever Care Health Plan",
       "planType": "HMO",
@@ -764,6 +783,7 @@
     {
       "id": "clever-value",
       "sourceFile": "CY26_SB_VAL_EN_R091125.pdf",
+      "sourcePage": 3,
       "name": "Clever Care Value (HMO)",
       "carrier": "Clever Care Health Plan",
       "planType": "HMO",
@@ -804,6 +824,7 @@
     {
       "id": "clever-breathe-plus",
       "sourceFile": "CY26_SB_BRP_EN_R011426.pdf",
+      "sourcePage": 3,
       "name": "Clever Care Breathe+ (HMO C-SNP)",
       "carrier": "Clever Care Health Plan",
       "planType": "HMO",
@@ -844,6 +865,7 @@
     {
       "id": "clever-total-plus",
       "sourceFile": "CY26_SB_TLP_EN_R011426.pdf",
+      "sourcePage": 3,
       "name": "Clever Care Total+ (HMO C-SNP)",
       "carrier": "Clever Care Health Plan",
       "planType": "HMO",
@@ -884,6 +906,7 @@
     {
       "id": "anthem-full-dual-advantage-aligned",
       "sourceFile": "1081748CASENABC_0228.pdf",
+      "sourcePage": 13,
       "name": "Anthem Full Dual Advantage Aligned (HMO D-SNP)",
       "carrier": "Anthem Blue Cross",
       "planType": "HMO",
@@ -925,6 +948,7 @@
     {
       "id": "anthem-select-hmo-pos",
       "sourceFile": "1083126CASENABC_0069.pdf",
+      "sourcePage": 8,
       "name": "Anthem Select (HMO-POS)",
       "carrier": "Anthem Blue Cross",
       "planType": "HMO-POS",
@@ -965,6 +989,7 @@
     {
       "id": "uhc-aarp-ca-004p",
       "sourceFile": "2026 MA Benefits UHC.pdf",
+      "sourcePage": 5,
       "name": "AARP Medicare Advantage from UHC CA-004P (HMO-POS)",
       "carrier": "UnitedHealthcare",
       "planType": "HMO-POS",
@@ -1005,6 +1030,7 @@
     {
       "id": "uhc-aarp-ca-44",
       "sourceFile": "2026 MA Benefits UHC.pdf",
+      "sourcePage": 5,
       "name": "AARP Medicare Advantage from UHC CA-44 (HMO-POS)",
       "carrier": "UnitedHealthcare",
       "planType": "HMO-POS",
@@ -1045,6 +1071,7 @@
     {
       "id": "uhc-complete-care-ca-18p",
       "sourceFile": "2026 MA Benefits UHC.pdf",
+      "sourcePage": 5,
       "name": "UHC Complete Care CA-18P (HMO-POS C-SNP)",
       "carrier": "UnitedHealthcare",
       "planType": "HMO-POS",
@@ -1085,6 +1112,7 @@
     {
       "id": "uhc-complete-care-support-ca-1ap",
       "sourceFile": "2026 MA Benefits UHC.pdf",
+      "sourcePage": 5,
       "name": "UHC Complete Care Support CA-1AP (HMO C-SNP)",
       "carrier": "UnitedHealthcare",
       "planType": "HMO",
@@ -1125,6 +1153,7 @@
     {
       "id": "uhc-aarp-ca-005p",
       "sourceFile": "2026 MA Benefits UHC.pdf",
+      "sourcePage": 11,
       "name": "AARP Medicare Advantage from UHC CA-005P (HMO-POS)",
       "carrier": "UnitedHealthcare",
       "planType": "HMO-POS",
@@ -1165,6 +1194,7 @@
     {
       "id": "uhc-aarp-ca-43",
       "sourceFile": "2026 MA Benefits UHC.pdf",
+      "sourcePage": 11,
       "name": "AARP Medicare Advantage from UHC CA-43 (HMO-POS)",
       "carrier": "UnitedHealthcare",
       "planType": "HMO-POS",
@@ -1205,6 +1235,7 @@
     {
       "id": "uhc-complete-care-ca-19p",
       "sourceFile": "2026 MA Benefits UHC.pdf",
+      "sourcePage": 11,
       "name": "UHC Complete Care CA-19P (HMO-POS C-SNP)",
       "carrier": "UnitedHealthcare",
       "planType": "HMO-POS",
@@ -1245,6 +1276,7 @@
     {
       "id": "uhc-complete-care-support-ca-2ap",
       "sourceFile": "2026 MA Benefits UHC.pdf",
+      "sourcePage": 11,
       "name": "UHC Complete Care Support CA-2AP (HMO C-SNP)",
       "carrier": "UnitedHealthcare",
       "planType": "HMO",
@@ -1285,6 +1317,7 @@
     {
       "id": "uhc-ucla-principal",
       "sourceFile": "2026-info-kit-uhmap-combined (1).pdf",
+      "sourcePage": 15,
       "name": "UCLA Health Medicare Advantage Principal Plan (HMO)",
       "carrier": "UnitedHealthcare",
       "planType": "HMO",
@@ -1325,6 +1358,7 @@
     {
       "id": "uhc-ucla-prestige",
       "sourceFile": "2026-info-kit-uhmap-combined (1).pdf",
+      "sourcePage": 15,
       "name": "UCLA Health Medicare Advantage Prestige Plan (HMO)",
       "carrier": "UnitedHealthcare",
       "planType": "HMO",
@@ -1365,6 +1399,7 @@
     {
       "id": "scan-classic",
       "sourceFile": "2026 Benefit Rollout Presentation_ Southern CA.pdf",
+      "sourcePage": 19,
       "name": "SCAN Classic (HMO)",
       "carrier": "SCAN Health Plan",
       "planType": "HMO",
@@ -1405,6 +1440,7 @@
     {
       "id": "scan-prime",
       "sourceFile": "2026 Benefit Rollout Presentation_ Southern CA.pdf",
+      "sourcePage": 19,
       "name": "SCAN Prime (HMO)",
       "carrier": "SCAN Health Plan",
       "planType": "HMO",
@@ -1445,6 +1481,7 @@
     {
       "id": "scan-venture",
       "sourceFile": "2026 Benefit Rollout Presentation_ Southern CA.pdf",
+      "sourcePage": 19,
       "name": "SCAN Venture (HMO)",
       "carrier": "SCAN Health Plan",
       "planType": "HMO",
@@ -1485,6 +1522,7 @@
     {
       "id": "scan-affirm",
       "sourceFile": "2026 Benefit Rollout Presentation_ Southern CA.pdf",
+      "sourcePage": 19,
       "name": "SCAN Affirm (HMO, Tailored)",
       "carrier": "SCAN Health Plan",
       "planType": "HMO",
@@ -1525,6 +1563,7 @@
     {
       "id": "scan-inspired",
       "sourceFile": "2026 Benefit Rollout Presentation_ Southern CA.pdf",
+      "sourcePage": 19,
       "name": "SCAN Inspired (HMO, Tailored for Women)",
       "carrier": "SCAN Health Plan",
       "planType": "HMO",
@@ -1565,6 +1604,7 @@
     {
       "id": "scan-allied",
       "sourceFile": "2026 Benefit Rollout Presentation_ Southern CA.pdf",
+      "sourcePage": 19,
       "name": "SCAN Allied (HMO, Astrana)",
       "carrier": "SCAN Health Plan",
       "planType": "HMO",
@@ -1605,6 +1645,7 @@
     {
       "id": "scan-essential-savings",
       "sourceFile": "2026 Benefit Rollout Presentation_ Southern CA.pdf",
+      "sourcePage": 19,
       "name": "SCAN Essential Savings (HMO, Astrana)",
       "carrier": "SCAN Health Plan",
       "planType": "HMO",
@@ -1645,6 +1686,7 @@
     {
       "id": "scan-desert-choice",
       "sourceFile": "2026 Benefit Rollout Presentation_ Southern CA.pdf",
+      "sourcePage": 19,
       "name": "SCAN Desert Choice (HMO, Heritage)",
       "carrier": "SCAN Health Plan",
       "planType": "HMO",
@@ -1685,6 +1727,7 @@
     {
       "id": "scan-alta",
       "sourceFile": "2026 Benefit Rollout Presentation_ Southern CA.pdf",
+      "sourcePage": 19,
       "name": "SCAN Alta (HMO)",
       "carrier": "SCAN Health Plan",
       "planType": "HMO",
@@ -1725,6 +1768,7 @@
     {
       "id": "scan-select-ucsd",
       "sourceFile": "2026 Benefit Rollout Presentation_ Southern CA.pdf",
+      "sourcePage": 19,
       "name": "SCAN Select (HMO, UCSD)",
       "carrier": "SCAN Health Plan",
       "planType": "HMO",
@@ -1765,6 +1809,7 @@
     {
       "id": "scan-balance-csnp",
       "sourceFile": "2026 Benefit Rollout Presentation_ Southern CA.pdf",
+      "sourcePage": 19,
       "name": "SCAN Balance (HMO C-SNP)",
       "carrier": "SCAN Health Plan",
       "planType": "HMO",
@@ -1805,6 +1850,7 @@
     {
       "id": "scan-strive-csnp",
       "sourceFile": "2026 Benefit Rollout Presentation_ Southern CA.pdf",
+      "sourcePage": 19,
       "name": "SCAN Strive (HMO C-SNP)",
       "carrier": "SCAN Health Plan",
       "planType": "HMO",
@@ -1845,6 +1891,7 @@
     {
       "id": "scan-connections-dsnp",
       "sourceFile": "2026 Benefit Rollout Presentation_ Southern CA.pdf",
+      "sourcePage": 19,
       "name": "SCAN Connections (HMO D-SNP / FIDE-SNP)",
       "carrier": "SCAN Health Plan",
       "planType": "HMO",
@@ -1886,6 +1933,7 @@
     {
       "id": "humana-gold-plus-021",
       "sourceFile": "H5619021000SB26.pdf",
+      "sourcePage": 4,
       "name": "Humana Gold Plus H5619-021 (HMO)",
       "carrier": "Humana",
       "planType": "HMO",
@@ -1937,6 +1985,7 @@
     {
       "id": "humana-usaa-honor-giveback-121",
       "sourceFile": "H5619121000SB26.pdf",
+      "sourcePage": 4,
       "name": "Humana USAA Honor Giveback (HMO) H5619-121",
       "carrier": "Humana",
       "planType": "HMO",
@@ -1998,6 +2047,7 @@
     {
       "id": "humana-gold-plus-giveback-146",
       "sourceFile": "H5619146000SB26.pdf",
+      "sourcePage": 4,
       "name": "Humana Gold Plus Giveback H5619-146 (HMO)",
       "carrier": "Humana",
       "planType": "HMO",
