@@ -1,13 +1,14 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import LoginForm from "@/components/LoginForm";
+import { safeNext } from "@/app/login/actions";
 import { getBrokerContext } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function SignupPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const { next } = await searchParams;
-  const dest = next && next.startsWith("/") && !next.startsWith("//") ? next : "/";
+  const dest = await safeNext(next ?? null);
 
   // Already signed in → skip the form.
   if (await getBrokerContext()) redirect(dest);

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDataStore } from "@/lib/data";
 import { recommendAcrossHorizons } from "@/lib/engine/horizonRecommendation";
-import { describeReason, POSITIVE_REASONS, type ReasonFacts } from "@/lib/engine/reasons";
+import { citationFor, describeReason, POSITIVE_REASONS, type ReasonFacts } from "@/lib/engine/reasons";
 import { buildRulesContext } from "@/lib/engine/rules";
 import { getSessionStore } from "@/lib/session/store";
 import { CONDITION_OPTIONS } from "@/lib/intake/options";
@@ -18,6 +18,7 @@ const meta = (p: Plan) => ({
   name: p.name,
   carrier: p.carrier,
   planType: p.planType,
+  snpType: p.snpType,
   smgSupported: p.smgSupported,
   isScan: p.isScan,
   isCompetitor: p.isCompetitor,
@@ -46,6 +47,11 @@ const buildHorizonFacts = (
   const requiredProviderNames = profile.providerConstraints
     .filter((c) => c.hardRequirement)
     .map((c) => (c.systemId ? ctx.systemsById.get(c.systemId)?.name ?? c.label : c.label));
+  const drugTierSummary = ([1, 2, 3, 4, 5, 6] as const)
+    .map((t) => ({ t, d: plan.benefits.drugTierDisplay[t] }))
+    .filter((x) => Boolean(x.d))
+    .map((x) => `T${x.t} ${x.d}`)
+    .join(" · ");
   return {
     currentMedNames: medNames,
     currentMedCount: profile.medications.length,
@@ -59,6 +65,10 @@ const buildHorizonFacts = (
     networkGapRate: undefined,
     catastrophicRate: exposure?.catastrophicRate,
     topUncoveredDrug: exposure?.topUncoveredDrugs[0],
+    sourceFile: plan.sourceFile,
+    sourcePage: plan.sourcePage,
+    annualOOPMax: plan.benefits.annualOOPMax,
+    drugTierSummary: drugTierSummary || undefined,
   };
 };
 
@@ -108,6 +118,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
               code,
               text: describeReason(code, facts),
               positive: POSITIVE_REASONS.has(code),
+              citation: citationFor(code, facts),
             })),
             exposure: h.representativeExposure,
           }

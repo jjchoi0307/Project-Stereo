@@ -1,4 +1,7 @@
+import type { ConditionFlag, YesNoUnknown } from "@/lib/domain";
+import { providerSystems } from "@/lib/data/fixtures/providers";
 import type { IntakeFormValues } from "./types";
+import { CONDITION_OPTIONS, FAMILY_HISTORY_CONDITIONS, GENDER_OPTIONS } from "./options";
 
 export interface IntakeValidation {
   ok: boolean;
@@ -7,6 +10,24 @@ export interface IntakeValidation {
 }
 
 const isInt = (s: string) => /^\d+$/.test(s.trim());
+
+// Controlled-vocab + bound constants (server-side; the public token endpoint
+// must reject arbitrary/huge payloads — storage DoS + junk into engine/LLM).
+const CONDITION_VALUES = new Set<string>(CONDITION_OPTIONS.map((o) => o.value));
+const FAMILY_CONDITION_VALUES = new Set<string>(FAMILY_HISTORY_CONDITIONS.map((o) => o.value));
+const GENDER_VALUES = new Set<string>(GENDER_OPTIONS.map((o) => o.value));
+const YES_NO_UNKNOWN = new Set<YesNoUnknown>(["yes", "no", "unknown"]);
+const PROVIDER_SYSTEM_IDS = new Set<string>(providerSystems.map((s) => s.id));
+
+// Length caps.
+const MAX_MEDICATIONS = 50;
+const MAX_MEDICATION_LEN = 200;
+const MAX_CONDITIONS = 40;
+const MAX_FAMILY_HISTORY = 40;
+const MAX_MUST_KEEP = 20;
+const MAX_FREE_TEXT = 2000;
+const MAX_ZIP = 10;
+const MAX_COUNTY = 80;
 
 /**
  * Shared client + server validation. Required by the brief: age, region, and at
@@ -43,6 +64,74 @@ export function validateIntake(v: IntakeFormValues): IntakeValidation {
   }
   for (const k of ["acupunctureVisits12mo", "specialistVisits12mo", "priorYearInpatientEvents"] as const) {
     if (v[k].trim() && !isInt(v[k])) fields[k] = "Whole number only.";
+  }
+
+  // ── Controlled vocabulary + bounds (server-side hardening) ────────────────
+  // Defensive guards: the public token endpoint may pass arbitrary JSON, so
+  // treat anything non-conforming as invalid rather than trusting the shape.
+
+  // gender — "" or a known Gender
+  if (v.gender !== "" && !GENDER_VALUES.has(v.gender as string)) {
+    fields.gender = "Select a valid gender.";
+  }
+
+  // medications — array, count cap, per-string length cap
+  if (!Array.isArray(v.medications)) {
+    fields.medications = "Medications must be a list.";
+  } else if (v.medications.length > MAX_MEDICATIONS) {
+    fields.medications = `Too many medications (max ${MAX_MEDICATIONS}).`;
+  } else if (v.medications.some((m) => typeof m !== "string" || m.length > MAX_MEDICATION_LEN)) {
+    fields.medications = `Each medication must be ${MAX_MEDICATION_LEN} characters or fewer.`;
+  }
+
+  // conditions — array, count cap, known ConditionFlag values only
+  if (!Array.isArray(v.conditions)) {
+    fields.conditions = "Conditions must be a list.";
+  } else if (v.conditions.length > MAX_CONDITIONS) {
+    fields.conditions = `Too many conditions (max ${MAX_CONDITIONS}).`;
+  } else if (v.conditions.some((c) => !CONDITION_VALUES.has(c as ConditionFlag))) {
+    fields.conditions = "Unrecognized condition.";
+  }
+
+  // conditionsFreeText — string length cap
+  if (typeof v.conditionsFreeText !== "string") {
+    fields.conditionsFreeText = "Invalid condition notes.";
+  } else if (v.conditionsFreeText.length > MAX_FREE_TEXT) {
+    fields.conditionsFreeText = `Condition notes must be ${MAX_FREE_TEXT} characters or fewer.`;
+  }
+
+  // familyHistory — array, count cap, each {condition ∈ vocab, status ∈ y/n/u}
+  if (!Array.isArray(v.familyHistory)) {
+    fields.familyHistory = "Family history must be a list.";
+  } else if (v.familyHistory.length > MAX_FAMILY_HISTORY) {
+    fields.familyHistory = `Too many family-history entries (max ${MAX_FAMILY_HISTORY}).`;
+  } else if (
+    v.familyHistory.some(
+      (f) =>
+        !f ||
+        typeof f !== "object" ||
+        !FAMILY_CONDITION_VALUES.has(f.condition as ConditionFlag) ||
+        !YES_NO_UNKNOWN.has(f.status as YesNoUnknown),
+    )
+  ) {
+    fields.familyHistory = "Invalid family-history entry.";
+  }
+
+  // mustKeepSystemIds — array, count cap, known provider-system ids only
+  if (!Array.isArray(v.mustKeepSystemIds)) {
+    fields.mustKeepSystemIds = "Provider list must be a list.";
+  } else if (v.mustKeepSystemIds.length > MAX_MUST_KEEP) {
+    fields.mustKeepSystemIds = `Too many required providers (max ${MAX_MUST_KEEP}).`;
+  } else if (v.mustKeepSystemIds.some((id) => !PROVIDER_SYSTEM_IDS.has(id as string))) {
+    fields.mustKeepSystemIds = "Unrecognized provider system.";
+  }
+
+  // zip / county — string length caps
+  if (typeof v.zip !== "string" || v.zip.length > MAX_ZIP) {
+    fields.zip = `ZIP must be ${MAX_ZIP} characters or fewer.`;
+  }
+  if (typeof v.county !== "string" || v.county.length > MAX_COUNTY) {
+    fields.county = `County must be ${MAX_COUNTY} characters or fewer.`;
   }
 
   return { ok: Object.keys(fields).length === 0 && !form, fields, form };

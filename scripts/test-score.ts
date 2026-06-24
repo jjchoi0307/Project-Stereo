@@ -1,15 +1,12 @@
 /**
  * Scoring checks. Run: npm run test:score
- *   - total = expectedFit − downsideRisk + preferenceContribution (consistency)
- *   - preferenceContribution is ≤ cap and 0 for non-SMG plans
- *   - BOUNDED PREFERENCE: the preference-weighted top pick is never more than
- *     `preference.max` below the pure-fit top on pure fit (so preference can't
- *     promote a clearly worse plan)
+ *   - total = expectedFit − downsideRisk (pure fit; NO carrier preference)
+ *   - preferenceContribution is 0 for every plan (SMG/SCAN included) — no bias
+ *   - the ranking is identical whether or not preference weighting is requested
  *   - the top plan carries at least one positive reason
  */
 
 import { getDataStore } from "@/lib/data";
-import { SCORING } from "@/lib/engine/config";
 import { normalizeProfile } from "@/lib/engine/normalize";
 import { POSITIVE_REASONS } from "@/lib/engine/reasons";
 import { applyRules, buildRulesContext } from "@/lib/engine/rules";
@@ -43,41 +40,34 @@ async function main() {
     excluded: rules.log.filter((e) => e.severity === "exclude"),
   };
   const on = score({ ...common, preferenceWeighting: true });
-  const off = score({ ...common, preferenceWeighting: false }); // total === pure fit
+  const off = score({ ...common, preferenceWeighting: false });
 
-  console.log("\nRanked (preference ON):");
+  console.log("\nRanked (pure fit):");
   for (const ps of on.ranked) {
     const plan = plans.find((p) => p.id === ps.planId)!;
     console.log(
       `  ${(planName.get(ps.planId) ?? ps.planId).padEnd(34)} total ${String(ps.total).padStart(6)} ` +
-        `(fit ${ps.expectedFit} − risk ${ps.downsideRisk} + pref ${ps.preferenceContribution})` +
+        `(fit ${ps.expectedFit} − risk ${ps.downsideRisk})` +
         `${plan.smgSupported ? "  [SMG]" : ""}`,
     );
   }
-  console.log(`preferenceChangedTop: ${on.preferenceChangedTop}`);
 
-  // consistency
+  // consistency: total = expectedFit − downsideRisk, no preference term
   for (const ps of on.ranked) {
     expect(
-      Math.abs(ps.total - (ps.expectedFit - ps.downsideRisk + ps.preferenceContribution)) < 0.05,
-      `${ps.planId}: total != expectedFit - downsideRisk + preference`,
+      Math.abs(ps.total - (ps.expectedFit - ps.downsideRisk)) < 0.05,
+      `${ps.planId}: total != expectedFit - downsideRisk`,
     );
-    expect(ps.preferenceContribution <= SCORING.preference.max, `${ps.planId}: preference over cap`);
-    const plan = plans.find((p) => p.id === ps.planId)!;
-    if (!plan.smgSupported) expect(ps.preferenceContribution === 0, `${ps.planId}: non-SMG got preference`);
+    // NO carrier preference: every plan (SMG/SCAN included) gets exactly 0.
+    expect(ps.preferenceContribution === 0, `${ps.planId}: a preference was applied (should be 0)`);
   }
 
-  // bounded preference: the on-top pick can't be much worse on pure fit
-  const pureTopId = off.ranked[0].planId;
-  const pureTopFit = off.ranked[0].total;
-  const onTopId = on.ranked[0].planId;
-  const onTopPureFit = off.ranked.find((p) => p.planId === onTopId)!.total;
-  console.log(`\npure-fit top: ${planName.get(pureTopId)} (${pureTopFit})`);
-  console.log(`preference top: ${planName.get(onTopId)} (pure fit ${onTopPureFit})`);
+  // requesting "preference weighting" must NOT change the ranking — it's pure fit.
   expect(
-    onTopPureFit >= pureTopFit - SCORING.preference.max,
-    "preference promoted a plan more than the cap below pure-fit top",
+    on.ranked.map((p) => p.planId).join(",") === off.ranked.map((p) => p.planId).join(","),
+    "preference weighting changed the ranking (should be a no-op — pure fit)",
   );
+  expect(on.preferenceChangedTop === false, "preferenceChangedTop should always be false (no preference)");
 
   // top plan has a positive reason
   expect(
@@ -90,7 +80,7 @@ async function main() {
     for (const e of errors) console.error("  - " + e);
     process.exit(1);
   }
-  console.log("\n✓ scoring is consistent and the preference weight is bounded.");
+  console.log("\n✓ scoring is consistent and purely fit-based (no carrier preference).");
 }
 
 main();

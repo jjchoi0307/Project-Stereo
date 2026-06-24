@@ -73,18 +73,26 @@ async function defaultOrgId(svc: ReturnType<typeof serviceClient>): Promise<stri
 
 /** The broker's agency org: matched case-insensitively by name, created if new. */
 async function resolveOrgId(svc: ReturnType<typeof serviceClient>, agency: string | undefined): Promise<string> {
-  if (!agency) return defaultOrgId(svc);
+  const name = agency?.trim();
+  if (!name) return defaultOrgId(svc);
+  // Escape LIKE metacharacters so this is a LITERAL case-insensitive match, not a
+  // pattern. Without this, agency="%" would ilike-match an ARBITRARY existing org
+  // (the org is the RLS tenant boundary) — a cross-tenant PHI breach.
+  const escaped = name.replace(/([\\%_])/g, "\\$1");
   const find = async () => {
-    const { data } = await svc.from("organizations").select("id").ilike("name", agency).limit(1);
+    const { data } = await svc.from("organizations").select("id").ilike("name", escaped).limit(1);
     return data?.[0]?.id as string | undefined;
   };
   const found = await find();
   if (found) return found;
-  const { data: created } = await svc.from("organizations").insert({ name: agency }).select("id").single();
+  // Atomic find-or-create: a UNIQUE index on lower(name) (migration 0005) means a
+  // concurrent first-signup for the same new agency makes one insert lose on the
+  // unique violation — re-select the winner's row rather than failing.
+  const { data: created, error } = await svc.from("organizations").insert({ name }).select("id").single();
   if (created) return created.id as string;
-  const raced = await find(); // two first-signups for the same new agency
+  const raced = await find();
   if (raced) return raced;
-  throw new Error("agency org provisioning failed");
+  throw error ?? new Error("agency org provisioning failed");
 }
 
 async function resolveBroker(

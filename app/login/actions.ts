@@ -8,7 +8,10 @@ export interface AuthState {
   notice?: string;
 }
 
-function safeNext(next: FormDataEntryValue | null): string {
+// Shared open-redirect guard. Async because this is a "use server" module: every
+// export is registered as a server action, which must be async. Behavior is the
+// same same-app-relative-path check used inline elsewhere.
+export async function safeNext(next: FormDataEntryValue | null): Promise<string> {
   // Only allow same-app relative paths (no protocol-relative // or absolute URLs).
   const n = typeof next === "string" ? next : "";
   return n.startsWith("/") && !n.startsWith("//") ? n : "/";
@@ -23,7 +26,7 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return { error: error.message };
 
-  redirect(safeNext(formData.get("next")));
+  redirect(await safeNext(formData.get("next")));
 }
 
 export async function signUp(_prev: AuthState, formData: FormData): Promise<AuthState> {
@@ -54,7 +57,7 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   if (!data.session) {
     return { notice: "Account created. Check your email to confirm, then sign in." };
   }
-  redirect(safeNext(formData.get("next")));
+  redirect(await safeNext(formData.get("next")));
 }
 
 /**

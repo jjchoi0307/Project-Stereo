@@ -68,10 +68,16 @@ interface ResolvedSession {
   brokerId?: string;
   orgId?: string;
   clientLabel?: string;
-  profile?: ClientProfileInput;
 }
 
-/** Patient-side (anonymous): resolve a token to its session, or null if invalid/expired. */
+/**
+ * Patient-side (anonymous): resolve a token to its session, or null if
+ * invalid/expired. Returns ONLY what the intake FORM needs to render — the
+ * session ids and a non-PHI client label. It deliberately does NOT return any
+ * previously-captured clinical `profile`: the anonymous link holder is not
+ * authorized to read prior PHI, only to write the form. The submit path fetches
+ * the prior profile itself (server-side) for provenance merging.
+ */
 export async function resolvePatientIntake(token: string): Promise<ResolvedSession | null> {
   if (supabaseMode()) {
     const svc = serviceClient();
@@ -82,18 +88,32 @@ export async function resolvePatientIntake(token: string): Promise<ResolvedSessi
       .maybeSingle();
     if (!data) return null;
     if (data.intake_token_expires_at && new Date(data.intake_token_expires_at).getTime() < Date.now()) return null;
-    const { data: p } = await svc.from("profiles").select("data").eq("session_id", data.id).maybeSingle();
     logAccess({ actor: "patient", action: "intake.resolve", sessionId: data.id as string });
     return {
       sessionId: data.id as string,
       brokerId: data.broker_id as string,
       orgId: data.org_id as string,
       clientLabel: (data.client_label as string | null) ?? undefined,
-      profile: (p?.data as ClientProfileInput) ?? undefined,
     };
   }
   const s = await (await getSessionStore()).get(token);
-  return s ? { sessionId: s.id, clientLabel: s.clientLabel, profile: s.profile } : null;
+  return s ? { sessionId: s.id, clientLabel: s.clientLabel } : null;
+}
+
+/**
+ * Fetch the previously-captured profile for provenance merging on submit. This is
+ * a SERVER-ONLY read kept out of the anonymous resolver so prior PHI is never
+ * echoed back to the link holder.
+ */
+async function fetchPriorProfile(sessionId: string): Promise<ClientProfileInput | undefined> {
+  if (supabaseMode()) {
+    const svc = serviceClient();
+    const { data, error } = await svc.from("profiles").select("data").eq("session_id", sessionId).maybeSingle();
+    if (error) console.error("patient intake prior-profile fetch failed:", error.code, error.message);
+    return (data?.data as ClientProfileInput) ?? undefined;
+  }
+  const s = await (await getSessionStore()).get(sessionId);
+  return s?.profile;
 }
 
 export type PatientSubmitResult =
@@ -119,7 +139,8 @@ export async function submitPatientIntake(token: string, values: IntakeFormValue
     drugs,
     providerSystems,
   });
-  if (resolved.profile) profile = mergeProvenance(resolved.profile, profile, "patient");
+  const prior = await fetchPriorProfile(resolved.sessionId);
+  if (prior) profile = mergeProvenance(prior, profile, "patient");
 
   if (supabaseMode()) {
     const svc = serviceClient();
@@ -135,7 +156,7 @@ export async function submitPatientIntake(token: string, values: IntakeFormValue
       { onConflict: "session_id" },
     );
     if (pErr) {
-      console.error("patient intake profile upsert failed:", pErr);
+      console.error("patient intake profile upsert failed:", pErr.code, pErr.message);
       return { ok: false, status: 500, error: "Could not save your facts. Please try again." };
     }
     // Mark complete AND burn the capability token (single-use): a leaked or
@@ -150,7 +171,7 @@ export async function submitPatientIntake(token: string, values: IntakeFormValue
       })
       .eq("id", resolved.sessionId);
     if (sErr) {
-      console.error("patient intake session update failed:", sErr);
+      console.error("patient intake session update failed:", sErr.code, sErr.message);
       return { ok: false, status: 500, error: "Could not save your facts. Please try again." };
     }
     logAccess({ actor: "patient", action: "intake.submit", sessionId: resolved.sessionId });

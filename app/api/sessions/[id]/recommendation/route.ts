@@ -12,6 +12,7 @@ const meta = (p: Plan) => ({
   name: p.name,
   carrier: p.carrier,
   planType: p.planType,
+  snpType: p.snpType,
   smgSupported: p.smgSupported,
   isScan: p.isScan,
   isCompetitor: p.isCompetitor,
@@ -55,6 +56,7 @@ const buildReasonFacts = (
     isLowestCatastrophic: cross.isLowestCatastrophic,
     eligibleCount: cross.eligibleCount,
     sourceFile: plan.sourceFile,
+    sourcePage: plan.sourcePage,
     annualOOPMax: plan.benefits.annualOOPMax,
     drugTierSummary: drugTierSummary || undefined,
   };

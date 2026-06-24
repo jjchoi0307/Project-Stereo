@@ -160,6 +160,7 @@ export interface Plan {
   dsnpDualEligibility?: string | null; // dual-eligibility note for a D-SNP
   dataSource: DataSource;
   sourceFile: string; // source health-plan PDF filename (UI footnote citation)
+  sourcePage: number; // PDF page where this plan's benefits summary begins (deep-link target)
 
   // Sourcing / preference flags (read by the bounded, logged preferenceWeight).
   smgSupported: boolean; // SMG sells/partners on this plan (all real plans here)

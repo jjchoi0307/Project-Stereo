@@ -4,14 +4,16 @@ import { useEffect, useState } from "react";
 import RecommendationView from "./RecommendationView";
 import { HORIZON_REC, SCORING } from "@/lib/engine/config";
 import Spinner from "@/components/ui/Spinner";
+import PlanKind from "@/components/ui/PlanKind";
+import { Ref, Sources, type Citation } from "@/components/ui/Citation";
 
 // ── Shapes returned by the routes ───────────────────────────────────────────
 interface PlanMeta {
-  id: string; name: string; carrier: string; planType: string;
+  id: string; name: string; carrier: string; planType: string; snpType?: string;
   smgSupported: boolean; isScan: boolean; isCompetitor: boolean;
   monthlyPremium: number; annualOOPMax: number;
 }
-interface Reason { code: string; text: string; positive: boolean }
+interface Reason { code: string; text: string; positive: boolean; citation?: Citation | null }
 interface Exposure {
   mean: number; worst: number; medCoverageRate: number; catastrophicRate: number;
   topUncoveredDrugs: { name: string; rate: number }[];
@@ -220,7 +222,10 @@ function HorizonPanel({ horizon: h, todayName, narrative }: { horizon: HorizonRe
                 <div className="mb-1.5 text-[11px] font-bold uppercase tracking-[.05em] text-accent">
                   Wins the most {h.years}-year futures
                 </div>
-                <h3 className="mb-1 text-xl font-semibold">{rec.plan.name}</h3>
+                <div className="mb-1 flex flex-wrap items-center gap-2.5">
+                  <h3 className="text-xl font-semibold">{rec.plan.name}</h3>
+                  <PlanKind snpType={rec.plan.snpType} />
+                </div>
                 <div className="text-[12.5px] text-slate-500">
                   {rec.plan.carrier} · {rec.plan.planType} · {premiumLabel(rec.plan.monthlyPremium)} ·{" "}
                   {usd(rec.plan.annualOOPMax)} OOP max
@@ -234,24 +239,37 @@ function HorizonPanel({ horizon: h, todayName, narrative }: { horizon: HorizonRe
               </div>
             </div>
 
-            <div className="my-4 grid grid-cols-2 gap-x-6 gap-y-2">
-              <div>
-                {rec.reasons.filter((r) => r.positive).map((r) => (
-                  <div key={r.code} className="mb-[5px] flex gap-2 text-[12.5px] leading-[1.45] text-slate-700">
-                    <span className="flex-none text-emerald-600">✓</span>
-                    {r.text}
+            {(() => {
+              const positives = rec.reasons.filter((r) => r.positive);
+              const cited = positives.filter((r) => r.citation);
+              const refOf = (r: Reason) => {
+                const i = cited.indexOf(r);
+                return i >= 0 ? i + 1 : null;
+              };
+              return (
+                <>
+                  <div className="my-4 grid grid-cols-2 gap-x-6 gap-y-2">
+                    <div>
+                      {positives.map((r) => (
+                        <div key={r.code} className="mb-[5px] flex gap-2 text-[12.5px] leading-[1.45] text-slate-700">
+                          <span className="flex-none text-emerald-600">✓</span>
+                          <span>{r.text}<Ref n={refOf(r)} /></span>
+                        </div>
+                      ))}
+                    </div>
+                    {rec.exposure && (
+                      <div className="grid grid-cols-2 content-start gap-2.5">
+                        <HeroStat label="Mean / yr">{usd(rec.exposure.mean)}</HeroStat>
+                        <HeroStat label="Worst / yr">{usd(rec.exposure.worst)}</HeroStat>
+                        <HeroStat label="Meds covered">{pct(rec.exposure.medCoverageRate)}</HeroStat>
+                        <HeroStat label="Catastrophic">{pct(rec.exposure.catastrophicRate)}</HeroStat>
+                      </div>
+                    )}
                   </div>
-                ))}
-              </div>
-              {rec.exposure && (
-                <div className="grid grid-cols-2 content-start gap-2.5">
-                  <HeroStat label="Mean / yr">{usd(rec.exposure.mean)}</HeroStat>
-                  <HeroStat label="Worst / yr">{usd(rec.exposure.worst)}</HeroStat>
-                  <HeroStat label="Meds covered">{pct(rec.exposure.medCoverageRate)}</HeroStat>
-                  <HeroStat label="Catastrophic">{pct(rec.exposure.catastrophicRate)}</HeroStat>
-                </div>
-              )}
-            </div>
+                  {cited.length > 0 && <Sources cited={cited} />}
+                </>
+              );
+            })()}
           </div>
 
           {/* Win-share distribution */}
@@ -438,7 +456,6 @@ const WEIGHT_DEFS: { key: keyof typeof SCORING.weights; label: string; def: stri
  */
 function CriteriaPanel() {
   const W = SCORING.weights;
-  const P = SCORING.preference;
   return (
     <details className="mb-6 rounded-xl border border-slate-200 bg-white p-[18px]">
       <summary className="flex cursor-pointer list-none items-center gap-2 text-[13px] font-semibold text-ink">
@@ -472,19 +489,11 @@ function CriteriaPanel() {
           </div>
         </div>
 
-        <div>
-          <div className="mb-1 text-[11px] font-bold uppercase tracking-[.04em] text-slate-500">3 · Plan preference (bounded &amp; disclosed)</div>
-          The only non-fit factor is a small tiebreak for SMG-supported plans (+{P.smgSupported}, +{P.scanBonus} more
-          for SCAN), <strong>hard-capped at {P.max}</strong> and logged to every audit record. Because it&apos;s capped,
-          it can only reorder plans already within {P.max} points of each other — it can never lift a worse-fit plan
-          over a better one. Toggle <strong>“Off — pure fit”</strong> on the Today tab to remove it and verify.
-        </div>
-
         <div className="rounded-lg border border-[#ccebe6] bg-[#f6fdfb] p-3 text-[12px] text-slate-600">
-          <strong className="text-accent">On SCAN:</strong> the score is plan-agnostic — nothing here is tuned to favor
-          a carrier. In practice SCAN is eligible for most clients and a top-3 fit about half the time, because its
-          $0-premium / low out-of-pocket-max design and SMG-network inclusion score well on the facts above — an
-          earned, reproducible outcome, not a thumb on the scale. Flip to pure fit any time to confirm it.
+          <strong className="text-accent">No plan preference.</strong> Eligible plans are ranked purely on the fit
+          score above. The tool applies <strong>no carrier or plan preference of any kind</strong> — the ranking is
+          determined only by how each plan fits the client&apos;s captured facts, and is fully reproducible from the
+          audit record.
         </div>
       </div>
     </details>

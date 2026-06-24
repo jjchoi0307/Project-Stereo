@@ -50,7 +50,7 @@ export function score(input: {
   excluded: ExclusionLogEntry[]; // hard-exclusion entries for removed plans
   preferenceWeighting: boolean;
 }): ScoringResult {
-  const { profile, normalized, survivingPlans, simSummaries, rulesLog, excluded, preferenceWeighting } = input;
+  const { profile, normalized, survivingPlans, simSummaries, rulesLog, excluded } = input;
 
   if (survivingPlans.length === 0) {
     return {
@@ -58,7 +58,7 @@ export function score(input: {
       ranked: [],
       excluded,
       topPlanId: null,
-      preferenceWeightingEnabled: preferenceWeighting,
+      preferenceWeightingEnabled: false,
       preferenceChangedTop: false,
     };
   }
@@ -110,20 +110,15 @@ export function score(input: {
     const expectedFit = coverageFit + networkFit + medicationFit - mismatchPenalty;
     const downsideRisk = catastrophicDownside;
 
-    let preferenceContribution = 0;
-    if (preferenceWeighting && plan.smgSupported) {
-      preferenceContribution = Math.min(
-        SCORING.preference.max,
-        SCORING.preference.smgSupported + (plan.isScan ? SCORING.preference.scanBonus : 0),
-      );
-    }
+    // No carrier preference: ranking is 100% pure fit (no SMG/SCAN tiebreak).
+    const preferenceContribution = 0;
 
     // Round components first, then derive totals from the rounded values so the
     // arithmetic a broker (or auditor) sees adds up exactly.
     const expectedFitR = round(expectedFit);
     const downsideRiskR = round(downsideRisk);
     const pureTotal = round(expectedFitR - downsideRiskR);
-    const total = round(expectedFitR - downsideRiskR + preferenceContribution);
+    const total = pureTotal;
 
     // Reason codes (positives first, then caveats).
     const reasonCodes: ReasonCode[] = [];
@@ -155,14 +150,13 @@ export function score(input: {
         medicationFit: { value: medicationFit, max: W.medicationFit },
         mismatchPenalty: { value: mismatchPenalty, max: W.mismatchPenalty },
         catastrophicDownside: { value: catastrophicDownside, max: W.catastrophicDownside },
-        preference: preferenceContribution,
+        preference: 0,
       },
       pureTotal,
     };
   });
 
   const ranked = [...scores].sort((a, b) => b.total - a.total);
-  const pureTop = [...scores].sort((a, b) => b.pureTotal - a.pureTotal)[0];
 
   const strip = ({ pureTotal: _pure, ...rest }: PlanScore & { pureTotal: number }): PlanScore => rest;
 
@@ -171,8 +165,9 @@ export function score(input: {
     ranked: ranked.map(strip),
     excluded,
     topPlanId: ranked[0]?.planId ?? null,
-    preferenceWeightingEnabled: preferenceWeighting,
-    preferenceChangedTop: preferenceWeighting && ranked[0]?.planId !== pureTop?.planId,
+    // Ranking is pure fit — no carrier preference is applied.
+    preferenceWeightingEnabled: false,
+    preferenceChangedTop: false,
   };
 }
 

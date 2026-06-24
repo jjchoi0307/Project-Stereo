@@ -65,6 +65,8 @@ export interface ReasonFacts {
 
   /** Citation inputs: the source PDF + verbatim figures behind a bullet. */
   sourceFile?: string;
+  /** Page in the source PDF where the cited benefits appear (book-style footnote). */
+  sourcePage?: number | null;
   annualOOPMax?: number;
   /** Short drug-tier summary built from the plan's verbatim tier display. */
   drugTierSummary?: string;
@@ -80,6 +82,7 @@ export interface ReasonCitation {
   sourceFile: string;
   quote: string;
   kind: "document" | "computed";
+  page?: number | null;
 }
 
 /**
@@ -90,8 +93,9 @@ export interface ReasonCitation {
 export function citationFor(code: ReasonCode, facts: ReasonFacts = {}): ReasonCitation | null {
   const src = facts.sourceFile;
   if (!src) return null;
-  const doc = (quote: string): ReasonCitation => ({ sourceFile: src, quote, kind: "document" });
-  const computed = (quote: string): ReasonCitation => ({ sourceFile: src, quote, kind: "computed" });
+  const page = facts.sourcePage ?? null;
+  const doc = (quote: string): ReasonCitation => ({ sourceFile: src, quote, kind: "document", page });
+  const computed = (quote: string): ReasonCitation => ({ sourceFile: src, quote, kind: "computed", page });
   const tiers = facts.drugTierSummary;
 
   switch (code) {

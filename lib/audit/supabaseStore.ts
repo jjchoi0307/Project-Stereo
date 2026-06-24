@@ -39,10 +39,14 @@ export class SupabaseAuditStore implements AuditStore {
   }
 
   async get(id: string): Promise<AuditRecord | null> {
+    // Defense-in-depth: scope to the broker's org (and broker) in addition to
+    // RLS, so a misconfigured/absent policy can't widen reads across tenants.
     const { data } = await this.ctx.client
       .from("audit_records")
       .select("payload")
       .eq("id", id)
+      .eq("org_id", this.ctx.orgId)
+      .eq("broker_id", this.ctx.brokerId)
       .maybeSingle();
     const record = (data?.payload as AuditRecord) ?? null;
     if (record) logAccess({ actor: this.ctx.brokerId, action: "audit.read", sessionId: sessionIdOf(record) });
@@ -53,6 +57,8 @@ export class SupabaseAuditStore implements AuditStore {
     const { data } = await this.ctx.client
       .from("audit_records")
       .select("payload")
+      .eq("org_id", this.ctx.orgId)
+      .eq("broker_id", this.ctx.brokerId)
       .order("created_at", { ascending: false });
     logAccess({ actor: this.ctx.brokerId, action: "audit.list" });
     return ((data as { payload: AuditRecord }[]) ?? []).map((r) => r.payload);

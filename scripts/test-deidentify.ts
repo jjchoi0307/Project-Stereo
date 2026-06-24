@@ -13,7 +13,8 @@ import type { ClientProfileInput } from "@/lib/domain";
 const ALLOWED_KEYS = new Set([
   "age",
   "conditions",
-  "conditionsFreeText",
+  // conditionsFreeText is intentionally NOT allowed: de-identify DROPS the
+  // free-text field (it can carry identifiers), and the test enforces that drop.
   "medications",
   "heightCm",
   "weightKg",
@@ -38,7 +39,7 @@ async function main() {
     county: "COUNTYSENTINEL",
     medications: [{ raw: "Lipitor 80mg RAWMEDSENTINEL", drugId: "rx-atorvastatin", name: "atorvastatin" }],
     conditions: ["diabetes", "hypertension"],
-    conditionsFreeText: ["mild neuropathy"],
+    conditionsFreeText: ["mild neuropathy FREETEXTSENTINEL"],
     heightCm: 170,
     weightKg: 95,
     bmi: 32.9,
@@ -55,6 +56,7 @@ async function main() {
   const sentinels = [
     "IDENTITYSENTINEL", "REGIONSENTINEL", "ZIPSENTINEL", "COUNTYSENTINEL",
     "RAWMEDSENTINEL", "PROVIDERSENTINEL", "NAMESENTINEL", "2026-01-02", "female",
+    "FREETEXTSENTINEL",
   ];
   for (const s of sentinels) {
     expect(!json.includes(s), `identity value "${s}" leaked into the de-identified payload`);
