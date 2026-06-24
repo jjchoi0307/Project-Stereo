@@ -11,7 +11,7 @@ export default function PlanKind({ snpType }: { snpType?: string }) {
     ? "bg-indigo-50 text-indigo-700"
     : csnp
       ? "bg-amber-50 text-amber-700"
-      : "bg-slate-100 text-slate-600";
+      : "bg-sky-50 text-sky-700"; // MA (Medicare Advantage)
   return (
     <span className={`rounded-md px-2 py-0.5 text-[10.5px] font-semibold ${cls}`} title={dsnp ? "Dual-eligible: Medicare + Medi-Cal" : csnp ? "Chronic-condition special-needs plan" : "Medicare Advantage"}>
       {label}
