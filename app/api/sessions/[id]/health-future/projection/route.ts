@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { getDataStore } from "@/lib/data";
 import { getSessionStore } from "@/lib/session/store";
-import { simConfigured } from "@/lib/sim/env";
+import { simConfigured, SIM_MODEL } from "@/lib/sim/env";
 import { projectHealthFuture } from "@/lib/sim/healthFutureAgent";
+import { getHorizonPayload, setHorizonPayload } from "@/lib/engine/horizonCacheStore";
+import { ENGINE_VERSION } from "@/lib/version";
 
 export const dynamic = "force-dynamic";
 // Adaptive thinking over a two-horizon projection can run for a while.
@@ -22,6 +24,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (!session) return NextResponse.json({ error: "session not found" }, { status: 404 });
   if (!session.profile) return NextResponse.json({ error: "no profile yet" }, { status: 409 });
 
+  // Cache the AI projection keyed by facts-version + engine + model: it auto-runs
+  // when the recommendation opens, so without this every page view would be a
+  // ~30s Claude call + cost. Stored once per facts-version, instant thereafter.
+  const cacheKey = `projection:${id}:${session.profile.capturedAt}:${ENGINE_VERSION}:${SIM_MODEL}`;
+  const cached = await getHorizonPayload(cacheKey);
+  if (cached) return NextResponse.json(cached);
+
   if (!simConfigured()) {
     return NextResponse.json(
       {
@@ -35,6 +44,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   try {
     const drugs = await getDataStore().listDrugs();
     const result = await projectHealthFuture(session.profile, drugs);
+    await setHorizonPayload(cacheKey, result);
     return NextResponse.json(result);
   } catch (e) {
     // PHI-free: log the error name/message only, never the profile.

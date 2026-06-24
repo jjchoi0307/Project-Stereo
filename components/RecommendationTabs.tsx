@@ -86,6 +86,15 @@ export default function RecommendationTabs({ sessionId }: { sessionId: string })
     return () => { active = false; };
   }, [tab, sessionId, horizons, hStatus]);
 
+  // Auto-run the AI health-future projection when the recommendation opens
+  // ("starts at Continue to recommendation"), so it's prominent and ready rather
+  // than a button to hunt for. Cached server-side, so this is at most one call
+  // per facts-version. Skips quietly if the key isn't configured.
+  useEffect(() => {
+    generateNarrative();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Default tabs come from config (not a hardcoded [5,10]) until the data lands.
   const years = horizons?.horizons.map((h) => h.years) ?? [...HORIZON_REC.horizonsYears];
   const activeHorizon =
@@ -109,6 +118,13 @@ export default function RecommendationTabs({ sessionId }: { sessionId: string })
   return (
     <div>
       <CriteriaPanel />
+
+      <AiProjection
+        status={nStatus}
+        error={nError}
+        data={narrative}
+        onGenerate={generateNarrative}
+      />
 
       <div
         role="tablist"
@@ -140,17 +156,7 @@ export default function RecommendationTabs({ sessionId }: { sessionId: string })
           )}
           {horizons &&
             (activeHorizon ? (
-              <HorizonPanel
-                horizon={activeHorizon}
-                todayName={horizons.todayTopPlanName}
-                narrative={{
-                  status: nStatus,
-                  error: nError,
-                  horizon: narrative?.horizons.find((h) => h.years === tab),
-                  overallCaveat: narrative?.overallCaveat,
-                  onGenerate: generateNarrative,
-                }}
-              />
+              <HorizonPanel horizon={activeHorizon} todayName={horizons.todayTopPlanName} />
             ) : (
               <p className="text-sm text-slate-500">No data for this horizon.</p>
             ))}
@@ -178,15 +184,14 @@ function TabButton({ tabKey, active, onSelect, children }: { tabKey: Tab; active
   );
 }
 
-interface NarrativeProps {
+interface AiProjectionProps {
   status: "idle" | "loading" | "done" | "error";
   error: { message: string; notConfigured: boolean } | null;
-  horizon: NarrativeHorizon | undefined;
-  overallCaveat: string | undefined;
+  data: NarrativeData | null;
   onGenerate: () => void;
 }
 
-function HorizonPanel({ horizon: h, todayName, narrative }: { horizon: HorizonRec; todayName: string | null; narrative: NarrativeProps }) {
+function HorizonPanel({ horizon: h, todayName }: { horizon: HorizonRec; todayName: string | null }) {
   const rec = h.recommended;
   const hasAssumptions =
     h.projectedAssumptions.conditions.length > 0 || h.projectedAssumptions.medications.length > 0;
@@ -328,9 +333,6 @@ function HorizonPanel({ horizon: h, todayName, narrative }: { horizon: HorizonRe
           </div>
         </>
       )}
-
-      {/* AI narrative */}
-      <NarrativePanel years={h.years} {...narrative} />
     </div>
   );
 }
@@ -344,97 +346,103 @@ function HeroStat({ label, children }: { label: string; children: React.ReactNod
   );
 }
 
-function NarrativePanel({ years, status, error, horizon, overallCaveat, onGenerate }: NarrativeProps & { years: number }) {
+/**
+ * Prominent, auto-run AI health-future projection — shown at the top of the
+ * recommendation (it starts when the page opens). Renders BOTH horizons so the
+ * broker sees the projection up front instead of hunting for a button.
+ */
+function AiProjection({ status, error, data, onGenerate }: AiProjectionProps) {
   return (
-    <section className="rounded-[13px] border border-[#ddd6fe] bg-[#faf8ff] p-[22px]">
-      <div className="mb-1.5 flex items-center gap-2.5">
+    <section className="mb-6 rounded-[13px] border border-[#ddd6fe] bg-[#faf8ff] p-[22px]">
+      <div className="mb-1.5 flex flex-wrap items-center gap-2.5">
         <span className="inline-flex h-6 w-6 items-center justify-center rounded-[7px] bg-violet-600 text-[13px] text-white">
           ✦
         </span>
-        <h3 className="m-0 text-[15px] font-semibold text-violet-900">AI health-future narrative</h3>
+        <h3 className="m-0 text-[15px] font-semibold text-violet-900">AI health-future projection</h3>
         <span className="rounded-md bg-violet-100 px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-[.03em] text-violet-700">
-          Interpretive
+          Interpretive · grounded in the client&apos;s facts
         </span>
       </div>
       <p className="mb-4 text-[12.5px] leading-[1.5] text-violet-400">
-        Generated from the simulation distribution. It adds context only — it never changes the deterministic
-        recommendation or scores above.
+        Generated from the captured facts when you open the recommendation. It adds clinical context only — it
+        never changes the deterministic, auditable plan ranking below.
       </p>
 
-      {status === "idle" && (
-        <button
-          onClick={onGenerate}
-          className="rounded-[9px] bg-violet-600 px-5 py-[11px] text-[13.5px] font-semibold text-white hover:opacity-90"
-        >
-          ✦ Generate narrative
-        </button>
-      )}
       {status === "loading" && (
         <div className="flex items-center gap-2.5 text-[13.5px] font-medium text-violet-700">
           <span
             className="inline-block h-4 w-4 rounded-full"
             style={{ border: "2px solid #ddd6fe", borderTopColor: "#7c3aed", animation: "spin .7s linear infinite" }}
           />
-          Reasoning over the simulation…
+          Reasoning over the client&apos;s profile… (~30s)
         </div>
+      )}
+      {status === "idle" && (
+        <button
+          onClick={onGenerate}
+          className="rounded-[9px] bg-violet-600 px-5 py-[11px] text-[13.5px] font-semibold text-white hover:opacity-90"
+        >
+          ✦ Generate projection
+        </button>
       )}
       {status === "error" && error && (
-        <div>
-          {error.notConfigured ? (
-            <div className="rounded-[9px] border border-[#ddd6fe] bg-violet-50 px-3.5 py-3 text-[12.5px] text-violet-900">
-              The AI narrative is not enabled for this account. {error.message}
+        error.notConfigured ? (
+          <div className="rounded-[9px] border border-[#ddd6fe] bg-violet-50 px-3.5 py-3 text-[12.5px] text-violet-900">
+            The AI projection is not enabled for this account. {error.message}
+          </div>
+        ) : (
+          <div>
+            <div className="mb-3 rounded-[9px] border border-rose-200 bg-rose-50 px-3.5 py-3 text-[12.5px] text-rose-700">
+              The model call didn&apos;t complete: {error.message}
             </div>
-          ) : (
-            <>
-              <div className="mb-3 rounded-[9px] border border-rose-200 bg-rose-50 px-3.5 py-3 text-[12.5px] text-rose-700">
-                The model call didn&apos;t complete: {error.message}
-              </div>
-              <button
-                onClick={onGenerate}
-                className="rounded-[9px] bg-violet-600 px-[18px] py-2.5 text-[13px] font-semibold text-white"
-              >
-                Retry
-              </button>
-            </>
-          )}
-        </div>
-      )}
-      {status === "done" && !horizon && (
-        <p className="text-sm text-slate-500">No narrative available for this horizon.</p>
-      )}
-      {status === "done" && horizon && (
-        <div data-fade>
-          <div className="mb-3 flex items-start gap-2.5">
-            <h4 className="m-0 flex-1 text-[15px] font-semibold leading-[1.35] text-[#1f1147]">{horizon.headline}</h4>
-            <span className="flex-none whitespace-nowrap rounded-md bg-violet-100 px-2.5 py-[3px] text-[11px] font-semibold text-violet-700">
-              {horizon.confidence} confidence
-            </span>
+            <button
+              onClick={onGenerate}
+              className="rounded-[9px] bg-violet-600 px-[18px] py-2.5 text-[13px] font-semibold text-white"
+            >
+              Retry
+            </button>
           </div>
-          <p className="mb-4 text-[13px] leading-[1.6] text-[#3f3357]">{horizon.narrative}</p>
+        )
+      )}
+      {status === "done" && data && (
+        <div data-fade className="flex flex-col gap-6">
+          {data.horizons.map((horizon) => (
+            <div key={horizon.years}>
+              <div className="mb-2 text-[11px] font-bold uppercase tracking-[.05em] text-violet-500">
+                {horizon.years}-year outlook
+              </div>
+              <div className="mb-3 flex items-start gap-2.5">
+                <h4 className="m-0 flex-1 text-[15px] font-semibold leading-[1.35] text-[#1f1147]">{horizon.headline}</h4>
+                <span className="flex-none whitespace-nowrap rounded-md bg-violet-100 px-2.5 py-[3px] text-[11px] font-semibold text-violet-700">
+                  {horizon.confidence} confidence
+                </span>
+              </div>
+              <p className="mb-4 text-[13px] leading-[1.6] text-[#3f3357]">{horizon.narrative}</p>
 
-          {horizon.watchItems.length > 0 && (
-            <>
-              <div className="mb-2 text-[11px] font-bold uppercase tracking-[.04em] text-violet-400">Watch items</div>
-              <div className="mb-4 flex flex-col gap-2">
-                {horizon.watchItems.map((w, i) => (
-                  <div key={i} className="rounded-[9px] border border-violet-100 bg-white px-3.5 py-[11px]">
-                    <div className="mb-0.5 text-[13px] font-semibold text-[#1f1147]">{w.event}</div>
-                    <div className="text-xs leading-[1.45] text-violet-400">
-                      {w.rationale} <span className="font-semibold">Grounding:</span> {w.groundedIn}
-                    </div>
+              {horizon.watchItems.length > 0 && (
+                <>
+                  <div className="mb-2 text-[11px] font-bold uppercase tracking-[.04em] text-violet-400">Watch items</div>
+                  <div className="mb-4 flex flex-col gap-2">
+                    {horizon.watchItems.map((w, i) => (
+                      <div key={i} className="rounded-[9px] border border-violet-100 bg-white px-3.5 py-[11px]">
+                        <div className="mb-0.5 text-[13px] font-semibold text-[#1f1147]">{w.event}</div>
+                        <div className="text-xs leading-[1.45] text-violet-400">
+                          {w.rationale} <span className="font-semibold">Grounding:</span> {w.groundedIn}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </>
+              )}
+
+              <div className="rounded-[9px] border border-violet-100 bg-white px-3.5 py-3">
+                <div className="mb-1 text-[11px] font-bold uppercase text-violet-400">Care outlook</div>
+                <div className="text-[12.5px] leading-[1.5] text-[#3f3357]">{horizon.careOutlook}</div>
               </div>
-            </>
-          )}
-
-          <div className="rounded-[9px] border border-violet-100 bg-white px-3.5 py-3">
-            <div className="mb-1 text-[11px] font-bold uppercase text-violet-400">Care outlook</div>
-            <div className="text-[12.5px] leading-[1.5] text-[#3f3357]">{horizon.careOutlook}</div>
-          </div>
-
-          {overallCaveat && (
-            <p className="mt-3.5 text-[11px] italic leading-[1.5] text-[#a99fc4]">{overallCaveat}</p>
+            </div>
+          ))}
+          {data.overallCaveat && (
+            <p className="text-[11px] italic leading-[1.5] text-[#a99fc4]">{data.overallCaveat}</p>
           )}
         </div>
       )}

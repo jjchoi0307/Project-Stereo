@@ -31,7 +31,11 @@ export class SupabaseAuditStore implements AuditStore {
         engine_version: record.engineVersion ?? "unknown",
         payload: record,
       },
-      { onConflict: "id" },
+      // ON CONFLICT DO NOTHING — audit rows are append-only (no UPDATE RLS policy),
+      // so re-viewing the same facts-version (same id) must NOT take the upsert's
+      // update path (that hits the policy's USING check → 403). The record is
+      // deterministic by id, so skipping a duplicate is correct & idempotent.
+      { onConflict: "id", ignoreDuplicates: true },
     );
     if (error) throw error;
     logAccess({ actor: this.ctx.brokerId, action: "audit.write", sessionId: sessionIdOf(record) });
