@@ -44,6 +44,7 @@ interface SourcePlan {
   networkId: string;
   formularyId: string;
   dataSource: string;
+  sourceFile: string;
   premium: number;
   moopInNetwork: number | null;
   moopOutOfNetwork: number | null;
@@ -212,6 +213,7 @@ function toPlan(p: SourcePlan): Plan {
     snpConditions: p.snpConditions,
     dsnpDualEligibility: p.dsnpDualEligibility ?? null,
     dataSource: p.dataSource as DataSource,
+    sourceFile: p.sourceFile,
     smgSupported: true, // every plan in the SMG folder is SMG-supported
     isScan: p.carrier === "SCAN Health Plan",
     isCompetitor: false, // no competitors in SMG's supported set
