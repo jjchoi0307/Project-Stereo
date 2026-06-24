@@ -39,6 +39,28 @@ export default function LoginForm({
 
         <form action={formAction}>
           <input type="hidden" name="next" value={next} />
+          {isSignup && (
+            <>
+              <label className="mb-1.5 block text-xs font-medium text-slate-700">Your name</label>
+              <input
+                name="name"
+                type="text"
+                autoComplete="name"
+                required
+                placeholder="Jane Broker"
+                className="mb-3.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-[13.5px]"
+              />
+              <label className="mb-1.5 block text-xs font-medium text-slate-700">Broker agency</label>
+              <input
+                name="agency"
+                type="text"
+                autoComplete="organization"
+                required
+                placeholder="e.g. Pacific Senior Advisors"
+                className="mb-3.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-[13.5px]"
+              />
+            </>
+          )}
           <label className="mb-1.5 block text-xs font-medium text-slate-700">Email</label>
           <input
             name="email"

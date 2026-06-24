@@ -36,18 +36,22 @@ export const getBrokerContext = cache(async (): Promise<BrokerContext | null> =>
   } = await client.auth.getUser();
   if (!user) return null;
 
-  const broker = await resolveBroker(user.id, user.email ?? "");
+  const broker = await resolveBroker(user.id, user.email ?? "", {
+    name: (user.user_metadata?.full_name as string | undefined)?.trim() || undefined,
+    agency: (user.user_metadata?.agency as string | undefined)?.trim() || undefined,
+  });
   return { client, brokerId: broker.id, orgId: broker.org_id };
 });
 
 /**
  * Find the broker row for this auth user, provisioning it on first login.
  *
- * ACCESS MODEL (single SMG org): a first login JOINS the SMG organization. Role
- * is `broker` by default — self-signup (gated by ALLOW_SIGNUP) only ever mints
- * brokers. Org admins are added BY HAND: list their email in ORG_ADMIN_EMAILS, or
- * set role='org_admin' on their brokers row directly. Reads + writes go through
- * the service-role client (RLS-bypass, server-only): the trusted provisioning path.
+ * ACCESS MODEL (multi-agency): each agency is an organization with a hard RLS wall
+ * between agencies. A broker's first login JOINS their agency's org (found by name,
+ * created if new — the agency comes from signup metadata). Role is `broker` by
+ * default; org_admin only for emails in ORG_ADMIN_EMAILS (added by hand). Accounts
+ * with no agency (hand-seeded admins) fall back to SMG_ORG_ID / the sole org.
+ * Writes go through the service-role client (RLS-bypass, server-only).
  */
 function adminEmails(): Set<string> {
   return new Set(
@@ -58,7 +62,7 @@ function adminEmails(): Set<string> {
   );
 }
 
-/** The one SMG org all brokers join. SMG_ORG_ID pins it; falls back to the sole org. */
+/** Fallback org when no agency is given (hand-seeded admins). */
 async function defaultOrgId(svc: ReturnType<typeof serviceClient>): Promise<string> {
   const pinned = process.env.SMG_ORG_ID?.trim();
   if (pinned) return pinned;
@@ -67,7 +71,27 @@ async function defaultOrgId(svc: ReturnType<typeof serviceClient>): Promise<stri
   throw new Error("SMG_ORG_ID is not set and the organization is ambiguous");
 }
 
-async function resolveBroker(userId: string, email: string): Promise<BrokerRow> {
+/** The broker's agency org: matched case-insensitively by name, created if new. */
+async function resolveOrgId(svc: ReturnType<typeof serviceClient>, agency: string | undefined): Promise<string> {
+  if (!agency) return defaultOrgId(svc);
+  const find = async () => {
+    const { data } = await svc.from("organizations").select("id").ilike("name", agency).limit(1);
+    return data?.[0]?.id as string | undefined;
+  };
+  const found = await find();
+  if (found) return found;
+  const { data: created } = await svc.from("organizations").insert({ name: agency }).select("id").single();
+  if (created) return created.id as string;
+  const raced = await find(); // two first-signups for the same new agency
+  if (raced) return raced;
+  throw new Error("agency org provisioning failed");
+}
+
+async function resolveBroker(
+  userId: string,
+  email: string,
+  signup: { name?: string; agency?: string } = {},
+): Promise<BrokerRow> {
   const svc = serviceClient();
 
   const { data: existing } = await svc
@@ -77,13 +101,13 @@ async function resolveBroker(userId: string, email: string): Promise<BrokerRow> 
     .maybeSingle();
   if (existing) return existing as BrokerRow;
 
-  // First login → join the SMG org. Admin only if explicitly allowlisted by hand.
-  const orgId = await defaultOrgId(svc);
+  // First login → join the broker's agency org. Admin only if allowlisted by hand.
+  const orgId = await resolveOrgId(svc, signup.agency);
   const role = adminEmails().has(email.toLowerCase()) ? "org_admin" : "broker";
 
   const { data: broker, error: brokerErr } = await svc
     .from("brokers")
-    .insert({ id: userId, org_id: orgId, email, role })
+    .insert({ id: userId, org_id: orgId, email, role, name: signup.name ?? null })
     .select("id,org_id")
     .single();
   if (brokerErr || !broker) {
