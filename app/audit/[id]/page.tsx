@@ -83,13 +83,57 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
             <div className="min-w-[220px] flex-1">
               <div className="mb-1 text-sm font-semibold">Verify reproducibility</div>
               <p className="m-0 text-[12.5px] leading-[1.5] text-slate-400">
-                Re-runs the engine with the recorded seed and versions, then confirms the ranking reproduces
-                exactly.
+                {record.aiRecommendation
+                  ? "The delivered AI recommendation is preserved verbatim below, every figure cited to a plan PDF + page. Verify re-runs the deterministic eligibility + engine backbone and confirms it reproduces exactly."
+                  : "Re-runs the engine with the recorded seed and versions, then confirms the ranking reproduces exactly."}
               </p>
             </div>
             <VerifyBadge auditId={record.id} />
           </div>
         </div>
+
+        {/* AI recommendation (delivered) */}
+        {record.aiRecommendation && (
+          <Card title={`AI recommendation (delivered) · ${record.aiRecommendation.model}`}>
+            <p className="mb-3 text-[12px] leading-[1.5] text-slate-500">
+              The exact recommendation the member was shown, grounded in the 2026 plan files. Top pick:{" "}
+              <strong className="text-ink">
+                {record.aiRecommendation.topPlanId ? name(record.aiRecommendation.topPlanId) : "—"}
+              </strong>
+              .
+            </p>
+            <div className="flex flex-col gap-3">
+              {record.aiRecommendation.ranked.slice(0, 5).map((r, i) => (
+                <div key={r.planId} className="rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5">
+                  <div className="mb-1 flex items-center gap-2.5">
+                    <span className="num text-slate-400">#{i + 1}</span>
+                    <span className="text-[13px] font-semibold">{r.planName}</span>
+                    <span className="num ml-auto font-semibold text-accent">{r.fitScore}</span>
+                  </div>
+                  <ul className="flex flex-col gap-1">
+                    {r.reasons.map((reason, j) => (
+                      <li key={j} className="flex gap-2 text-[11.5px] leading-[1.45] text-slate-600">
+                        <span className={reason.positive ? "text-emerald-600" : "text-amber-600"}>
+                          {reason.positive ? "✓" : "⚑"}
+                        </span>
+                        <span>
+                          {reason.text}
+                          {reason.citation && (
+                            <span className="ml-1 italic text-slate-400">
+                              [{reason.citation.sourceFile}
+                              {reason.citation.sourcePage ? ` p.${reason.citation.sourcePage}` : ""}: “
+                              {reason.citation.quote}”]
+                            </span>
+                          )}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
 
         {/* Snapshot grid */}
         <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -142,8 +186,8 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
           )}
         </Card>
 
-        {/* Per-plan scores */}
-        <Card title="Per-plan scores & ranking">
+        {/* Per-plan scores (deterministic engine backbone) */}
+        <Card title="Deterministic engine backbone · per-plan scores">
           <table className="w-full border-collapse text-[12.5px]">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-[.03em] text-slate-500">

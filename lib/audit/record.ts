@@ -8,7 +8,7 @@
  * the seeded plan data through the shared engine pipeline.
  */
 
-import type { AuditRecord, ClientProfileInput } from "@/lib/domain";
+import type { AuditAiRecommendation, AuditRecord, ClientProfileInput } from "@/lib/domain";
 import type { EngineRun } from "@/lib/engine/pipeline";
 import { DATA_VERSION, ENGINE_VERSION } from "@/lib/version";
 
@@ -19,7 +19,11 @@ export function auditIdFor(profile: ClientProfileInput): string {
   return `aud-${profile.id.replace("profile-", "")}-${stamp}`;
 }
 
-export function buildAuditRecord(profile: ClientProfileInput, run: EngineRun): AuditRecord {
+export function buildAuditRecord(
+  profile: ClientProfileInput,
+  run: EngineRun,
+  ai?: AuditAiRecommendation | null,
+): AuditRecord {
   return {
     id: auditIdFor(profile),
     createdAt: new Date().toISOString(),
@@ -34,5 +38,6 @@ export function buildAuditRecord(profile: ClientProfileInput, run: EngineRun): A
     ranking: run.scoring.ranked.map((s) => s.planId),
     preferenceWeightingEnabled: run.scoring.preferenceWeightingEnabled,
     preferenceChangedTop: run.scoring.preferenceChangedTop,
+    aiRecommendation: ai ?? null,
   };
 }

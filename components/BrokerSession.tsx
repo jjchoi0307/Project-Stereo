@@ -12,6 +12,7 @@ import type {
 import { CONDITION_OPTIONS } from "@/lib/intake/options";
 import { profileToValues } from "@/lib/intake/toValues";
 import type { IntakeReference } from "@/lib/intake/types";
+import type { AiMarker, AiOutcome, ClinicalRead } from "@/lib/ai/clinicalRead";
 import type { BrokerSession as Session } from "@/lib/session/store";
 import IntakeForm from "./IntakeForm";
 import Card from "@/components/ui/Card";
@@ -90,14 +91,19 @@ export default function BrokerSession({
   const [rules, setRules] = useState<RulesView | null>(null);
   const [sim, setSim] = useState<SimView | null>(null);
   const [health, setHealth] = useState<HealthView | null>(null);
+  const [clinical, setClinical] = useState<ClinicalRead | null>(null);
 
   // Recompute markers + health futures + screening + simulation when facts change.
+  // The AI clinical read powers cards 2 & 3; the deterministic `normalized` /
+  // `health-futures` fetches are kept as a graceful fallback when the AI is
+  // unconfigured (503) — see the render switch below.
   useEffect(() => {
     if (session.status !== "intake_complete") {
       setNormalized(null);
       setRules(null);
       setSim(null);
       setHealth(null);
+      setClinical(null);
       return;
     }
     let active = true;
@@ -105,15 +111,20 @@ export default function BrokerSession({
       const r = await fetch(`/api/sessions/${session.id}/${suffix}`, { cache: "no-store" });
       return r.ok ? r.json() : null;
     };
-    Promise.all([load("normalized"), load("health-futures"), load("rules"), load("simulation")]).then(
-      ([n, hf, ru, s]) => {
-        if (!active) return;
-        if (n) setNormalized(n.normalized);
-        if (hf) setHealth(hf);
-        if (ru) setRules(ru);
-        if (s) setSim(s);
-      },
-    );
+    Promise.all([
+      load("normalized"),
+      load("health-futures"),
+      load("rules"),
+      load("simulation"),
+      load("clinical-read"),
+    ]).then(([n, hf, ru, s, c]) => {
+      if (!active) return;
+      if (n) setNormalized(n.normalized);
+      if (hf) setHealth(hf);
+      if (ru) setRules(ru);
+      if (s) setSim(s);
+      if (c) setClinical(c);
+    });
     return () => {
       active = false;
     };
@@ -176,13 +187,26 @@ export default function BrokerSession({
         </div>
         <h1 className="mb-1 text-2xl font-semibold tracking-[-.01em] text-ink">Clinical read</h1>
         <p className="mb-6 text-[13.5px] text-slate-500">
-          Every marker, outcome, and exclusion below is deterministic and expandable to its trace.
+          Risk markers and health futures are AI-read from the captured facts; plan screening and
+          simulation are deterministic and expandable to their trace.
         </p>
 
         <div className="space-y-4">
           <CapturedFacts profile={session.profile} reference={reference} />
-          {normalized ? <MarkersCard normalized={normalized} /> : <LoadingCard label="risk markers" />}
-          {health ? <HealthFuturesCard health={health} /> : <LoadingCard label="health futures" />}
+          {clinical ? (
+            <MarkersCard clinical={clinical} />
+          ) : normalized ? (
+            <MarkersCardDeterministic normalized={normalized} />
+          ) : (
+            <LoadingCard label="risk markers" />
+          )}
+          {clinical ? (
+            <HealthFuturesCard clinical={clinical} />
+          ) : health ? (
+            <HealthFuturesCardDeterministic health={health} />
+          ) : (
+            <LoadingCard label="health futures" />
+          )}
           {rules ? <ScreeningCard rules={rules} /> : <LoadingCard label="plan screening" />}
           {sim ? <SimulationCard sim={sim} /> : <LoadingCard label="simulation" />}
         </div>
@@ -409,7 +433,60 @@ const MARKERS: { key: keyof Omit<NormalizedProfile, "profileId">; label: string 
   { key: "oncologyRisk", label: "Oncology" },
 ];
 
-function MarkersCard({ normalized }: { normalized: NormalizedProfile }) {
+// AI-powered risk markers, grounded in the captured de-identified facts.
+function MarkersCard({ clinical }: { clinical: ClinicalRead }) {
+  const [open, setOpen] = useState<Record<string, boolean>>({});
+  return (
+    <Card>
+      <div className="mb-1.5">
+        <ReadLabel>
+          2 · Risk markers{" "}
+          <span className="font-medium normal-case tracking-normal text-slate-400">· AI read</span>
+        </ReadLabel>
+      </div>
+      <p className="mb-[18px] text-[12.5px] text-slate-400">
+        Markers read from the captured facts. Click any to read why.
+      </p>
+      <div className="flex flex-col gap-3.5">
+        {clinical.markers.map((m) => {
+          const st = BAND_STYLE[m.band];
+          const p = Math.max(0, Math.min(100, Math.round(m.score)));
+          const isOpen = !!open[m.key];
+          return (
+            <div key={m.key}>
+              <div
+                onClick={() => setOpen((o) => ({ ...o, [m.key]: !o[m.key] }))}
+                className="flex cursor-pointer items-center gap-3"
+              >
+                <div className="flex flex-[0_0_168px] items-center gap-1.5 text-[13px] font-medium text-slate-700">
+                  <span className="text-[10px] text-slate-400">{isOpen ? "▾" : "▸"}</span>
+                  {m.label}
+                </div>
+                <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
+                  <span className="block h-full rounded-full" style={{ width: `${p}%`, background: st.bar }} />
+                </div>
+                <span className="num flex-[0_0_40px] text-right text-[13px] font-semibold text-slate-600">{p}</span>
+                <span
+                  className="flex-[0_0_86px] rounded-md py-[3px] text-center text-[11px] font-semibold"
+                  style={{ background: st.bg, color: st.fg }}
+                >
+                  {st.label}
+                </span>
+              </div>
+              {isOpen && (
+                <div className="ml-[180px] mt-2.5 rounded-r-lg border-l-2 border-slate-300 bg-slate-50 px-3.5 py-[11px] text-[12.5px] leading-[1.55] text-slate-600">
+                  {m.why}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </Card>
+  );
+}
+
+function MarkersCardDeterministic({ normalized }: { normalized: NormalizedProfile }) {
   const [open, setOpen] = useState<Record<string, boolean>>({});
   return (
     <Card>
@@ -462,7 +539,81 @@ function MarkersCard({ normalized }: { normalized: NormalizedProfile }) {
 }
 
 // ── 3 · Health futures ─────────────────────────────────────────────────────
-function HealthFuturesCard({ health }: { health: HealthView }) {
+const OUTLOOK_STYLE: Record<"stable" | "watch" | "elevated", { bg: string; fg: string; label: string }> = {
+  stable: { bg: "#ecfdf5", fg: "#059669", label: "Stable" },
+  watch: { bg: "#fffbeb", fg: "#92400e", label: "Watch" },
+  elevated: { bg: "#fff1f2", fg: "#9f1239", label: "Elevated" },
+};
+const LIKELIHOOD_STYLE: Record<"unlikely" | "possible" | "likely", { bg: string; fg: string; label: string }> = {
+  unlikely: { bg: "#f1f5f9", fg: "#475569", label: "Unlikely" },
+  possible: { bg: "#fffbeb", fg: "#92400e", label: "Possible" },
+  likely: { bg: "#fff7ed", fg: "#9a3412", label: "Likely" },
+};
+
+// AI-powered health futures, grounded in the captured de-identified facts.
+function HealthFuturesCard({ clinical }: { clinical: ClinicalRead }) {
+  const { horizons, outcomes, caveat } = clinical.futures;
+  const ordered = [...horizons].sort((a, b) => a.years - b.years);
+  return (
+    <Card>
+      <div className="mb-1.5">
+        <ReadLabel>
+          3 · Health futures{" "}
+          <span className="font-medium normal-case tracking-normal text-slate-400">· AI read</span>
+        </ReadLabel>
+      </div>
+      <p className="mb-[18px] text-[12.5px] text-slate-400">
+        Where this person&apos;s health is most likely headed, read from the captured facts.
+      </p>
+
+      <div className="mb-5 grid grid-cols-2 gap-3">
+        {ordered.map((h) => {
+          const st = OUTLOOK_STYLE[h.outlook];
+          return (
+            <div key={h.years} className="rounded-[10px] border border-slate-200 bg-slate-50 p-3.5">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="num text-[13px] font-semibold text-slate-700">{h.years}-year</span>
+                <span
+                  className="rounded-md px-2 py-[3px] text-[11px] font-semibold"
+                  style={{ background: st.bg, color: st.fg }}
+                >
+                  {st.label}
+                </span>
+              </div>
+              <div className="text-[13.5px] font-semibold text-ink">{h.headline}</div>
+              <p className="mt-1 text-[12.5px] leading-[1.5] text-slate-600">{h.summary}</p>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mb-2.5 text-xs font-semibold text-slate-600">Possible outcomes</div>
+      <div className="mb-[18px] flex flex-col gap-2.5">
+        {outcomes.map((o, i) => {
+          const st = LIKELIHOOD_STYLE[o.likelihood];
+          return (
+            <div key={i} className="rounded-lg border border-slate-200 bg-white px-3.5 py-[11px]">
+              <div className="flex items-center gap-2.5">
+                <span className="flex-1 text-[13px] font-medium text-slate-700">{o.label}</span>
+                <span
+                  className="flex-none rounded-md px-2 py-[3px] text-[11px] font-semibold"
+                  style={{ background: st.bg, color: st.fg }}
+                >
+                  {st.label}
+                </span>
+              </div>
+              <p className="mt-1 text-[12.5px] leading-[1.5] text-slate-500">{o.why}</p>
+            </div>
+          );
+        })}
+      </div>
+
+      <p className="text-[11.5px] italic leading-[1.5] text-slate-400">{caveat}</p>
+    </Card>
+  );
+}
+
+function HealthFuturesCardDeterministic({ health }: { health: HealthView }) {
   const [open, setOpen] = useState(false);
   const outcomeColor = (rate: number) => (rate >= 0.2 ? "#f97316" : rate >= 0.1 ? "#f59e0b" : "#94a3b8");
   return (
