@@ -35,10 +35,19 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   }
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
+  const fullName = String(formData.get("name") ?? "").trim();
+  const agency = String(formData.get("agency") ?? "").trim();
   if (!email || !password) return { error: "Email and password are required." };
+  if (!fullName || !agency) return { error: "Your name and broker agency are required." };
 
   const supabase = await getServerSupabase();
-  const { data, error } = await supabase.auth.signUp({ email, password });
+  // Stash name + agency in user metadata; first-login provisioning (resolveBroker)
+  // reads them to attach the broker to their agency's organization.
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { data: { full_name: fullName, agency } },
+  });
   if (error) return { error: error.message };
 
   // If email confirmation is enabled in Supabase, there's no session yet.
