@@ -33,3 +33,4 @@ SMG Healthplans/
 reference/**/__pycache__/
 reference/**/*.pyc
 reference/**/.venv/
+.mcp.json

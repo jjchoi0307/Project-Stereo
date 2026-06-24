@@ -5,32 +5,34 @@ import type { IntakeReference } from "@/lib/intake/types";
 import IntakeForm from "./IntakeForm";
 
 export default function PatientIntake({
-  sessionId,
+  token,
   reference,
 }: {
-  sessionId: string;
+  token: string;
   reference: IntakeReference;
 }) {
   const [done, setDone] = useState(false);
 
   if (done) {
     return (
-      <div className="rounded-lg border border-slate-200 bg-white p-8 text-center">
-        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-2xl text-emerald-600">
+      <div className="mx-auto max-w-[440px] text-center" data-fade>
+        <div className="mb-[18px] inline-flex h-14 w-14 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 text-[26px] text-emerald-600">
           ✓
         </div>
-        <h2 className="text-lg font-semibold text-ink">Thank you</h2>
-        <p className="mt-1 text-sm text-slate-600">
-          Your facts have been sent to your broker. You can hand the device back now.
+        <h1 className="mb-2 text-[22px] font-semibold text-ink">Thank you — sent to your broker</h1>
+        <p className="text-sm leading-[1.55] text-slate-500">
+          Your facts are with your Seoul Medical Group broker. They&apos;ll review them and walk you through your
+          plan options.
         </p>
+        <p className="mt-[18px] text-[12.5px] text-slate-400">You can close this window.</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-6 sm:p-8">
+    <div className="mx-auto max-w-[660px] rounded-xl border border-slate-200 bg-white p-[26px]">
       <IntakeForm
-        sessionId={sessionId}
+        submitUrl={`/api/intake/${token}`}
         capturedBy="patient"
         reference={reference}
         variant="patient"

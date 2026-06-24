@@ -9,7 +9,7 @@ import type { CaptureSource } from "@/lib/domain";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const store = getSessionStore();
+  const store = (await getSessionStore());
   const session = await store.get(id);
   if (!session) return NextResponse.json({ error: "session not found" }, { status: 404 });
 

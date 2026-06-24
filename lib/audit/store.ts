@@ -5,6 +5,7 @@
  */
 
 import type { AuditRecord } from "@/lib/domain";
+import { getBrokerContext } from "@/lib/supabase/auth";
 import type { BrokerContext } from "@/lib/supabase/client";
 import { stateStore } from "@/lib/supabase/env";
 import { SupabaseAuditStore } from "./supabaseStore";
@@ -33,13 +34,15 @@ class InMemoryAuditStore implements AuditStore {
 const g = globalThis as unknown as { __SMG_AUDIT_STORE__?: AuditStore };
 
 /**
- * Returns the audit store. With a broker context (auth wired + STATE_STORE=supabase)
- * it returns an RLS-scoped, append-only Supabase store; otherwise the in-memory
- * singleton. No-argument callers keep the current in-memory behavior.
+ * Returns the audit store. In supabase mode it resolves the signed-in broker and
+ * returns an RLS-scoped, append-only Supabase store; otherwise the in-memory
+ * singleton. `getBrokerContext()` is a no-op (null, no I/O) in memory mode, so
+ * callers just await it.
  */
-export function getAuditStore(ctx?: BrokerContext): AuditStore {
-  if (ctx && stateStore() === "supabase") {
-    return new SupabaseAuditStore(ctx);
+export async function getAuditStore(ctx?: BrokerContext): Promise<AuditStore> {
+  const resolved = ctx ?? (await getBrokerContext()) ?? undefined;
+  if (resolved && stateStore() === "supabase") {
+    return new SupabaseAuditStore(resolved);
   }
   if (!g.__SMG_AUDIT_STORE__) g.__SMG_AUDIT_STORE__ = new InMemoryAuditStore();
   return g.__SMG_AUDIT_STORE__;

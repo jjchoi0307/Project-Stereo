@@ -55,6 +55,32 @@ export const HEALTH_SIM = {
 } as const;
 
 /**
+ * Across-futures horizon recommendation (lib/engine/horizonRecommendation.ts).
+ * The client is projected into `replicas` simulated futures at each horizon and
+ * the engine is scored on each; the plan that wins the most futures is the
+ * horizon's recommendation. `replicas` and `scenarioCount` (the engine's inner
+ * financial loop, per future) are kept below the live defaults so two nested
+ * simulations stay responsive — raise them to trade latency for resolution.
+ * `assumptionIncidence` is the share of futures a newly-acquired condition/med
+ * must reach to be shown as a projected assumption.
+ *
+ * `scenarioCount` is kept equal to SIM_CONFIG.defaultScenarioCount (500) so each
+ * future is scored at the SAME resolution as today's live recommendation — a
+ * lower count would let sampling noise flip the pick and produce spurious
+ * "changes vs today" flags.
+ */
+export const HORIZON_REC = {
+  horizonsYears: [5, 10],
+  replicas: 120, // number of simulated futures per horizon
+  // Single source of truth — MUST equal the live engine default so each future is
+  // scored at the same resolution as "today" (else sampling noise → spurious
+  // "changes vs today"). Referenced, not copied.
+  scenarioCount: SIM_CONFIG.defaultScenarioCount,
+  assumptionIncidence: 0.2,
+  maxDistribution: 5, // plans shown in the win-share distribution
+} as const;
+
+/**
  * Scoring weights (step 6). The PlanScore formula is:
  *
  *   expectedFit  = coverageFit + networkFit + medicationFit − mismatchPenalty

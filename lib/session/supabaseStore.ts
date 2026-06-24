@@ -7,6 +7,7 @@
  * BrokerContext (see lib/supabase/client.ts) and STATE_STORE=supabase.
  */
 import type { ClientProfileInput } from "@/lib/domain";
+import { logAccess } from "@/lib/security/accessLog";
 import type { BrokerContext } from "@/lib/supabase/client";
 import type { BrokerSession, SessionStore } from "./store";
 
@@ -37,6 +38,7 @@ export class SupabaseSessionStore implements SessionStore {
       .select("id,status,client_label,created_at")
       .single();
     if (error || !data) throw error ?? new Error("session insert failed");
+    logAccess({ actor: this.ctx.brokerId, action: "session.create", sessionId: (data as SessionRow).id });
     return this.toSession(data as SessionRow);
   }
 
@@ -52,6 +54,7 @@ export class SupabaseSessionStore implements SessionStore {
       .select("data")
       .eq("session_id", id)
       .maybeSingle();
+    logAccess({ actor: this.ctx.brokerId, action: "session.read", sessionId: id });
     return this.toSession(s as SessionRow, (p?.data as ClientProfileInput) ?? undefined);
   }
 
@@ -61,6 +64,7 @@ export class SupabaseSessionStore implements SessionStore {
       .from("sessions")
       .select("id,status,client_label,created_at")
       .order("created_at", { ascending: false });
+    logAccess({ actor: this.ctx.brokerId, action: "session.list" });
     return ((data as SessionRow[]) ?? []).map((r) => this.toSession(r));
   }
 
@@ -85,6 +89,7 @@ export class SupabaseSessionStore implements SessionStore {
       .maybeSingle();
     if (error) throw error;
     if (!data) return null;
+    logAccess({ actor: this.ctx.brokerId, action: "profile.write", sessionId: id });
     return this.toSession(data as SessionRow, profile);
   }
 }
