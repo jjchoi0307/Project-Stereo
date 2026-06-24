@@ -327,6 +327,28 @@ export type ReasonCode =
   | "network_gap_risk"
   | "high_catastrophic_exposure";
 
+/** One weighted component of the fit score: its contribution and its max weight. */
+export interface ScoreComponent {
+  value: number; // weighted contribution (raw; round for display)
+  max: number; // the component's weight (max possible contribution)
+}
+
+/**
+ * Transparent breakdown of how a plan's total was built — the weighted sub-scores
+ * the engine already computes, surfaced for brokers and the audit trail. Display
+ * arithmetic: expectedFit = coverageFit + networkFit + medicationFit − mismatchPenalty;
+ * total = expectedFit − catastrophicDownside + preference. (Components are raw and
+ * may differ from the rounded subtotals by display rounding.)
+ */
+export interface ScoreBreakdown {
+  coverageFit: ScoreComponent;
+  networkFit: ScoreComponent;
+  medicationFit: ScoreComponent;
+  mismatchPenalty: ScoreComponent; // subtracted
+  catastrophicDownside: ScoreComponent; // subtracted (== downsideRisk)
+  preference: number; // added (0..preference.max)
+}
+
 export interface PlanScore {
   planId: PlanId;
   expectedFit: number;
@@ -335,6 +357,8 @@ export interface PlanScore {
   preferenceContribution: number; // bounded tiebreaker, logged
   total: number;
   reasonCodes: ReasonCode[];
+  /** Weighted sub-scores that build the total (transparency; see ScoreBreakdown). */
+  breakdown: ScoreBreakdown;
 }
 
 export interface Recommendation {

@@ -13,10 +13,15 @@ interface Exposure {
   mean: number; worst: number; medCoverageRate: number; catastrophicRate: number;
   topUncoveredDrugs: { name: string; rate: number }[];
 }
+interface ScoreComp { value: number; max: number }
+interface Breakdown {
+  coverageFit: ScoreComp; networkFit: ScoreComp; medicationFit: ScoreComp;
+  mismatchPenalty: ScoreComp; catastrophicDownside: ScoreComp; preference: number;
+}
 interface RankedItem {
   planId: string; expectedFit: number; downsideRisk: number; confidence: number;
   preferenceContribution: number; total: number; reasons: Reason[];
-  plan: PlanMeta; exposure: Exposure; providerGaps?: string[];
+  plan: PlanMeta; exposure: Exposure; providerGaps?: string[]; breakdown: Breakdown;
 }
 interface NearMiss {
   reason: string; requiredProviders: string[]; regionName: string; ranked: RankedItem[];
@@ -365,7 +370,68 @@ function TopCard({ item, rank, highlight }: { item: RankedItem; rank: number; hi
           {confLabel(item.confidence)} <span className="font-normal text-slate-400">· <span className="num">{usd(e.mean)}</span>/yr</span>
         </Stat>
       </div>
+
+      <BreakdownDetails item={item} />
     </div>
+  );
+}
+
+const round1 = (n: number) => Math.round(n * 10) / 10;
+
+function CompRow({ label, value, max, sign }: { label: string; value: number; max: number; sign: "+" | "−" }) {
+  const pos = sign === "+";
+  return (
+    <div className="flex items-center gap-2.5 py-[3px]">
+      <span className="flex-[0_0_150px] text-[12px] text-slate-600">{label}</span>
+      <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+        <span
+          className="block h-full rounded-full"
+          style={{ width: `${Math.round((Math.abs(value) / max) * 100)}%`, background: pos ? "#0d6e6e" : "#f59e0b" }}
+        />
+      </span>
+      <span className="num flex-[0_0_64px] text-right text-[12px] font-semibold" style={{ color: pos ? "#0f172a" : "#b45309" }}>
+        {sign}{round1(Math.abs(value))}
+      </span>
+      <span className="num flex-[0_0_30px] text-right text-[11px] text-slate-400">/{max}</span>
+    </div>
+  );
+}
+
+function BreakdownDetails({ item }: { item: RankedItem }) {
+  const b = item.breakdown;
+  return (
+    <details className="mt-3 border-t border-slate-100 pt-3">
+      <summary className="cursor-pointer list-none text-[12px] font-medium text-accent">
+        ▸ How this fit score is built ({round1(item.total)})
+      </summary>
+      <div className="mt-2.5">
+        <CompRow label="Coverage fit" value={b.coverageFit.value} max={b.coverageFit.max} sign="+" />
+        <CompRow label="Network fit" value={b.networkFit.value} max={b.networkFit.max} sign="+" />
+        <CompRow label="Medication fit" value={b.medicationFit.value} max={b.medicationFit.max} sign="+" />
+        <CompRow label="Mismatch penalty" value={b.mismatchPenalty.value} max={b.mismatchPenalty.max} sign="−" />
+        <div className="my-1.5 flex justify-between border-t border-dashed border-slate-200 pt-1.5 text-[12px]">
+          <span className="text-slate-500">= Expected fit</span>
+          <span className="num font-semibold">{round1(item.expectedFit)}</span>
+        </div>
+        <CompRow label="Catastrophic downside" value={b.catastrophicDownside.value} max={b.catastrophicDownside.max} sign="−" />
+        {b.preference > 0 && (
+          <div className="flex items-center gap-2.5 py-[3px]">
+            <span className="flex-[0_0_150px] text-[12px] text-slate-600">SMG/SCAN preference</span>
+            <span className="flex-1 text-[11px] italic text-slate-400">bounded tiebreak, logged</span>
+            <span className="num flex-[0_0_64px] text-right text-[12px] font-semibold text-accent">+{round1(b.preference)}</span>
+            <span className="num flex-[0_0_30px] text-right text-[11px] text-slate-400">/5</span>
+          </div>
+        )}
+        <div className="mt-1.5 flex justify-between border-t border-slate-200 pt-1.5 text-[12.5px]">
+          <span className="font-semibold">= Fit score</span>
+          <span className="num font-bold text-accent">{round1(item.total)}</span>
+        </div>
+        <p className="mt-2 text-[11px] leading-[1.45] text-slate-400">
+          Each component is a 0–1 fit measure × its weight. Higher coverage/network/medication fit is better;
+          mismatch and catastrophic downside are subtracted. Components are rounded for display.
+        </p>
+      </div>
+    </details>
   );
 }
 
