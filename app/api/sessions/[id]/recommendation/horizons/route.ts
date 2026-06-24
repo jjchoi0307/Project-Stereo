@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { getDataStore } from "@/lib/data";
 import { recommendAcrossHorizons } from "@/lib/engine/horizonRecommendation";
-import { POSITIVE_REASONS, REASON_TEXT } from "@/lib/engine/reasons";
+import { describeReason, POSITIVE_REASONS, type ReasonFacts } from "@/lib/engine/reasons";
+import { buildRulesContext } from "@/lib/engine/rules";
 import { getSessionStore } from "@/lib/session/store";
 import { CONDITION_OPTIONS } from "@/lib/intake/options";
-import type { ConditionFlag, Plan } from "@/lib/domain";
+import type { ClientProfileInput, ConditionFlag, Plan } from "@/lib/domain";
+import type { RulesContext } from "@/lib/engine/rules";
+import type { HorizonExposure } from "@/lib/engine/horizonRecommendation";
 
 export const dynamic = "force-dynamic";
 // Two nested simulations (futures × financial scenarios) per horizon.
@@ -26,6 +29,40 @@ const condLabel = (c: ConditionFlag) =>
   CONDITION_OPTIONS.find((o) => o.value === c)?.label ?? c;
 
 /**
+ * Build specific-reason facts at a horizon: plan benefits + the horizon's
+ * representative exposure + the client profile. Cross-plan "lowest catastrophic"
+ * context isn't meaningful across-futures, so it's left undefined (describeReason
+ * falls back gracefully).
+ */
+const buildHorizonFacts = (
+  plan: Plan,
+  exposure: HorizonExposure | null,
+  profile: ClientProfileInput,
+  ctx: RulesContext,
+): ReasonFacts => {
+  const medNames = profile.medications
+    .map((m) => m.name ?? m.raw)
+    .filter((n): n is string => Boolean(n));
+  const requiredProviderNames = profile.providerConstraints
+    .filter((c) => c.hardRequirement)
+    .map((c) => (c.systemId ? ctx.systemsById.get(c.systemId)?.name ?? c.label : c.label));
+  return {
+    currentMedNames: medNames,
+    currentMedCount: profile.medications.length,
+    specialistCopay: plan.benefits.specialistCopay,
+    mentalHealthOutpatientCopay: plan.benefits.mentalHealthOutpatientCopay,
+    acupunctureVisitsPerYear: plan.benefits.acupunctureVisitsPerYear,
+    requiredProviderNames,
+    specialistVisits12mo: profile.utilization?.specialistVisits12mo,
+    acupunctureVisits12mo: profile.utilization?.acupunctureVisits12mo,
+    medCoverageRate: exposure?.medCoverageRate,
+    networkGapRate: undefined,
+    catastrophicRate: exposure?.catastrophicRate,
+    topUncoveredDrug: exposure?.topUncoveredDrugs[0],
+  };
+};
+
+/**
  * Across-futures recommendation at each horizon (5y, 10y): the plan that holds up
  * best as the client's health evolves. Deterministic — every per-future pick is a
  * real runEngine() result on a projected profile. The AI narrative is separate
@@ -38,7 +75,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (!session.profile) return NextResponse.json({ error: "no profile yet" }, { status: 409 });
 
   const db = getDataStore();
-  const result = await recommendAcrossHorizons(session.profile, db);
+  const profile = session.profile;
+  const [result, ctx] = await Promise.all([
+    recommendAcrossHorizons(profile, db),
+    buildRulesContext(db),
+  ]);
   const planById = new Map((await db.listPlans()).map((p) => [p.id, p]));
   const nameOf = (pid: string | null) => (pid ? planById.get(pid)?.name ?? pid : null);
   const metaOf = (pid: string) => {
@@ -47,7 +88,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   };
 
   const horizons = result.horizons.map((h) => {
+    const recPlan = h.recommendedPlanId ? planById.get(h.recommendedPlanId) ?? null : null;
     const recMeta = h.recommendedPlanId ? metaOf(h.recommendedPlanId) : null;
+    const facts = recPlan
+      ? buildHorizonFacts(recPlan, h.representativeExposure, profile, ctx)
+      : {};
     return {
       years: h.years,
       replicas: h.replicas,
@@ -61,7 +106,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
             winShare: h.winShare,
             reasons: h.representativeReasonCodes.map((code) => ({
               code,
-              text: REASON_TEXT[code],
+              text: describeReason(code, facts),
               positive: POSITIVE_REASONS.has(code),
             })),
             exposure: h.representativeExposure,

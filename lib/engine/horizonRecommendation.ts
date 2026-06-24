@@ -20,10 +20,17 @@ import type {
   ReasonCode,
 } from "@/lib/domain";
 import type { DataStore } from "@/lib/data";
+import { DATA_VERSION, ENGINE_VERSION } from "@/lib/version";
 import { HORIZON_REC } from "./config";
 import { simulateReplicas, type ProfileReplica } from "./healthSim";
 import { normalizeProfile } from "./normalize";
 import { buildEngineCatalog, runEngine, type EngineCatalog } from "./pipeline";
+
+/** Resolution of the nested simulation. Overridable for A/B; defaults from config. */
+interface HorizonResolution {
+  replicas: number;
+  scenarioCount: number;
+}
 
 export interface HorizonPlanShare {
   planId: string;
@@ -92,9 +99,10 @@ async function recommendOneHorizon(
   catalog: EngineCatalog,
   normalized: ReturnType<typeof normalizeProfile>,
   years: number,
+  res: HorizonResolution,
 ): Promise<HorizonRecommendation> {
   const drugsById = catalog.ctx.drugsById;
-  const { replicas } = simulateReplicas(profile, normalized, { years, replicas: HORIZON_REC.replicas });
+  const { replicas } = simulateReplicas(profile, normalized, { years, replicas: res.replicas });
 
   // One record per simulated future — lets us pick a representative (median-acuity)
   // future for the recommended plan, not the arbitrary first one it happened to win.
@@ -117,7 +125,7 @@ async function recommendOneHorizon(
     const projected = projectProfile(profile, rep, years, drugsById);
     const run = await runEngine(projected, db, {
       preferenceWeighting: true,
-      count: HORIZON_REC.scenarioCount,
+      count: res.scenarioCount,
       catalog,
     });
 
@@ -184,7 +192,7 @@ async function recommendOneHorizon(
   return {
     years,
     replicas: total,
-    scenarioCount: HORIZON_REC.scenarioCount,
+    scenarioCount: res.scenarioCount,
     recommendedPlanId,
     winShare: distribution[0]?.share ?? 0,
     noneEligibleRate: none / total,
@@ -195,29 +203,55 @@ async function recommendOneHorizon(
   };
 }
 
+// Deterministic output → cache by profile facts-version + engine/data version +
+// resolution. Instant 5y↔10y switches and revisits; auto-invalidates when facts
+// change (capturedAt) or the engine/data version bumps. Bounded, no TTL needed.
+const horizonCache = new Map<string, HorizonsResult>();
+const HORIZON_CACHE_MAX = 200;
+
 export async function recommendAcrossHorizons(
   profile: ClientProfileInput,
   db: DataStore,
-  opts: { horizonsYears?: readonly number[] } = {},
+  opts: { horizonsYears?: readonly number[]; replicas?: number; scenarioCount?: number } = {},
 ): Promise<HorizonsResult> {
+  const res: HorizonResolution = {
+    replicas: opts.replicas ?? HORIZON_REC.replicas,
+    scenarioCount: opts.scenarioCount ?? HORIZON_REC.scenarioCount,
+  };
+  const years = opts.horizonsYears ?? HORIZON_REC.horizonsYears;
+
+  const cacheKey = [
+    profile.id,
+    profile.capturedAt,
+    ENGINE_VERSION,
+    DATA_VERSION,
+    res.replicas,
+    res.scenarioCount,
+    years.join("-"),
+  ].join("|");
+  const cached = horizonCache.get(cacheKey);
+  if (cached) return cached;
+
   const catalog = await buildEngineCatalog(db);
   const drugs = [...catalog.ctx.drugsById.values()];
   const normalized = normalizeProfile(profile, drugs);
 
   // Today's pick at the SAME scenario count as the futures, so "changes vs today"
   // reflects clinical change, not sampling noise from a different resolution (#1).
-  // (HORIZON_REC.scenarioCount == the live route's default, so this also matches it.)
   const today = await runEngine(profile, db, {
     preferenceWeighting: true,
-    count: HORIZON_REC.scenarioCount,
+    count: res.scenarioCount,
     catalog,
   });
 
-  const years = opts.horizonsYears ?? HORIZON_REC.horizonsYears;
-  const horizons: HorizonRecommendation[] = [];
-  for (const y of years) {
-    horizons.push(await recommendOneHorizon(profile, db, catalog, normalized, y));
-  }
+  // Horizons are independent — run concurrently (yields at each runEngine await).
+  const horizons = await Promise.all(
+    years.map((y) => recommendOneHorizon(profile, db, catalog, normalized, y, res)),
+  );
 
-  return { todayTopPlanId: today.scoring.topPlanId, horizons };
+  const result: HorizonsResult = { todayTopPlanId: today.scoring.topPlanId, horizons };
+
+  if (horizonCache.size >= HORIZON_CACHE_MAX) horizonCache.delete(horizonCache.keys().next().value!);
+  horizonCache.set(cacheKey, result);
+  return result;
 }

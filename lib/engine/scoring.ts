@@ -148,6 +148,15 @@ export function score(input: {
       preferenceContribution,
       total,
       reasonCodes,
+      // Transparent sub-scores (raw weighted contributions + their max weight).
+      breakdown: {
+        coverageFit: { value: coverageFit, max: W.coverageFit },
+        networkFit: { value: networkFit, max: W.networkFit },
+        medicationFit: { value: medicationFit, max: W.medicationFit },
+        mismatchPenalty: { value: mismatchPenalty, max: W.mismatchPenalty },
+        catastrophicDownside: { value: catastrophicDownside, max: W.catastrophicDownside },
+        preference: preferenceContribution,
+      },
       pureTotal,
     };
   });

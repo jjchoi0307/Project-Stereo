@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import RecommendationView from "./RecommendationView";
-import { HORIZON_REC } from "@/lib/engine/config";
+import { HORIZON_REC, SCORING } from "@/lib/engine/config";
 import Spinner from "@/components/ui/Spinner";
 
 // ── Shapes returned by the routes ───────────────────────────────────────────
@@ -70,8 +70,11 @@ export default function RecommendationTabs({ sessionId }: { sessionId: string })
 
   // Lazy-load the deterministic across-futures recommendation when a horizon tab
   // is first opened (it's a heavier nested simulation; no need on the Today tab).
+  // Eager prefetch: start computing horizons on mount (not only when a horizon tab
+  // is opened), so they're usually ready by the time the broker switches. The
+  // engine caches the deterministic result, so this is computed at most once.
   useEffect(() => {
-    if (tab === "today" || horizons || hStatus === "loading") return;
+    if (horizons || hStatus === "loading") return;
     let active = true;
     setHStatus("loading");
     fetch(`/api/sessions/${sessionId}/recommendation/horizons`, { cache: "no-store" })
@@ -103,6 +106,8 @@ export default function RecommendationTabs({ sessionId }: { sessionId: string })
 
   return (
     <div>
+      <CriteriaPanel />
+
       <div
         role="tablist"
         aria-label="Recommendation horizon"
@@ -416,5 +421,72 @@ function NarrativePanel({ years, status, error, horizon, overallCaveat, onGenera
         </div>
       )}
     </section>
+  );
+}
+
+const WEIGHT_DEFS: { key: keyof typeof SCORING.weights; label: string; def: string; sign: "+" | "−" }[] = [
+  { key: "coverageFit", label: "Coverage fit", def: "OOP protection + acupuncture / mental-health / specialist cost matched to this client's needs", sign: "+" },
+  { key: "networkFit", label: "Network fit", def: "required + likely-needed providers stay in network", sign: "+" },
+  { key: "medicationFit", label: "Medication fit", def: "current + likely-future prescriptions covered across simulated futures", sign: "+" },
+  { key: "mismatchPenalty", label: "Mismatch penalty", def: "expected coverage gaps + expected annual cost", sign: "−" },
+  { key: "catastrophicDownside", label: "Catastrophic downside", def: "worst-case out-of-pocket exposure across futures", sign: "−" },
+];
+
+/**
+ * The published, rigid scoring criteria — rendered live from the engine config so
+ * what brokers read is exactly what the engine computes. Shown above every tab.
+ */
+function CriteriaPanel() {
+  const W = SCORING.weights;
+  const P = SCORING.preference;
+  return (
+    <details className="mb-6 rounded-xl border border-slate-200 bg-white p-[18px]">
+      <summary className="flex cursor-pointer list-none items-center gap-2 text-[13px] font-semibold text-ink">
+        <span className="text-accent">ⓘ</span> How plans are scored — deterministic, fact-based &amp; auditable
+      </summary>
+
+      <div className="mt-3 space-y-4 text-[12.5px] leading-[1.55] text-slate-600">
+        <div>
+          <div className="mb-1 text-[11px] font-bold uppercase tracking-[.04em] text-slate-500">1 · Eligibility (hard rules, run before any scoring)</div>
+          A plan is excluded — never ranked — if it fails any of: not sold in the client&apos;s region; doesn&apos;t
+          keep a <strong>must-keep</strong> provider in network; or leaves a <strong>critical medication</strong>{" "}
+          (insulin, oncology) off formulary. These are pass/fail, not weighted.
+        </div>
+
+        <div>
+          <div className="mb-1.5 text-[11px] font-bold uppercase tracking-[.04em] text-slate-500">2 · Fit score (eligible plans scored on weighted, simulated facts)</div>
+          <div className="flex flex-col gap-1">
+            {WEIGHT_DEFS.map((w) => (
+              <div key={w.key} className="flex items-baseline gap-2">
+                <span className="num flex-[0_0_44px] font-semibold" style={{ color: w.sign === "+" ? "#0d6e6e" : "#b45309" }}>
+                  {w.sign}{W[w.key]}
+                </span>
+                <span><strong className="text-slate-700">{w.label}</strong> — {w.def}</span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-2 text-[12px] text-slate-500">
+            <span className="num">Fit = Coverage + Network + Medication − Mismatch − Catastrophic downside</span>.
+            Every input is a real simulation statistic across hundreds of futures — no hand-set rankings. Expand any
+            plan&apos;s “How this fit score is built” to see its exact arithmetic.
+          </div>
+        </div>
+
+        <div>
+          <div className="mb-1 text-[11px] font-bold uppercase tracking-[.04em] text-slate-500">3 · Plan preference (bounded &amp; disclosed)</div>
+          The only non-fit factor is a small tiebreak for SMG-supported plans (+{P.smgSupported}, +{P.scanBonus} more
+          for SCAN), <strong>hard-capped at {P.max}</strong> and logged to every audit record. Because it&apos;s capped,
+          it can only reorder plans already within {P.max} points of each other — it can never lift a worse-fit plan
+          over a better one. Toggle <strong>“Off — pure fit”</strong> on the Today tab to remove it and verify.
+        </div>
+
+        <div className="rounded-lg border border-[#ccebe6] bg-[#f6fdfb] p-3 text-[12px] text-slate-600">
+          <strong className="text-accent">On SCAN:</strong> the score is plan-agnostic — nothing here is tuned to favor
+          a carrier. In practice SCAN is eligible for most clients and a top-3 fit about half the time, because its
+          $0-premium / low out-of-pocket-max design and SMG-network inclusion score well on the facts above — an
+          earned, reproducible outcome, not a thumb on the scale. Flip to pure fit any time to confirm it.
+        </div>
+      </div>
+    </details>
   );
 }

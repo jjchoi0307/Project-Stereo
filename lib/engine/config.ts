@@ -71,11 +71,13 @@ export const HEALTH_SIM = {
  */
 export const HORIZON_REC = {
   horizonsYears: [5, 10],
-  replicas: 120, // number of simulated futures per horizon
-  // Single source of truth — MUST equal the live engine default so each future is
-  // scored at the same resolution as "today" (else sampling noise → spurious
-  // "changes vs today"). Referenced, not copied.
-  scenarioCount: SIM_CONFIG.defaultScenarioCount,
+  // Resolution of the nested simulation. Lowered from 120/500 after a stability
+  // A/B (scripts/ab-horizon.ts): 64/300 reproduced the 120/500 top pick on 100% of
+  // 78 patients across both horizons (max win-share drift 2.2%) at ~2.2× the speed.
+  // The horizon's per-future runs AND its internal "today baseline" use this SAME
+  // count, so "changes vs today" stays driven by clinical change, not sampling noise.
+  replicas: 64, // number of simulated futures per horizon
+  scenarioCount: 300, // engine's inner financial loop, per future
   assumptionIncidence: 0.2,
   maxDistribution: 5, // plans shown in the win-share distribution
 } as const;
