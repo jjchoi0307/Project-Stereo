@@ -6,6 +6,71 @@
   color-scheme: light;
 }
 
+* {
+  box-sizing: border-box;
+}
+
 body {
-  @apply bg-slate-50 text-slate-900 antialiased;
+  @apply bg-slate-50 text-ink antialiased;
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+}
+
+/* Tabular monospace for IDs, money, and percentages. */
+.num {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Brand link affordance. */
+.lk {
+  @apply cursor-pointer text-accent no-underline;
+}
+.lk:hover {
+  @apply underline;
+}
+
+::selection {
+  background: #0d6e6e22;
+}
+
+/* Consistent, on-brand focus ring across all interactive elements. */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible,
+[tabindex]:focus-visible,
+a:focus-visible {
+  outline: 2px solid #0d6e6e;
+  outline-offset: 2px;
+}
+
+@keyframes pulseDot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.7);
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+[data-fade] {
+  animation: fadeUp 0.35s ease both;
 }

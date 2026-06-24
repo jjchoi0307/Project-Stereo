@@ -5,9 +5,16 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // SMG brand-ish neutrals + a calm clinical accent. Tune later.
+        // SMG brand-ish neutrals + a calm clinical accent.
         ink: "#0f172a",
         accent: "#0d6e6e",
+      },
+      fontFamily: {
+        sans: ["'IBM Plex Sans'", "system-ui", "sans-serif"],
+        mono: ["'IBM Plex Mono'", "ui-monospace", "monospace"],
+      },
+      boxShadow: {
+        hero: "0 8px 24px -12px rgba(13,110,110,.35)",
       },
     },
   },

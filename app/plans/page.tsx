@@ -1,108 +1,65 @@
 /**
- * Plan-data reference view — renders the seeded plan data through the
- * data-access layer. Useful for sanity-checking the fixtures; not part of the
- * broker recommendation flow.
+ * Plan-data reference — the SMG-supported 2026 Medicare Advantage catalog,
+ * rendered from the data-access layer with a client-side filter.
  */
 
-import Link from "next/link";
+import Header from "@/components/ui/Header";
+import PlansCatalog, { type PlanRow } from "@/components/PlansCatalog";
 import { getDataStore } from "@/lib/data";
+import type { Plan } from "@/lib/domain";
+
+export const dynamic = "force-dynamic";
+
+function toRow(p: Plan): PlanRow {
+  const b = p.benefits;
+
+  // Concise benefit bullets derived from the numeric benefit fields (real, short).
+  const benefits: string[] = [];
+  if (b.pcpCopay === 0) benefits.push("$0 PCP visits");
+  if (b.otcAllowanceQuarterly > 0) benefits.push(`$${b.otcAllowanceQuarterly}/qtr OTC card`);
+  if (b.dentalAllowanceAnnual > 0) benefits.push("Routine dental");
+  if (b.acupunctureVisitsPerYear > 0)
+    benefits.push(
+      b.acupunctureVisitsPerYear >= 999
+        ? "Routine acupuncture"
+        : `${b.acupunctureVisitsPerYear} acupuncture visits/yr`,
+    );
+  if (b.insulinMonthlyCap) benefits.push(`$${b.insulinMonthlyCap} insulin cap`);
+
+  // Tags from supplemental categories actually present on the plan.
+  const tags: string[] = [];
+  if (p.snpType !== "none") tags.push(p.snpType);
+  if (p.supplemental.dental) tags.push("Dental");
+  if (p.supplemental.vision) tags.push("Vision");
+  if (p.supplemental.otc) tags.push("OTC");
+  if (p.supplemental.transportation) tags.push("Transportation");
+  if (b.acupunctureVisitsPerYear > 0) tags.push("Acupuncture");
+  if (p.supplemental.fitness) tags.push("Fitness");
+  if (p.supplemental.hearing) tags.push("Hearing");
+
+  return {
+    id: p.id,
+    name: p.name,
+    carrier: p.carrier,
+    type: p.planType,
+    smg: p.smgSupported,
+    premiumLabel: b.monthlyPremium === 0 ? "$0" : `$${b.monthlyPremium}`,
+    oopLabel: "$" + b.annualOOPMax.toLocaleString(),
+    benefits,
+    tags,
+  };
+}
 
 export default async function PlansPage() {
-  const db = getDataStore();
-  const plans = await db.listPlans();
-  const networks = await Promise.all(plans.map((p) => db.getNetwork(p.networkId)));
-  const [regions, profiles] = await Promise.all([db.listRegions(), db.listExampleProfiles()]);
-  const uclaByNetwork = new Map(networks.map((n) => [n?.id, n?.systemIds.includes("sys-ucla")]));
+  const plans = await getDataStore().listPlans();
+  const rows = plans.map(toRow);
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-10">
-      <header className="mb-8">
-        <Link href="/" className="text-sm text-accent hover:underline">← Home</Link>
-        <h1 className="mt-2 text-2xl font-semibold text-ink">Plan data (synthetic)</h1>
-        <p className="mt-1 text-sm text-slate-600">Seeded fixtures behind the data-access layer.</p>
-      </header>
-
-      <section className="mb-10">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">14 plans</h2>
-        <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-left text-slate-500">
-              <tr>
-                <th className="px-3 py-2 font-medium">Plan</th>
-                <th className="px-3 py-2 font-medium">Type</th>
-                <th className="px-3 py-2 font-medium">Flags</th>
-                <th className="px-3 py-2 font-medium">UCLA</th>
-                <th className="px-3 py-2 font-medium">Regions</th>
-                <th className="px-3 py-2 font-medium">Formulary</th>
-              </tr>
-            </thead>
-            <tbody>
-              {plans.map((p) => (
-                <tr key={p.id} className="border-t border-slate-100">
-                  <td className="px-3 py-2">
-                    <div className="font-medium text-ink">{p.name}</div>
-                    <div className="text-xs text-slate-500">{p.carrier}</div>
-                  </td>
-                  <td className="px-3 py-2 text-slate-600">{p.planType}</td>
-                  <td className="px-3 py-2">
-                    <span className="flex flex-wrap gap-1">
-                      {p.isScan && <Tag color="emerald">SCAN</Tag>}
-                      {p.smgSupported && !p.isScan && <Tag color="emerald">SMG</Tag>}
-                      {p.isCompetitor && <Tag color="rose">competitor</Tag>}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2">
-                    {uclaByNetwork.get(p.networkId) ? (
-                      <span className="text-emerald-700">in-network</span>
-                    ) : (
-                      <span className="text-slate-400">no</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 text-slate-600">{p.regionsAvailable.join(", ")}</td>
-                  <td className="px-3 py-2 text-slate-600">{p.formularyId.replace("form-", "")}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section className="grid gap-6 sm:grid-cols-2">
-        <Card title={`${regions.length} market regions`}>
-          <ul className="space-y-1 text-sm text-slate-600">
-            {regions.map((r) => (
-              <li key={r.id}><span className="font-medium text-ink">{r.name}</span> — {r.counties.join(", ")}</li>
-            ))}
-          </ul>
-        </Card>
-        <Card title={`${profiles.length} example client profiles`}>
-          <ul className="space-y-1 text-sm text-slate-600">
-            {profiles.map((p) => (
-              <li key={p.id}>
-                <span className="font-medium text-ink">{p.id.replace("profile-", "")}</span> · age {p.age} ·{" "}
-                {p.conditions.join(", ") || "—"} · entered by {p.capturedBy}
-              </li>
-            ))}
-          </ul>
-        </Card>
-      </section>
-    </main>
-  );
-}
-
-function Tag({ children, color }: { children: React.ReactNode; color: "emerald" | "rose" }) {
-  const cls =
-    color === "emerald"
-      ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
-      : "bg-rose-50 text-rose-700 ring-rose-200";
-  return <span className={`rounded px-1.5 py-0.5 text-xs ring-1 ${cls}`}>{children}</span>;
-}
-
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4">
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">{title}</h2>
-      {children}
+    <div className="flex min-h-screen flex-col">
+      <Header />
+      <main className="mx-auto w-full max-w-[1000px] px-6 pb-14 pt-9" data-fade>
+        <PlansCatalog rows={rows} />
+      </main>
     </div>
   );
 }

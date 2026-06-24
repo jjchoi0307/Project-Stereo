@@ -43,23 +43,23 @@ interface ScenarioData {
 }
 
 const usd = (n: number) => "$" + n.toLocaleString();
+const premiumLabel = (n: number) => (n === 0 ? "$0" : "$" + n);
 const pct = (n: number) => Math.round(n * 100) + "%";
 const confLabel = (c: number) => (c >= 66 ? "High" : c >= 33 ? "Moderate" : "Low");
 
-function tags(plan: PlanMeta) {
+function PlanChips({ plan }: { plan: PlanMeta }) {
+  const chips: string[] = [];
+  if (plan.isScan) chips.push("SCAN");
+  else if (plan.smgSupported) chips.push("SMG network");
   return (
-    <span className="flex gap-1">
-      {plan.isScan && <Chip tone="emerald">SCAN</Chip>}
-      {plan.smgSupported && !plan.isScan && <Chip tone="emerald">SMG</Chip>}
-      {plan.isCompetitor && <Chip tone="rose">competitor</Chip>}
-    </span>
+    <>
+      {chips.map((c) => (
+        <span key={c} className="rounded-md bg-[#f0fdf9] px-2 py-0.5 text-[10.5px] font-semibold text-accent">
+          {c}
+        </span>
+      ))}
+    </>
   );
-}
-
-function fitSummary(item: RankedItem): string {
-  const positives = item.reasons.filter((r) => r.positive);
-  if (positives.length) return positives.slice(0, 2).map((r) => r.text).join(" ");
-  return "Eligible for this client, with the tradeoffs noted below.";
 }
 
 export default function RecommendationView({ sessionId }: { sessionId: string }) {
@@ -109,168 +109,149 @@ export default function RecommendationView({ sessionId }: { sessionId: string })
   const nm = data.nearMiss ?? null;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs text-slate-400">
-          {data.scenarioCount} seeded scenarios · seed {data.seed} · reproducible
-        </p>
-        <div className="flex items-center gap-2 text-xs">
-          <span className="text-slate-500">Preference weighting</span>
-          <div className="inline-flex overflow-hidden rounded-md border border-slate-300">
-            <button onClick={() => setPreference(true)}
-              className={`px-3 py-1 ${preference ? "bg-accent text-white" : "bg-white text-slate-600"}`}>On</button>
-            <button onClick={() => setPreference(false)}
-              className={`px-3 py-1 ${!preference ? "bg-accent text-white" : "bg-white text-slate-600"}`}>Off (pure fit)</button>
-          </div>
+    <div>
+      {/* Preference weighting */}
+      <div className="mb-[18px] flex flex-wrap items-center gap-3">
+        <span className="text-[13px] font-medium text-slate-600">Preference weighting</span>
+        <div className="inline-flex rounded-lg bg-[#eef2f5] p-[3px]">
+          <PrefButton on={preference} label="On" onClick={() => setPreference(true)} />
+          <PrefButton on={!preference} label="Off — pure fit" onClick={() => setPreference(false)} />
         </div>
+        <span className="num ml-auto text-[11px] text-slate-400">
+          {data.scenarioCount} scenarios · seed {data.seed}
+        </span>
       </div>
 
       {data.preferenceWeightingEnabled && data.preferenceChangedTop && (
-        <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
-          ⚑ Preference weighting changed the top pick versus the pure-fit ranking. Toggle to “Off” to compare.
+        <div className="mb-[18px] rounded-[9px] border border-amber-200 bg-amber-50 px-3.5 py-[11px] text-[12.5px] leading-[1.5] text-amber-800">
+          ⚑ Turning preference weighting off changed the ordering of eligible plans. The top recommendation is
+          unchanged.
         </div>
       )}
 
-      {/* No eligible plan — explain why, then offer the closest near-misses. */}
+      {/* No eligible plan — explain, then offer the closest near-misses. */}
       {noneEligible && (
-        <section className="space-y-4">
-          <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3">
+        <div className="space-y-4">
+          <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
             <h2 className="text-sm font-semibold text-rose-800">No plan matches every hard requirement</h2>
-            {nm ? (
-              <p className="mt-1 text-sm text-rose-700">
-                {nm.requiredProviders.length > 1
-                  ? `No single plan in ${nm.regionName} keeps all of these must-keep providers in network: ${nm.requiredProviders.join(", ")}. They don't share a plan network.`
-                  : `No plan in ${nm.regionName} keeps ${nm.requiredProviders[0] ?? "the required provider"} in network.`}{" "}
-                The closest plans are below — each shows which required provider it would <strong>drop</strong>, so you can decide with the client which requirement can flex.
-              </p>
-            ) : (
-              <p className="mt-1 text-sm text-rose-700">
-                Every plan was excluded for this profile (see “Not recommended” below for the specific reason on each). Try widening the market region or relaxing a hard requirement.
-              </p>
-            )}
+            <p className="mt-1 text-sm leading-[1.5] text-rose-700">
+              {nm
+                ? nm.requiredProviders.length > 1
+                  ? `No single plan in ${nm.regionName} keeps all of these must-keep providers in network: ${nm.requiredProviders.join(", ")}. The closest plans are below — each shows which required provider it would drop.`
+                  : `No plan in ${nm.regionName} keeps ${nm.requiredProviders[0] ?? "the required provider"} in network. The closest plans are below.`
+                : "Every plan was excluded for this profile (see “Not recommended” below). Try widening the market region or relaxing a hard requirement."}
+            </p>
           </div>
-
           {nm && nm.ranked.length > 0 && (
-            <div className="space-y-4">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                Closest plans · if a provider requirement can flex
-              </h2>
+            <div className="flex flex-col gap-3.5">
               {nm.ranked.slice(0, 3).map((item, i) => (
                 <TopCard key={item.planId} item={item} rank={i + 1} highlight={false} />
               ))}
             </div>
           )}
-        </section>
+        </div>
       )}
 
-      {/* Top recommendations */}
+      {/* Top plans */}
       {!noneEligible && (
-        <section className="space-y-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-            Recommended {top.length > 1 ? `· top ${top.length}` : ""}
-          </h2>
+        <div className="mb-7 flex flex-col gap-3.5">
           {top.map((item, i) => (
             <TopCard key={item.planId} item={item} rank={i + 1} highlight={i === 0} />
           ))}
-        </section>
+        </div>
       )}
 
-      {/* Comparison of the rest (still eligible) */}
+      {/* Other eligible */}
       {rest.length > 0 && (
-        <section>
-          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
-            Other eligible plans
-          </h2>
-          <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-400">
-                <tr>
-                  <th className="px-3 py-2 font-medium">Plan</th>
-                  <th className="px-3 py-2 text-right font-medium">Score</th>
-                  <th className="px-3 py-2 text-right font-medium">Meds</th>
-                  <th className="px-3 py-2 text-right font-medium">Worst / yr</th>
-                  <th className="px-3 py-2 font-medium">Main caveat</th>
+        <>
+          <div className="mb-2.5 text-xs font-bold uppercase tracking-[.04em] text-slate-500">Other eligible plans</div>
+          <div className="mb-7 overflow-hidden rounded-[11px] border border-slate-200 bg-white">
+            <table className="w-full border-collapse text-[12.5px]">
+              <thead>
+                <tr className="bg-slate-50 text-left text-[11px] uppercase tracking-[.03em] text-slate-500">
+                  <th className="px-3.5 py-2.5 font-semibold">Plan</th>
+                  <th className="px-3.5 py-2.5 text-right font-semibold">Premium</th>
+                  <th className="px-3.5 py-2.5 text-right font-semibold">OOP max</th>
+                  <th className="px-3.5 py-2.5 text-right font-semibold">Fit</th>
                 </tr>
               </thead>
               <tbody>
-                {rest.map((item) => {
-                  const caveat = item.reasons.find((r) => !r.positive);
-                  return (
-                    <tr key={item.planId} className="border-t border-slate-100 align-top">
-                      <td className="px-3 py-2">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-ink">{item.plan.name}</span>
-                          {tags(item.plan)}
-                        </div>
-                      </td>
-                      <td className="px-3 py-2 text-right tabular-nums">{item.total}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">{pct(item.exposure.medCoverageRate)}</td>
-                      <td className="px-3 py-2 text-right tabular-nums text-slate-500">{usd(item.exposure.worst)}</td>
-                      <td className="px-3 py-2 text-xs text-amber-700">{caveat?.text ?? "—"}</td>
-                    </tr>
-                  );
-                })}
+                {rest.map((item) => (
+                  <tr key={item.planId} className="border-t border-slate-100">
+                    <td className="px-3.5 py-[11px]">
+                      <div className="font-semibold">{item.plan.name}</div>
+                      <div className="text-[11.5px] text-slate-400">
+                        {item.plan.carrier} · {item.plan.planType}
+                      </div>
+                    </td>
+                    <td className="num px-3.5 py-[11px] text-right">{premiumLabel(item.plan.monthlyPremium)}</td>
+                    <td className="num px-3.5 py-[11px] text-right text-slate-600">{usd(item.plan.annualOOPMax)}</td>
+                    <td className="num px-3.5 py-[11px] text-right font-semibold text-accent">{item.total}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
-        </section>
+        </>
       )}
 
-      {/* Stress-test (scenario perturbation) */}
-      {scenarios && scenarios.scenarios.length > 0 && <ScenarioPanel data={scenarios} />}
+      {/* Stress tests */}
+      {scenarios && scenarios.scenarios.length > 0 && <StressTests data={scenarios} />}
 
       {/* Not recommended */}
       {data.excluded.length > 0 && (
-        <section>
-          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
-            Not recommended for this profile
-          </h2>
-          <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white">
+        <>
+          <div className="mb-2.5 text-xs font-bold uppercase tracking-[.04em] text-slate-500">Not recommended</div>
+          <div className="mb-7 flex flex-col gap-[7px]">
             {data.excluded.map(({ plan, reasons }) => (
-              <li key={plan.id} className="flex items-start justify-between gap-3 px-3 py-2">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-slate-500">{plan.name}</span>
-                    {tags(plan)}
-                  </div>
-                  {reasons.map((r, i) => (
-                    <div key={i} className="mt-0.5 text-xs text-rose-600">✗ {r.detail}</div>
-                  ))}
+              <div
+                key={plan.id}
+                className="flex items-center gap-3 rounded-[9px] border border-slate-100 bg-white px-3.5 py-2.5"
+              >
+                <span className="flex-none font-bold text-rose-600">✗</span>
+                <div className="flex-1">
+                  <span className="text-[13px] font-semibold">{plan.name}</span>{" "}
+                  <span className="text-xs text-slate-400">· {plan.carrier}</span>
                 </div>
-              </li>
+                <div className="flex-[1.4] text-right text-xs text-rose-800">
+                  {reasons.map((r) => r.detail).join(" ")}
+                </div>
+              </div>
             ))}
-          </ul>
-        </section>
+          </div>
+        </>
       )}
 
-      <div className="flex items-center justify-between border-t border-slate-100 pt-4">
-        <Link href={`/session/${sessionId}`} className="text-sm text-accent hover:underline">
-          ← Back to session facts
-        </Link>
-        {auditId && (
-          <span className="text-xs text-slate-500">
-            Audit record saved ·{" "}
-            <Link href={`/audit/${auditId}`} className="font-mono text-accent hover:underline">
-              {auditId}
-            </Link>
-          </span>
-        )}
-      </div>
+      {/* Audit footer */}
+      {auditId && (
+        <div className="flex items-center gap-2.5 rounded-[11px] border border-slate-200 bg-slate-50 px-[18px] py-3.5 text-[12.5px] text-slate-600">
+          <span className="font-bold text-emerald-600">✓</span> Audit record saved on view —{" "}
+          <Link href={`/audit/${auditId}`} className="num lk font-medium">
+            {auditId}
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
 
-function ScenarioPanel({ data }: { data: ScenarioData }) {
+function PrefButton({ on, label, onClick }: { on: boolean; label: string; onClick: () => void }) {
   return (
-    <section>
-      <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-slate-500">
-        Stress-test this recommendation
-      </h2>
-      <p className="mb-2 text-xs text-slate-400">
-        How the pick holds up if the client&apos;s situation changes. Baseline top:{" "}
-        <span className="font-medium text-ink">{data.baseline.topPlanName ?? "— none eligible"}</span>
-      </p>
-      <ul className="space-y-2">
+    <button
+      onClick={onClick}
+      className="rounded-md px-3.5 py-1.5 text-[12.5px] font-semibold"
+      style={{ background: on ? "#0d6e6e" : "transparent", color: on ? "#fff" : "#64748b" }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function StressTests({ data }: { data: ScenarioData }) {
+  return (
+    <>
+      <div className="mb-2.5 text-xs font-bold uppercase tracking-[.04em] text-slate-500">Stress tests</div>
+      <div className="mb-7 rounded-[11px] border border-slate-200 bg-white px-[18px] py-2">
         {data.scenarios.map((s) => {
           const bt = s.baselineTop;
           const baselineFate =
@@ -279,36 +260,29 @@ function ScenarioPanel({ data }: { data: ScenarioData }) {
               : bt.rankUnderScenario === 1
                 ? `${bt.planName ?? "baseline pick"} stays #1`
                 : `${bt.planName ?? "baseline pick"} falls to #${bt.rankUnderScenario}`;
+          const note = s.changed
+            ? `Top pick shifts to ${s.topPlanName ?? "— none eligible"}. ${baselineFate}.`
+            : `Top pick unchanged. ${baselineFate}.`;
           return (
-            <li key={s.id} className="rounded-lg border border-slate-200 bg-white p-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="text-sm font-medium text-ink">{s.label}</div>
-                  <div className="mt-0.5 text-xs text-slate-500">{s.description}</div>
-                </div>
-                {s.changed ? (
-                  <span className="shrink-0 rounded bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800 ring-1 ring-amber-200">
-                    ⚑ top pick changes
-                  </span>
-                ) : (
-                  <span className="shrink-0 rounded bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 ring-1 ring-emerald-200">
-                    ✓ holds
-                  </span>
-                )}
+            <div key={s.id} className="flex items-start gap-3 border-b border-slate-100 py-3 last:border-b-0">
+              <span
+                className="flex-none rounded-md px-2.5 py-[3px] text-xs font-bold"
+                style={{
+                  background: s.changed ? "#fffbeb" : "#ecfdf5",
+                  color: s.changed ? "#d97706" : "#059669",
+                }}
+              >
+                {s.changed ? "⚑" : "✓"}
+              </span>
+              <div className="flex-1">
+                <div className="text-[13px] font-semibold">{s.label}</div>
+                <div className="mt-0.5 text-[12.5px] leading-[1.45] text-slate-500">{note}</div>
               </div>
-              <div className="mt-2 text-sm text-slate-700">
-                {s.changed ? (
-                  <>New top plan: <span className="font-medium text-ink">{s.topPlanName ?? "— none eligible"}</span>. </>
-                ) : (
-                  <>Top plan unchanged. </>
-                )}
-                <span className="text-slate-500">{baselineFate}.</span>
-              </div>
-            </li>
+            </div>
           );
         })}
-      </ul>
-    </section>
+      </div>
+    </>
   );
 }
 
@@ -318,90 +292,88 @@ function TopCard({ item, rank, highlight }: { item: RankedItem; rank: number; hi
   const e = item.exposure;
   const keepsProviders = item.reasons.some((r) => r.code === "keeps_required_providers");
   const networkGap = item.reasons.some((r) => r.code === "network_gap_risk");
+  const networkLabel = networkGap ? "gap risk" : keepsProviders ? "keeps required" : "in network";
 
   return (
-    <div className={`rounded-lg border bg-white p-5 ${highlight ? "border-accent ring-1 ring-accent" : "border-slate-200"}`}>
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">
-              {rank}
-            </span>
-            <h3 className="text-base font-semibold text-ink">{item.plan.name}</h3>
-            {tags(item.plan)}
-          </div>
-          <p className="mt-0.5 text-xs text-slate-500">
-            {item.plan.carrier} · {item.plan.planType} · {item.plan.monthlyPremium === 0 ? "$0 premium" : usd(item.plan.monthlyPremium) + "/mo"} · {usd(item.plan.annualOOPMax)} OOP max
-          </p>
+    <div
+      className="relative rounded-[13px] border bg-white p-[22px]"
+      style={{
+        borderColor: highlight ? "#0d6e6e" : "#e2e8f0",
+        boxShadow: highlight ? "0 8px 24px -12px rgba(13,110,110,.35)" : "none",
+      }}
+    >
+      <div className="flex items-start gap-4">
+        <div
+          className="num flex h-[34px] w-[34px] flex-none items-center justify-center rounded-[9px] text-[15px] font-bold text-white"
+          style={{ background: highlight ? "#0d6e6e" : "#0f172a" }}
+        >
+          {rank}
         </div>
-        <div className="text-right">
-          <div className="text-2xl font-semibold text-ink">{item.total}</div>
-          <div className="text-[11px] uppercase tracking-wide text-slate-400">fit score</div>
+        <div className="min-w-0 flex-1">
+          <div className="mb-0.5 flex flex-wrap items-center gap-2.5">
+            <h3 className="text-[17px] font-semibold">{item.plan.name}</h3>
+            <PlanChips plan={item.plan} />
+          </div>
+          <div className="text-[12.5px] text-slate-500">
+            {item.plan.carrier} · {item.plan.planType} ·{" "}
+            {item.plan.monthlyPremium === 0 ? "$0" : usd(item.plan.monthlyPremium)} premium ·{" "}
+            {usd(item.plan.annualOOPMax)} OOP max
+          </div>
+        </div>
+        <div className="flex-none text-right">
+          <div className="num text-[34px] font-bold leading-none text-accent">{item.total}</div>
+          <div className="text-[10.5px] uppercase tracking-[.03em] text-slate-400">fit score</div>
         </div>
       </div>
 
       {item.providerGaps && item.providerGaps.length > 0 && (
-        <div className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+        <div className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-[12.5px] text-rose-700">
           ✗ Drops required provider: <strong>{item.providerGaps.join(", ")}</strong>
         </div>
       )}
 
-      <p className="mt-3 text-sm text-slate-700">{fitSummary(item)}</p>
-
-      {positives.length > 0 && (
-        <ul className="mt-3 space-y-1">
+      <div className="my-4 grid grid-cols-2 gap-x-6 gap-y-2">
+        <div>
           {positives.map((r) => (
-            <li key={r.code} className="flex items-start gap-2 text-sm text-slate-700">
-              <span className="text-emerald-600">✓</span> {r.text}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat label="Medications">
-          {pct(e.medCoverageRate)} covered
-          {e.topUncoveredDrugs.length > 0 && (
-            <span className="block text-xs text-amber-700">gap: {e.topUncoveredDrugs[0].name}</span>
-          )}
-        </Stat>
-        <Stat label="Network">
-          {networkGap ? <span className="text-amber-700">gap risk</span> : keepsProviders ? "keeps required" : "in network"}
-        </Stat>
-        <Stat label="Worst case">
-          {usd(e.worst)}
-          <span className="block text-xs text-slate-400">{pct(e.catastrophicRate)} catastrophic</span>
-        </Stat>
-        <Stat label="Confidence">
-          {confLabel(item.confidence)}
-          <span className="block text-xs text-slate-400">est. {usd(e.mean)}/yr</span>
-        </Stat>
-      </div>
-
-      {caveats.length > 0 && (
-        <div className="mt-3 border-t border-slate-100 pt-3">
-          <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Tradeoffs</span>
-          {caveats.map((r) => (
-            <div key={r.code} className="mt-1 flex items-start gap-2 text-sm text-amber-700">
-              <span>⚑</span> {r.text}
+            <div key={r.code} className="mb-[5px] flex gap-2 text-[12.5px] leading-[1.45] text-slate-700">
+              <span className="flex-none text-emerald-600">✓</span>
+              {r.text}
             </div>
           ))}
         </div>
-      )}
+        <div>
+          {caveats.map((r) => (
+            <div key={r.code} className="mb-[5px] flex gap-2 text-[12.5px] leading-[1.45] text-slate-700">
+              <span className="flex-none text-amber-600">⚑</span>
+              {r.text}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-4 gap-2.5 border-t border-slate-100 pt-3.5">
+        <Stat label="Meds covered">
+          <span className="num">{pct(e.medCoverageRate)}</span>
+        </Stat>
+        <Stat label="Network">
+          <span className="text-emerald-600">{networkLabel}</span>
+        </Stat>
+        <Stat label="Worst-case / cat.">
+          <span className="num">{usd(e.worst)}</span> <span className="font-normal text-slate-400">· {pct(e.catastrophicRate)}</span>
+        </Stat>
+        <Stat label="Confidence / est.">
+          {confLabel(item.confidence)} <span className="font-normal text-slate-400">· <span className="num">{usd(e.mean)}</span>/yr</span>
+        </Stat>
+      </div>
     </div>
   );
 }
 
 function Stat({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-md bg-slate-50 px-3 py-2">
-      <div className="text-[11px] uppercase tracking-wide text-slate-400">{label}</div>
-      <div className="mt-0.5 text-sm font-medium text-ink">{children}</div>
+    <div>
+      <div className="mb-0.5 text-[10.5px] uppercase tracking-[.03em] text-slate-400">{label}</div>
+      <div className="text-[13px] font-semibold">{children}</div>
     </div>
   );
-}
-
-function Chip({ tone, children }: { tone: "emerald" | "rose"; children: React.ReactNode }) {
-  const cls = tone === "emerald" ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-rose-50 text-rose-700 ring-rose-200";
-  return <span className={`rounded px-1.5 py-0.5 text-[10px] ring-1 ${cls}`}>{children}</span>;
 }
