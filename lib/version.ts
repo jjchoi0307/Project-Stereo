@@ -10,7 +10,9 @@
  * Because reference data is bundled + git-versioned (not in a mutable DB), these
  * strings + the stored profile snapshot are enough to re-run and verify.
  */
-export const DATA_VERSION = "plans-2026.v1";
+// v2: corrected SCAN citation pages (point at the county benefit tables — LA p.46/47,
+// Riverside p.50, San Diego p.52, Connections p.24 — not the portfolio title slide p.19).
+export const DATA_VERSION = "plans-2026.v2";
 // 1.1.0: agent-based correlated simulation (lib/engine/priors.ts), default 500 agents.
 // 1.2.0: de-identified seeding (lib/engine/seed.ts) — cohort keyed to clinical facts, not identity.
 export const ENGINE_VERSION = "engine-1.2.0";

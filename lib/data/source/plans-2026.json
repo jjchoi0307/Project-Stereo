@@ -1399,7 +1399,7 @@
     {
       "id": "scan-classic",
       "sourceFile": "2026 Benefit Rollout Presentation_ Southern CA.pdf",
-      "sourcePage": 19,
+      "sourcePage": 46,
       "name": "SCAN Classic (HMO)",
       "carrier": "SCAN Health Plan",
       "planType": "HMO",
@@ -1440,7 +1440,7 @@
     {
       "id": "scan-prime",
       "sourceFile": "2026 Benefit Rollout Presentation_ Southern CA.pdf",
-      "sourcePage": 19,
+      "sourcePage": 46,
       "name": "SCAN Prime (HMO)",
       "carrier": "SCAN Health Plan",
       "planType": "HMO",
@@ -1481,7 +1481,7 @@
     {
       "id": "scan-venture",
       "sourceFile": "2026 Benefit Rollout Presentation_ Southern CA.pdf",
-      "sourcePage": 19,
+      "sourcePage": 46,
       "name": "SCAN Venture (HMO)",
       "carrier": "SCAN Health Plan",
       "planType": "HMO",
@@ -1522,7 +1522,7 @@
     {
       "id": "scan-affirm",
       "sourceFile": "2026 Benefit Rollout Presentation_ Southern CA.pdf",
-      "sourcePage": 19,
+      "sourcePage": 47,
       "name": "SCAN Affirm (HMO, Tailored)",
       "carrier": "SCAN Health Plan",
       "planType": "HMO",
@@ -1563,7 +1563,7 @@
     {
       "id": "scan-inspired",
       "sourceFile": "2026 Benefit Rollout Presentation_ Southern CA.pdf",
-      "sourcePage": 19,
+      "sourcePage": 47,
       "name": "SCAN Inspired (HMO, Tailored for Women)",
       "carrier": "SCAN Health Plan",
       "planType": "HMO",
@@ -1604,7 +1604,7 @@
     {
       "id": "scan-allied",
       "sourceFile": "2026 Benefit Rollout Presentation_ Southern CA.pdf",
-      "sourcePage": 19,
+      "sourcePage": 47,
       "name": "SCAN Allied (HMO, Astrana)",
       "carrier": "SCAN Health Plan",
       "planType": "HMO",
@@ -1645,7 +1645,7 @@
     {
       "id": "scan-essential-savings",
       "sourceFile": "2026 Benefit Rollout Presentation_ Southern CA.pdf",
-      "sourcePage": 19,
+      "sourcePage": 47,
       "name": "SCAN Essential Savings (HMO, Astrana)",
       "carrier": "SCAN Health Plan",
       "planType": "HMO",
@@ -1686,7 +1686,7 @@
     {
       "id": "scan-desert-choice",
       "sourceFile": "2026 Benefit Rollout Presentation_ Southern CA.pdf",
-      "sourcePage": 19,
+      "sourcePage": 50,
       "name": "SCAN Desert Choice (HMO, Heritage)",
       "carrier": "SCAN Health Plan",
       "planType": "HMO",
@@ -1727,7 +1727,7 @@
     {
       "id": "scan-alta",
       "sourceFile": "2026 Benefit Rollout Presentation_ Southern CA.pdf",
-      "sourcePage": 19,
+      "sourcePage": 52,
       "name": "SCAN Alta (HMO)",
       "carrier": "SCAN Health Plan",
       "planType": "HMO",
@@ -1768,7 +1768,7 @@
     {
       "id": "scan-select-ucsd",
       "sourceFile": "2026 Benefit Rollout Presentation_ Southern CA.pdf",
-      "sourcePage": 19,
+      "sourcePage": 52,
       "name": "SCAN Select (HMO, UCSD)",
       "carrier": "SCAN Health Plan",
       "planType": "HMO",
@@ -1809,7 +1809,7 @@
     {
       "id": "scan-balance-csnp",
       "sourceFile": "2026 Benefit Rollout Presentation_ Southern CA.pdf",
-      "sourcePage": 19,
+      "sourcePage": 46,
       "name": "SCAN Balance (HMO C-SNP)",
       "carrier": "SCAN Health Plan",
       "planType": "HMO",
@@ -1850,7 +1850,7 @@
     {
       "id": "scan-strive-csnp",
       "sourceFile": "2026 Benefit Rollout Presentation_ Southern CA.pdf",
-      "sourcePage": 19,
+      "sourcePage": 46,
       "name": "SCAN Strive (HMO C-SNP)",
       "carrier": "SCAN Health Plan",
       "planType": "HMO",
@@ -1891,7 +1891,7 @@
     {
       "id": "scan-connections-dsnp",
       "sourceFile": "2026 Benefit Rollout Presentation_ Southern CA.pdf",
-      "sourcePage": 19,
+      "sourcePage": 24,
       "name": "SCAN Connections (HMO D-SNP / FIDE-SNP)",
       "carrier": "SCAN Health Plan",
       "planType": "HMO",
