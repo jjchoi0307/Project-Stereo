@@ -1,6 +1,6 @@
+import Image from "next/image";
 import Link from "next/link";
 import { signOut } from "@/app/login/actions";
-import Brand from "./Brand";
 
 /**
  * Sticky branded top bar for the authed broker routes (dashboard, session,
@@ -13,11 +13,19 @@ export default function Header({ authed = true }: { authed?: boolean }) {
   return (
     <header className="sticky top-0 z-20 border-b border-slate-200 bg-white">
       <div className="mx-auto flex h-[60px] max-w-[1120px] items-center gap-5 px-7">
-        <Link href="/" className="flex items-center gap-2.5">
-          <Brand />
-          <span className="leading-[1.05]">
-            <span className="block text-sm font-semibold text-ink">Seoul Medical Group</span>
-            <span className="block text-[11px] tracking-[.02em] text-slate-500">Plan Recommender · 2026</span>
+        <Link href="/" className="flex items-center gap-3">
+          <Image
+            src="/smg-logo.png"
+            alt="Seoul Medical Group"
+            width={156}
+            height={30}
+            priority
+            className="h-[30px] w-auto"
+          />
+          <span className="hidden border-l border-slate-200 pl-3 text-[11px] leading-tight tracking-[.02em] text-slate-500 sm:block">
+            Plan Recommender
+            <br />
+            2026
           </span>
         </Link>
         <nav className="ml-auto flex items-center gap-1">
