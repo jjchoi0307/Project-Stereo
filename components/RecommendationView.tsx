@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-interface Reason { code: string; text: string; positive: boolean }
+interface Citation { sourceFile: string; quote: string; kind: "document" | "computed" }
+interface Reason { code: string; text: string; positive: boolean; citation?: Citation | null }
 interface PlanMeta {
   id: string; name: string; carrier: string; planType: string;
   smgSupported: boolean; isScan: boolean; isCompetitor: boolean;
@@ -337,24 +338,36 @@ function TopCard({ item, rank, highlight }: { item: RankedItem; rank: number; hi
         </div>
       )}
 
-      <div className="my-4 grid grid-cols-2 gap-x-6 gap-y-2">
-        <div>
-          {positives.map((r) => (
-            <div key={r.code} className="mb-[5px] flex gap-2 text-[12.5px] leading-[1.45] text-slate-700">
-              <span className="flex-none text-emerald-600">✓</span>
-              {r.text}
+      {(() => {
+        const cited = [...positives, ...caveats].filter((r) => r.citation);
+        const refOf = (r: Reason) => {
+          const i = cited.indexOf(r);
+          return i >= 0 ? i + 1 : null;
+        };
+        return (
+          <>
+            <div className="my-4 grid grid-cols-2 gap-x-6 gap-y-2">
+              <div>
+                {positives.map((r) => (
+                  <div key={r.code} className="mb-[5px] flex gap-2 text-[12.5px] leading-[1.45] text-slate-700">
+                    <span className="flex-none text-emerald-600">✓</span>
+                    <span>{r.text}<Ref n={refOf(r)} /></span>
+                  </div>
+                ))}
+              </div>
+              <div>
+                {caveats.map((r) => (
+                  <div key={r.code} className="mb-[5px] flex gap-2 text-[12.5px] leading-[1.45] text-slate-700">
+                    <span className="flex-none text-amber-600">⚑</span>
+                    <span>{r.text}<Ref n={refOf(r)} /></span>
+                  </div>
+                ))}
+              </div>
             </div>
-          ))}
-        </div>
-        <div>
-          {caveats.map((r) => (
-            <div key={r.code} className="mb-[5px] flex gap-2 text-[12.5px] leading-[1.45] text-slate-700">
-              <span className="flex-none text-amber-600">⚑</span>
-              {r.text}
-            </div>
-          ))}
-        </div>
-      </div>
+            {cited.length > 0 && <Sources cited={cited} />}
+          </>
+        );
+      })()}
 
       <div className="grid grid-cols-4 gap-2.5 border-t border-slate-100 pt-3.5">
         <Stat label="Meds covered">
@@ -440,6 +453,41 @@ function Stat({ label, children }: { label: string; children: React.ReactNode })
     <div>
       <div className="mb-0.5 text-[10.5px] uppercase tracking-[.03em] text-slate-400">{label}</div>
       <div className="text-[13px] font-semibold">{children}</div>
+    </div>
+  );
+}
+
+/** Superscript footnote reference, like a book citation. */
+function Ref({ n }: { n: number | null }) {
+  if (!n) return null;
+  return <sup className="ml-0.5 text-[9px] font-bold text-accent">{n}</sup>;
+}
+
+/** Per-plan footnote list: each bullet's source PDF + the exact figure behind it. */
+function Sources({ cited }: { cited: Reason[] }) {
+  return (
+    <div className="mb-1 mt-1 rounded-lg border border-slate-100 bg-slate-50 px-3.5 py-2.5">
+      <div className="mb-1.5 text-[10.5px] font-bold uppercase tracking-[.04em] text-slate-500">Sources</div>
+      <ol className="space-y-1">
+        {cited.map((r, i) => {
+          const c = r.citation!;
+          return (
+            <li key={r.code} className="flex gap-2 text-[11px] leading-[1.45] text-slate-500">
+              <span className="num flex-none font-bold text-accent">{i + 1}.</span>
+              <span>
+                <span className="num text-slate-600">{c.sourceFile}</span>
+                {c.kind === "computed" && (
+                  <span className="ml-1 rounded bg-violet-50 px-1 py-px text-[9px] font-semibold uppercase text-violet-600">
+                    computed
+                  </span>
+                )}
+                {" — "}
+                <span className="italic">“{c.quote}”</span>
+              </span>
+            </li>
+          );
+        })}
+      </ol>
     </div>
   );
 }

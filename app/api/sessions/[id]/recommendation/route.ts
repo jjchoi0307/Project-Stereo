@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDataStore } from "@/lib/data";
 import { runEngine } from "@/lib/engine/pipeline";
-import { describeReason, POSITIVE_REASONS, type ReasonFacts } from "@/lib/engine/reasons";
+import { citationFor, describeReason, POSITIVE_REASONS, type ReasonFacts } from "@/lib/engine/reasons";
 import { getSessionStore } from "@/lib/session/store";
 import type { ClientProfileInput, Plan } from "@/lib/domain";
 import type { RulesContext } from "@/lib/engine/rules";
@@ -33,6 +33,12 @@ const buildReasonFacts = (
   const requiredProviderNames = profile.providerConstraints
     .filter((c) => c.hardRequirement)
     .map((c) => (c.systemId ? ctx.systemsById.get(c.systemId)?.name ?? c.label : c.label));
+  // Verbatim drug-tier line from the plan PDF, for the medication citations.
+  const drugTierSummary = ([1, 2, 3, 4, 5, 6] as const)
+    .map((t) => ({ t, d: plan.benefits.drugTierDisplay[t] }))
+    .filter((x) => Boolean(x.d))
+    .map((x) => `T${x.t} ${x.d}`)
+    .join(" · ");
   return {
     currentMedNames: medNames,
     currentMedCount: profile.medications.length,
@@ -48,6 +54,9 @@ const buildReasonFacts = (
     topUncoveredDrug: summary.topUncoveredDrugs[0],
     isLowestCatastrophic: cross.isLowestCatastrophic,
     eligibleCount: cross.eligibleCount,
+    sourceFile: plan.sourceFile,
+    annualOOPMax: plan.benefits.annualOOPMax,
+    drugTierSummary: drugTierSummary || undefined,
   };
 };
 
@@ -102,6 +111,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         code,
         text: describeReason(code, facts),
         positive: POSITIVE_REASONS.has(code),
+        citation: citationFor(code, facts),
       })),
       exposure: {
         mean: s.meanExposure,

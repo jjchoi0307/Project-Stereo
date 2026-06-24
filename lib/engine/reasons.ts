@@ -62,6 +62,80 @@ export interface ReasonFacts {
   /** Cross-plan context (may be unavailable, e.g. in horizon view). */
   isLowestCatastrophic?: boolean;
   eligibleCount?: number;
+
+  /** Citation inputs: the source PDF + verbatim figures behind a bullet. */
+  sourceFile?: string;
+  annualOOPMax?: number;
+  /** Short drug-tier summary built from the plan's verbatim tier display. */
+  drugTierSummary?: string;
+}
+
+/**
+ * A footnote citation for a reason bullet.
+ * - `document`: the figure is stated directly in the plan PDF (cite the line).
+ * - `computed`: the bullet is a simulation result; we cite the DOCUMENTED INPUTS
+ *   it was computed from, not a single PDF line (intellectually honest).
+ */
+export interface ReasonCitation {
+  sourceFile: string;
+  quote: string;
+  kind: "document" | "computed";
+}
+
+/**
+ * Footnote source for a bullet: the plan PDF + the exact figure/line behind it,
+ * tagged document-fact vs computed-from-inputs. Returns null when no source is
+ * known (so the bullet simply renders without a reference number).
+ */
+export function citationFor(code: ReasonCode, facts: ReasonFacts = {}): ReasonCitation | null {
+  const src = facts.sourceFile;
+  if (!src) return null;
+  const doc = (quote: string): ReasonCitation => ({ sourceFile: src, quote, kind: "document" });
+  const computed = (quote: string): ReasonCitation => ({ sourceFile: src, quote, kind: "computed" });
+  const tiers = facts.drugTierSummary;
+
+  switch (code) {
+    case "covers_all_current_meds":
+    case "covers_likely_future_meds":
+      return doc(tiers ? `Drug tiers — ${tiers}` : "Plan formulary & drug-tier schedule");
+    case "keeps_required_providers":
+      return doc(
+        facts.requiredProviderNames?.length
+          ? `Plan network contracts ${nameList(facts.requiredProviderNames)}`
+          : "Plan provider network",
+      );
+    case "strong_specialist_access":
+      return doc(
+        facts.specialistCopay != null ? `Specialist copay ${money(facts.specialistCopay)}` : "Specialist cost share",
+      );
+    case "mental_health_well_covered":
+      return doc(
+        facts.mentalHealthOutpatientCopay != null
+          ? `Outpatient mental-health copay ${money(facts.mentalHealthOutpatientCopay)}`
+          : "Outpatient mental-health cost share",
+      );
+    case "acupuncture_well_covered":
+      return doc(
+        facts.acupunctureVisitsPerYear != null
+          ? `Acupuncture ${facts.acupunctureVisitsPerYear >= 999 ? "unlimited" : facts.acupunctureVisitsPerYear} visits/yr`
+          : "Acupuncture benefit",
+      );
+    case "med_coverage_gap":
+      return doc(
+        facts.topUncoveredDrug ? `${facts.topUncoveredDrug.name} not on plan formulary` : "Plan formulary",
+      );
+    case "low_catastrophic_exposure":
+    case "high_catastrophic_exposure":
+      return computed(
+        facts.annualOOPMax != null
+          ? `Out-of-pocket max ${money(facts.annualOOPMax)} — catastrophic risk computed across simulated futures`
+          : "Out-of-pocket max + cost shares — computed across simulated futures",
+      );
+    case "network_gap_risk":
+      return computed("Network match computed across simulated futures");
+    default:
+      return null;
+  }
 }
 
 const pct = (frac: number) => `${Math.round(frac * 100)}%`;
