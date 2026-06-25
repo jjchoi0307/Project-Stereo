@@ -263,6 +263,7 @@ function synthPlan(g: GenPlan, pack: PlanFactsPack): AiRankedPlan | null {
     topUncoveredDrugs: facts.medicationCoverage.notCovered,
     providerGaps: facts.providerGaps,
     deepWritten: true,
+    topThreeVotes: 0, // horizons aren't ensembled — votes apply only to the "today" path
   };
 }
 

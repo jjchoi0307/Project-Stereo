@@ -1,5 +1,6 @@
 import { requireRole } from "@/lib/supabase/adminGuard";
 import type { AuditEventRow } from "@/lib/audit/eventStore";
+import { clientRef } from "@/lib/session/ref";
 
 export const dynamic = "force-dynamic";
 
@@ -73,7 +74,7 @@ export default async function AdminAuditPage() {
                   <td className="num whitespace-nowrap px-3.5 py-2.5 text-slate-500">{fmt(e.created_at)}</td>
                   <td className="px-3.5 py-2.5">{actorLabel(e)}</td>
                   <td className="px-3.5 py-2.5 font-medium">{ACTION_LABEL[e.action] ?? e.action}</td>
-                  <td className="num px-3.5 py-2.5 text-slate-400">{e.session_id ? e.session_id.slice(0, 8) : "—"}</td>
+                  <td className="num px-3.5 py-2.5 text-slate-500" title={e.session_id ?? undefined}>{e.session_id ? clientRef(e.session_id) : "—"}</td>
                   <td className="px-3.5 py-2.5 text-slate-600">{planOf(e.metadata) || "—"}</td>
                   <td className="px-3.5 py-2.5">
                     <span className={e.outcome === "ok" ? "text-emerald-600" : "text-rose-600"}>{e.outcome}</span>

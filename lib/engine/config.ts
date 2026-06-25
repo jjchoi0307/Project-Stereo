@@ -4,6 +4,35 @@
  */
 
 /**
+ * Ensemble voting for the recommendation ranking. The model isn't perfectly
+ * deterministic and fit scores can cluster, so a single run's top pick is unstable.
+ * We run the cheap SCREEN (ranking) step `runs` times and present the plans that
+ * appear in the top 3 most often — frequency, not one run's score, decides the
+ * ranking. `runs` is configurable (env ENSEMBLE_RUNS); start ~16 and tune for
+ * cost/latency. Only the screen is ensembled — the expensive deep write-ups run
+ * ONCE for the voted winners. `concurrency` bounds parallel model calls (Anthropic
+ * rate limits); see lib/ai/recommend.ts for the 500-broker load notes.
+ */
+export const ENSEMBLE = {
+  runs: Math.max(1, Number(process.env.ENSEMBLE_RUNS) || 16),
+  concurrency: Math.max(1, Number(process.env.ENSEMBLE_CONCURRENCY) || 8),
+} as const;
+
+/**
+ * Tiebreak rule (named business rule — auditable). When plans are EFFECTIVELY
+ * TIED on top-3 votes (within `tieBandVotes`), order is decided purely by MEMBER
+ * BENEFIT: lower out-of-pocket max, then lower premium, then plan id. There is NO
+ * carrier preference — ties never favor a specific plan/carrier. (A carrier
+ * tiebreak was considered and rejected: undisclosed steering is a compliance risk
+ * and contradicts the tool's unbiased positioning.)
+ */
+export const TIEBREAK_RULE = {
+  name: "neutral_member_benefit_v1",
+  tieBandVotes: Math.max(0, Number(process.env.TIE_BAND_VOTES) || 2),
+  order: ["topThreeVotes_desc", "annualOOPMax_asc", "monthlyPremium_asc", "planId_asc"] as const,
+} as const;
+
+/**
  * Relative importance of each intake input to the recommendation/projection.
  * Centralized (not hardcoded in logic) so it can later be admin-exposed.
  *

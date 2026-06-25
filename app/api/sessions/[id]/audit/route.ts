@@ -6,7 +6,7 @@ import { runEngine } from "@/lib/engine/pipeline";
 import { getHorizonPayload } from "@/lib/engine/horizonCacheStore";
 import { getSessionStore } from "@/lib/session/store";
 import { SIM_MODEL } from "@/lib/sim/env";
-import { DATA_VERSION } from "@/lib/version";
+import { recCacheKey } from "@/lib/engine/factsSignature";
 import type { AuditAiRecommendation } from "@/lib/domain";
 
 /** Shape of the cached AI recommendation payload (app/api/.../recommendation/route.ts). */
@@ -69,8 +69,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   // recommendation route warms it). Audit is POSTed after the recommendation
   // loads, so it's normally present; if not, the record still saves with the
   // deterministic backbone and the AI snapshot fills in on a later view.
-  const aiCacheKey = `airec:${id}:${session.profile.capturedAt}:${SIM_MODEL}:${DATA_VERSION}`;
-  const cachedAi = (await getHorizonPayload(aiCacheKey)) as CachedAiRec | null;
+  const cachedAi = (await getHorizonPayload(recCacheKey(id, session.profile))) as CachedAiRec | null;
   const ai = cachedAi?.ranked?.length ? toAuditAi(cachedAi) : null;
 
   const run = await runEngine(session.profile, getDataStore(), { preferenceWeighting: false });
