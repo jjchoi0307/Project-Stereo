@@ -10,12 +10,11 @@
  */
 import "server-only";
 
-import Anthropic from "@anthropic-ai/sdk";
 import type { ClientProfileInput } from "@/lib/domain";
-import { getAnthropic } from "@/lib/sim/client";
 import { deidentifyForSim, type DeidentifiedFacts } from "@/lib/sim/deidentify";
 import { SIM_MODEL } from "@/lib/sim/env";
 import { importanceGuidance } from "@/lib/engine/config";
+import { newTrajectory, rlmLeaf, logTrajectory } from "./rlm";
 
 export interface AiMarker {
   key: string;
@@ -145,51 +144,21 @@ const OUTPUT_SCHEMA = {
  */
 export async function aiClinicalRead(profile: ClientProfileInput, guidanceText?: string): Promise<ClinicalRead> {
   const facts = deidentifyForSim(profile);
-  const client = getAnthropic();
 
-  // No extended thinking — it was the main latency cost; this is a single-pass
-  // grounded read, not a deep simulation interpretation. temperature 0 keeps the
-  // markers/futures stable for the same facts.
-  const stream = client.messages.stream({
-    model: SIM_MODEL,
-    max_tokens: 16000,
-    temperature: 0,
-    output_config: {
-      effort: "low",
-      format: { type: "json_schema", schema: OUTPUT_SCHEMA },
-    },
+  // RLM leaf: the clinical read is a single grounded sub-call (small, bounded
+  // context — no decomposition needed), run through the shared orchestrator so it
+  // shares the same config + trajectory logging as the other AI systems.
+  const traj = newTrajectory("clinical-read");
+  const parsed = await rlmLeaf<unknown>(traj, {
+    label: "clinical-read",
     system: SYSTEM_PROMPT,
-    messages: [{ role: "user", content: buildUserMessage(facts, guidanceText) }],
+    user: buildUserMessage(facts, guidanceText),
+    schema: OUTPUT_SCHEMA,
   });
-  const response = await stream.finalMessage();
+  logTrajectory(traj);
 
-  if (response.stop_reason === "refusal") {
-    throw new Error(
-      `Clinical read refused: ${response.stop_details?.explanation ?? "no detail"}`,
-    );
-  }
-  if (response.stop_reason === "max_tokens") {
-    throw new Error("Clinical read was truncated (hit max_tokens) — raise the cap in lib/ai/clinicalRead.ts.");
-  }
-
-  const text = response.content
-    .filter((b): b is Anthropic.TextBlock => b.type === "text")
-    .map((b) => b.text)
-    .join("");
-
-  if (!text.trim()) {
-    throw new Error(`Empty clinical read (stop_reason=${response.stop_reason}).`);
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(text);
-  } catch (e) {
-    throw new Error(`Clinical read was not valid JSON: ${(e as Error).message}`);
-  }
   const read = validateRead(parsed);
-
-  return { model: response.model, ...read };
+  return { model: SIM_MODEL, ...read };
 }
 
 /**

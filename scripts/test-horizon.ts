@@ -12,6 +12,7 @@
 
 import { getDataStore } from "@/lib/data";
 import { recommendAcrossHorizons } from "@/lib/engine/horizonRecommendation";
+import { HORIZON_REC } from "@/lib/engine/config";
 
 async function main() {
   const db = getDataStore();
@@ -39,7 +40,7 @@ async function main() {
   expect(JSON.stringify(a) === JSON.stringify(b), "two runs must be byte-identical (seeded)");
 
   // Horizons present and ordered.
-  expect(a.horizons.map((h) => h.years).join(",") === "5,10", "expected 5y and 10y horizons");
+  expect(a.horizons.map((h) => h.years).join(",") === HORIZON_REC.horizonsYears.join(","), `expected ${HORIZON_REC.horizonsYears.join("/")}y horizons`);
 
   for (const h of a.horizons) {
     expect(h.winShare >= 0 && h.winShare <= 1, `${h.years}yr winShare out of range`);
@@ -68,10 +69,12 @@ async function main() {
     expect(typeof changed === "boolean", `${h.years}yr changedVsToday not derivable`);
   }
 
-  // Clinical burden compounds: 10yr assumes at least as many acquired conditions as 5yr.
-  const c5 = a.horizons.find((h) => h.years === 5)!.projectedAssumptions.conditions.length;
-  const c10 = a.horizons.find((h) => h.years === 10)!.projectedAssumptions.conditions.length;
-  expect(c10 >= c5, "10yr should assume at least as many acquired conditions as 5yr");
+  // Clinical burden compounds: the later horizon assumes at least as many acquired
+  // conditions as the earlier one (horizon-agnostic — uses whatever years are configured).
+  const byYear = [...a.horizons].sort((x, y) => x.years - y.years);
+  const early = byYear[0].projectedAssumptions.conditions.length;
+  const late = byYear[byYear.length - 1].projectedAssumptions.conditions.length;
+  expect(late >= early, "later horizon should assume at least as many acquired conditions as the earlier one");
 
   if (errors.length) {
     console.error(`\n✗ ${errors.length} problem(s):`);
