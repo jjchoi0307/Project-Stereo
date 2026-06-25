@@ -25,12 +25,11 @@
  */
 
 import "server-only";
-import Anthropic from "@anthropic-ai/sdk";
 import type { ClientProfileInput } from "@/lib/domain";
 import type { DataStore } from "@/lib/data";
 import { SCORING, ENSEMBLE, TIEBREAK_RULE } from "@/lib/engine/config";
-import { getAnthropic } from "@/lib/sim/client";
 import { SIM_MODEL } from "@/lib/sim/env";
+import { newTrajectory, rlmLeaf, rlmParallel, logTrajectory, type RlmTrajectory } from "./rlm";
 import {
   buildPlanFactsPack,
   type PlanFacts,
@@ -174,11 +173,12 @@ interface ScreenItem {
   fit: number;
 }
 
+// RLM leaf: one screen sub-call (ranks all plans). Decompose step of the ensemble.
 async function callScreen(
-  client: Anthropic,
+  traj: RlmTrajectory,
   patient: RecommendationPatientFacts,
   candidates: PlanFacts[],
-): Promise<{ items: ScreenItem[]; model: string }> {
+): Promise<ScreenItem[]> {
   const user = [
     "MEMBER FACTS (de-identified):",
     JSON.stringify(patient, null, 2),
@@ -188,11 +188,13 @@ async function callScreen(
     "",
     "Rank ALL of these plans best-first for this member.",
   ].join("\n");
-  const { parsed, model } = await callStructured(client, SYSTEM_SCREEN, user, SCREEN_SCHEMA, "low");
-  const items = Array.isArray((parsed as { ranked?: unknown }).ranked)
-    ? ((parsed as { ranked: ScreenItem[] }).ranked)
-    : [];
-  return { items, model };
+  const parsed = await rlmLeaf<{ ranked?: ScreenItem[] }>(traj, {
+    label: "screen",
+    system: SYSTEM_SCREEN,
+    user,
+    schema: SCREEN_SCHEMA,
+  });
+  return Array.isArray(parsed.ranked) ? parsed.ranked : [];
 }
 
 // ── Stage 2: DEEP write-up (one plan, full detail) ───────────────────────────
@@ -326,11 +328,12 @@ function deepPlanFacts(c: PlanFacts) {
   };
 }
 
+// RLM leaf: the deep write-up sub-call for ONE plan (delegate step).
 async function callDeep(
-  client: Anthropic,
+  traj: RlmTrajectory,
   patient: RecommendationPatientFacts,
   facts: PlanFacts,
-): Promise<{ result: DeepResult; model: string }> {
+): Promise<DeepResult> {
   const user = [
     "MEMBER FACTS (de-identified):",
     JSON.stringify(patient, null, 2),
@@ -340,49 +343,12 @@ async function callDeep(
     "",
     "Write the detailed recommendation for this plan and this member.",
   ].join("\n");
-  const { parsed, model } = await callStructured(client, SYSTEM_DEEP, user, DEEP_SCHEMA, "low");
-  return { result: parsed as DeepResult, model };
-}
-
-// ── Anthropic call helper (streamed, structured) ─────────────────────────────
-
-async function callStructured(
-  client: Anthropic,
-  system: string,
-  user: string,
-  schema: Record<string, unknown>,
-  effort: "low" | "medium",
-): Promise<{ parsed: unknown; model: string }> {
-  const stream = client.messages.stream({
-    model: SIM_MODEL,
-    max_tokens: 16000,
-    // No extended thinking: it was the dominant latency cost (adaptive thinking
-    // pushed the 3 parallel deep calls past the route budget) and adds little for
-    // this well-structured, grounded task — the programmatic synthesize guardrails
-    // enforce correctness. temperature 0 (allowed without thinking) keeps output
-    // stable + repeatable for the same client.
-    temperature: 0,
-    output_config: { effort, format: { type: "json_schema", schema } },
-    system,
-    messages: [{ role: "user", content: user }],
+  return rlmLeaf<DeepResult>(traj, {
+    label: `deep:${facts.planId}`,
+    system: SYSTEM_DEEP,
+    user,
+    schema: DEEP_SCHEMA,
   });
-  const response = await stream.finalMessage();
-  if (response.stop_reason === "refusal") {
-    throw new Error(`AI call refused: ${response.stop_details?.explanation ?? "no detail"}`);
-  }
-  if (response.stop_reason === "max_tokens") {
-    throw new Error("AI call truncated (hit max_tokens).");
-  }
-  const text = response.content
-    .filter((b): b is Anthropic.TextBlock => b.type === "text")
-    .map((b) => b.text)
-    .join("");
-  if (!text.trim()) throw new Error(`Empty AI response (stop_reason=${response.stop_reason}).`);
-  try {
-    return { parsed: JSON.parse(text), model: response.model };
-  } catch (e) {
-    throw new Error(`AI response was not valid JSON: ${(e as Error).message}`);
-  }
 }
 
 // ── Scoring + grounding helpers ──────────────────────────────────────────────
@@ -499,20 +465,6 @@ function heuristicToRanked(c: PlanFacts, sub: AiSubScores, topThreeVotes = 0): A
   };
 }
 
-/** Run `tasks` with a bounded number in flight (Anthropic rate-limit hygiene). */
-async function withConcurrency<T, R>(items: T[], limit: number, fn: (item: T, i: number) => Promise<R>): Promise<R[]> {
-  const out: R[] = new Array(items.length);
-  let next = 0;
-  async function worker() {
-    while (next < items.length) {
-      const i = next++;
-      out[i] = await fn(items[i], i);
-    }
-  }
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => worker()));
-  return out;
-}
-
 export interface RecommendOptions {
   /** Relax hard provider requirements (near-miss path when nothing is eligible). */
   ignoreProviderConstraints?: boolean;
@@ -540,7 +492,7 @@ export async function recommendPlans(
   const maxMoop = Math.max(1, ...pack.candidates.map((c) => c.annualOOPMax));
   const medCount = pack.patient.medications.length;
 
-  const client = getAnthropic();
+  const traj = newTrajectory("today-recommendation");
 
   // TODAY's plan-fit is grounded in the 2026 plan files + the member's HARD
   // clinical needs (conditions, meds, providers, dual eligibility, region). Family
@@ -559,20 +511,26 @@ export async function recommendPlans(
   // rate limits. Raising ENSEMBLE.runs multiplies spend + latency linearly, and at
   // high broker concurrency the cache table (horizon_cache) write throughput may
   // warrant a higher Supabase tier — see supabase/migrations/0006.
-  const screens = await withConcurrency(
-    Array.from({ length: ENSEMBLE.runs }),
+  const screens = await rlmParallel(
+    traj,
+    "screen-ensemble",
+    Array.from({ length: ENSEMBLE.runs }, (_, i) => i),
     ENSEMBLE.concurrency,
-    () => callScreen(client, todayPatient, pack.candidates).then((r) => r).catch(() => null),
+    async () => {
+      try {
+        return await callScreen(traj, todayPatient, pack.candidates);
+      } catch {
+        return null;
+      }
+    },
   );
-  const okScreens = screens.filter((s): s is { items: ScreenItem[]; model: string } => !!s && s.items.length > 0);
+  const okScreens = screens.filter((s): s is ScreenItem[] => !!s && s.length > 0);
   const ensembleRuns = okScreens.length;
 
   // Each run's top 3 (by that run's fit) earns the plan one top-3 "vote".
   const votes = new Map<string, number>();
-  let screenModel = SIM_MODEL;
-  for (const s of okScreens) {
-    screenModel = s.model;
-    const top3 = [...s.items]
+  for (const items of okScreens) {
+    const top3 = [...items]
       .filter((it) => factsById.has(it.planId))
       .sort((a, b) => b.fit - a.fit)
       .slice(0, DEEP_COUNT);
@@ -595,22 +553,20 @@ export async function recommendPlans(
 
   const topIds = orderedIds.slice(0, DEEP_COUNT);
 
-  // 2. DEEP — parallel detailed write-ups for the voted winners (small per-call).
-  const deepResults = await Promise.all(
-    topIds.map(async (id) => {
-      try {
-        const facts = factsById.get(id)!;
-        const { result, model } = await callDeep(client, todayPatient, facts);
-        return { id, ranked: deepToRanked(facts, result, votes.get(id) ?? 0), model };
-      } catch (e) {
-        console.error("deep write-up failed for", id, (e as Error).message);
-        return null;
-      }
-    }),
-  );
+  // 2. DEEP — parallel detailed write-ups for the voted winners (delegate step).
+  const deepResults = await rlmParallel(traj, "deep-writeups", topIds, Math.max(1, topIds.length), async (id) => {
+    try {
+      const facts = factsById.get(id)!;
+      const result = await callDeep(traj, todayPatient, facts);
+      return { id, ranked: deepToRanked(facts, result, votes.get(id) ?? 0) };
+    } catch (e) {
+      console.error("deep write-up failed for", id, (e as Error).message);
+      return null;
+    }
+  });
 
-  const deepOk = deepResults.filter((x): x is NonNullable<typeof x> => x !== null);
-  const model = deepOk[0]?.model ?? screenModel;
+  const deepOk = deepResults.filter((x): x is { id: string; ranked: AiRankedPlan } => x !== null);
+  const model = SIM_MODEL;
   const deepById = new Map(deepOk.map((d) => [d.id, d.ranked]));
 
   // 3. SYNTHESIZE — the three SHOWN plans are SELECTED by top-3 vote frequency
@@ -639,6 +595,7 @@ export async function recommendPlans(
   }
 
   const ranked = [...topRanked, ...tail];
+  logTrajectory(traj);
   return {
     model,
     topPlanId: ranked[0]?.planId ?? null,

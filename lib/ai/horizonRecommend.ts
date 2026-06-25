@@ -20,12 +20,11 @@
  */
 
 import "server-only";
-import Anthropic from "@anthropic-ai/sdk";
 import type { ClientProfileInput } from "@/lib/domain";
 import type { DataStore } from "@/lib/data";
-import { getAnthropic } from "@/lib/sim/client";
 import { SIM_MODEL } from "@/lib/sim/env";
 import { HORIZON_REC, SCORING, importanceGuidance } from "@/lib/engine/config";
+import { newTrajectory, rlmLeaf, rlmParallel, logTrajectory } from "./rlm";
 import {
   buildPlanFactsPack,
   type PlanFacts,
@@ -287,54 +286,40 @@ export async function recommendHorizons(
     )
     .slice(0, 10);
 
-  const client = getAnthropic();
   const emptyProjection: HorizonProjection = { headline: "", summary: "", conditions: [], medications: [] };
-  let modelUsed = SIM_MODEL;
+  const traj = newTrajectory("horizon-projection");
 
-  // RLM DECOMPOSE: one focused call PER horizon, run in PARALLEL. Each emits ~half
-  // the output of the old both-horizons-in-one call, and they run concurrently, so
-  // wall-clock ≈ a single horizon instead of two. A failed horizon degrades to an
-  // empty card rather than failing the whole projection.
-  const horizons: AiHorizon[] = await Promise.all(
-    HORIZONS.map(async (years): Promise<AiHorizon> => {
-      try {
-        const stream = client.messages.stream({
-          model: SIM_MODEL,
-          max_tokens: 12000,
-          temperature: 0,
-          output_config: { effort: "low", format: { type: "json_schema", schema: OUTPUT_SCHEMA } },
-          system: SYSTEM,
-          messages: [{ role: "user", content: userMessage(pack.patient, shortlist, years, guidanceText) }],
-        });
-        const response = await stream.finalMessage();
-        modelUsed = response.model;
-        if (response.stop_reason === "refusal" || response.stop_reason === "max_tokens") {
-          throw new Error(`horizon ${years}: ${response.stop_reason}`);
-        }
-        const text = response.content
-          .filter((b): b is Anthropic.TextBlock => b.type === "text")
-          .map((b) => b.text)
-          .join("");
-        if (!text.trim()) throw new Error(`horizon ${years}: empty`);
-        const parsed = JSON.parse(text) as { projection?: HorizonProjection; ranked?: GenPlan[] };
-        const ranked = (parsed.ranked ?? [])
-          .map((p) => synthPlan(p, pack))
-          .filter((x): x is AiRankedPlan => x !== null)
-          .sort((a, b) => b.fitScore - a.fitScore);
-        const recommended = ranked[0] ?? null;
-        return {
-          years,
-          changedVsToday: Boolean(recommended && todayTopPlanId && recommended.planId !== todayTopPlanId),
-          projection: parsed.projection ?? emptyProjection,
-          recommended,
-          ranked,
-        };
-      } catch (e) {
-        console.error("horizon projection failed:", (e as Error).message);
-        return { years, changedVsToday: false, projection: emptyProjection, recommended: null, ranked: [] };
-      }
-    }),
-  );
+  // RLM DECOMPOSE → DELEGATE: one focused leaf call PER horizon, run in PARALLEL
+  // through the shared orchestrator. Each emits ~half the output of the old
+  // both-horizons-in-one call and they run concurrently, so wall-clock ≈ a single
+  // horizon. A failed horizon degrades to an empty card, not a failed projection.
+  const horizons = await rlmParallel(traj, "horizons", [...HORIZONS], HORIZONS.length, async (years): Promise<AiHorizon> => {
+    try {
+      const parsed = await rlmLeaf<{ projection?: HorizonProjection; ranked?: GenPlan[] }>(traj, {
+        label: `horizon:${years}`,
+        system: SYSTEM,
+        user: userMessage(pack.patient, shortlist, years, guidanceText),
+        schema: OUTPUT_SCHEMA,
+        maxTokens: 12000,
+      });
+      const ranked = (parsed.ranked ?? [])
+        .map((p) => synthPlan(p, pack))
+        .filter((x): x is AiRankedPlan => x !== null)
+        .sort((a, b) => b.fitScore - a.fitScore);
+      const recommended = ranked[0] ?? null;
+      return {
+        years,
+        changedVsToday: Boolean(recommended && todayTopPlanId && recommended.planId !== todayTopPlanId),
+        projection: parsed.projection ?? emptyProjection,
+        recommended,
+        ranked,
+      };
+    } catch (e) {
+      console.error("horizon projection failed:", (e as Error).message);
+      return { years, changedVsToday: false, projection: emptyProjection, recommended: null, ranked: [] };
+    }
+  });
 
-  return { model: modelUsed, todayTopPlanId, horizons };
+  logTrajectory(traj);
+  return { model: SIM_MODEL, todayTopPlanId, horizons };
 }
