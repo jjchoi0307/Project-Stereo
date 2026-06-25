@@ -13,9 +13,15 @@
  * ONCE for the voted winners. `concurrency` bounds parallel model calls (Anthropic
  * rate limits); see lib/ai/recommend.ts for the 500-broker load notes.
  */
+// Latency is governed by ceil(runs / concurrency) batches, NOT by `runs` alone:
+// 12, 15, 16 all run in 2 batches at concurrency 8, so they cost ~the same time.
+// runs=12, concurrency=12 → a SINGLE batch (faster) while still giving 12 votes
+// (credible: temperature 0 + the neutral tiebreaker converge well below 16). The
+// 3 deep write-ups remain the latency floor. Both env-tunable; if Anthropic rate
+// limits bite at high broker concurrency, lower ENSEMBLE_CONCURRENCY.
 export const ENSEMBLE = {
-  runs: Math.max(1, Number(process.env.ENSEMBLE_RUNS) || 16),
-  concurrency: Math.max(1, Number(process.env.ENSEMBLE_CONCURRENCY) || 8),
+  runs: Math.max(1, Number(process.env.ENSEMBLE_RUNS) || 12),
+  concurrency: Math.max(1, Number(process.env.ENSEMBLE_CONCURRENCY) || 12),
 } as const;
 
 /**
