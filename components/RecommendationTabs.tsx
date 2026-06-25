@@ -119,7 +119,15 @@ export default function RecommendationTabs({ sessionId }: { sessionId: string })
             </div>
           )}
           {hStatus === "error" && (
-            <p className="text-sm text-rose-600">Could not load the horizon recommendation.</p>
+            <div className="flex items-center gap-3 text-sm text-rose-600">
+              <span>Could not load the projection.</span>
+              <button
+                onClick={() => setHStatus("idle")}
+                className="rounded-[7px] border border-slate-300 bg-white px-3 py-1.5 text-[12.5px] font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Retry
+              </button>
+            </div>
           )}
           {horizons &&
             (activeHorizon ? (
