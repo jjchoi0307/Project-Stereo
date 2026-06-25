@@ -34,7 +34,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   // Cache keyed by facts-version + model + config: it auto-runs when the clinical
   // read opens, so without this every page view would be a ~30-50s Claude call + cost.
-  const cacheKey = `clinicalread:${id}:${factsSignature(session.profile)}:${SIM_MODEL}:${cfgSig}`;
+  const cacheKey = `clinicalread:${id}:${factsSignature(session.profile)}:${SIM_MODEL}:${cfgSig}:h3-5`;
   const cached = await getHorizonPayload(cacheKey);
   if (cached) return NextResponse.json(cached);
 
