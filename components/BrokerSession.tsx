@@ -75,6 +75,8 @@ interface HealthView {
 
 const usd = (n: number) => "$" + n.toLocaleString();
 const pct = (n: number) => Math.round(n * 100) + "%";
+/** Plain-language stand-in for the model's "acuity"/complexity score (0..1+). */
+const careLevel = (score: number) => (score >= 0.5 ? "high" : score >= 0.25 ? "moderate" : "low");
 
 export default function BrokerSession({
   initialSession,
@@ -624,7 +626,7 @@ function HealthFuturesCardDeterministic({ health }: { health: HealthView }) {
         <ReadLabel>
           3 · Health futures{" "}
           <span className="font-medium normal-case tracking-normal text-slate-400">
-            · simulated, {health.replicas} trajectories
+            · {health.replicas} simulated futures
           </span>
         </ReadLabel>
       </div>
@@ -640,11 +642,11 @@ function HealthFuturesCardDeterministic({ health }: { health: HealthView }) {
         </div>
         <div className="rounded-[10px] border border-orange-200 bg-orange-50 p-3.5">
           <div className="num text-[26px] font-semibold text-orange-900">{pct(health.severeRate)}</div>
-          <div className="mt-0.5 text-xs text-orange-700">high-complexity</div>
+          <div className="mt-0.5 text-xs text-orange-700">need more care</div>
         </div>
         <div className="rounded-[10px] border border-slate-200 bg-slate-50 p-3.5">
-          <div className="num text-[26px] font-semibold text-ink">{health.meanComplexity.toFixed(1)}</div>
-          <div className="mt-0.5 text-xs text-slate-500">mean acuity</div>
+          <div className="text-[22px] font-semibold capitalize text-ink">{careLevel(health.meanComplexity)}</div>
+          <div className="mt-0.5 text-xs text-slate-500">typical care needs</div>
         </div>
       </div>
 
@@ -671,7 +673,7 @@ function HealthFuturesCardDeterministic({ health }: { health: HealthView }) {
       {health.sampleTrajectories.length > 0 && (
         <>
           <div onClick={() => setOpen((x) => !x)} className="cursor-pointer text-[12.5px] font-medium text-accent">
-            {open ? "▾" : "▸"} Sample trajectories
+            {open ? "▾" : "▸"} See example futures
           </div>
           {open && (
             <div className="mt-3 flex flex-col gap-2">
@@ -680,11 +682,11 @@ function HealthFuturesCardDeterministic({ health }: { health: HealthView }) {
                   key={r.index}
                   className="rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-[11px] text-[12.5px] leading-[1.5] text-slate-600"
                 >
-                  <span className="font-semibold text-slate-700">Replica #{r.index}</span> · end acuity{" "}
-                  {r.complexityScore.toFixed(1)} —{" "}
+                  <span className="font-semibold text-slate-700">Example #{r.index}</span> · ends with{" "}
+                  {careLevel(r.complexityScore)} care needs —{" "}
                   {r.events.length
                     ? r.events.map((e) => `Yr ${e.year}: ${e.label}`).join("; ")
-                    : "remained stable, no major events"}
+                    : "stayed healthy, no major changes"}
                   .
                 </div>
               ))}
