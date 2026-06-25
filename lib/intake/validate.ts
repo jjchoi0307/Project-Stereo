@@ -126,6 +126,11 @@ export function validateIntake(v: IntakeFormValues): IntakeValidation {
     fields.mustKeepSystemIds = "Unrecognized provider system.";
   }
 
+  // dualEligible — boolean only (defensive; public token endpoint may pass arbitrary JSON)
+  if (v.dualEligible !== undefined && typeof v.dualEligible !== "boolean") {
+    fields.dualEligible = "Dual eligibility must be true or false.";
+  }
+
   // zip / county — string length caps
   if (typeof v.zip !== "string" || v.zip.length > MAX_ZIP) {
     fields.zip = `ZIP must be ${MAX_ZIP} characters or fewer.`;

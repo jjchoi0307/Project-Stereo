@@ -292,6 +292,26 @@ export default function IntakeForm({
           onChange={(x) => update({ priorYearInpatientEvents: x })} />
       </div>
 
+      {divider}
+
+      {/* 8 Dual eligibility — gates D-SNP plans */}
+      <StepLabel step={8}>Dual eligibility</StepLabel>
+      <label className="flex cursor-pointer items-start gap-3 rounded-[9px] border border-slate-200 bg-white px-3.5 py-3">
+        <input
+          type="checkbox"
+          className="mt-0.5"
+          checked={v.dualEligible}
+          onChange={(e) => update({ dualEligible: e.target.checked })}
+        />
+        <span className="text-[13px] leading-[1.5] text-slate-700">
+          <span className="font-semibold">Dual-eligible (Medicare + Medi-Cal)</span>
+          <span className="block text-[12px] text-slate-500">
+            Check only if the client is confirmed dual-eligible. Dual-eligible Special Needs Plans (D-SNPs) are
+            shown only when this is checked.
+          </span>
+        </span>
+      </label>
+
       <button type="submit" disabled={submitting}
         className="mt-[26px] flex w-full items-center justify-center gap-2.5 rounded-[9px] bg-accent py-[13px] text-[14.5px] font-semibold text-white hover:opacity-90 disabled:opacity-50">
         {submitting && <Spinner light size={15} />}
