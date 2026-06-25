@@ -16,6 +16,7 @@ export type AccessAction =
   | "session.read"
   | "session.list"
   | "session.create"
+  | "session.delete"
   | "profile.write"
   | "audit.read"
   | "audit.list"

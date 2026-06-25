@@ -3,21 +3,18 @@
  * the session; the recommendation flow lives inside it.
  */
 
-import Link from "next/link";
 import Header from "@/components/ui/Header";
-import StatusPill from "@/components/ui/StatusPill";
 import StartSessionButton from "@/components/StartSessionButton";
+import SessionRow from "@/components/SessionRow";
 import { getSessionStore } from "@/lib/session/store";
 import { getBrokerContext } from "@/lib/supabase/auth";
+import { clientRef } from "@/lib/session/ref";
 
 export const dynamic = "force-dynamic"; // per-request; in-memory or RLS-scoped Supabase
 
-const fmtDate = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-
-function sessionLabel(s: { clientLabel?: string; profile?: { age: number } | undefined }): string {
-  if (s.clientLabel) return s.clientLabel;
-  return s.profile ? `Client — age ${s.profile.age}` : "Client — intake pending";
+/** Readable identity: broker-set label if any, else the stable client code. */
+function sessionTitle(s: { clientLabel?: string; id: string }): string {
+  return s.clientLabel || `Client ${clientRef(s.id)}`;
 }
 
 export default async function Home() {
@@ -51,24 +48,21 @@ export default async function Home() {
           </div>
         ) : (
           <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-            <div className="grid grid-cols-[1fr_auto_auto] gap-4 border-b border-slate-200 bg-slate-50 px-5 py-3 text-[11px] font-semibold uppercase tracking-[.04em] text-slate-500">
+            <div className="grid grid-cols-[1fr_auto_auto_auto] gap-4 border-b border-slate-200 bg-slate-50 px-5 py-3 text-[11px] font-semibold uppercase tracking-[.04em] text-slate-500">
               <div>Client</div>
               <div>Status</div>
-              <div className="text-right">Updated</div>
+              <div>Started</div>
+              <div className="sr-only">Actions</div>
             </div>
             {sessions.map((s) => (
-              <Link
+              <SessionRow
                 key={s.id}
-                href={`/session/${s.id}`}
-                className="grid grid-cols-[1fr_auto_auto] items-center gap-4 border-b border-slate-100 px-5 py-[15px] last:border-b-0 hover:bg-slate-50"
-              >
-                <div>
-                  <div className="text-sm font-semibold text-ink">{sessionLabel(s)}</div>
-                  <div className="num text-xs text-slate-400">{s.id}</div>
-                </div>
-                <StatusPill status={s.status === "intake_complete" ? "captured" : "awaiting"} />
-                <div className="num text-right text-[13px] text-slate-500">{fmtDate(s.createdAt)}</div>
-              </Link>
+                id={s.id}
+                title={sessionTitle(s)}
+                code={clientRef(s.id)}
+                captured={s.status === "intake_complete"}
+                createdAt={s.createdAt}
+              />
             ))}
           </div>
         )}

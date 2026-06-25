@@ -7,3 +7,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (!session) return NextResponse.json({ error: "session not found" }, { status: 404 });
   return NextResponse.json({ session });
 }
+
+/** Remove a client session from the broker's list (soft-delete; audit trail kept).
+ *  RLS scopes the store to the signed-in broker, so this only affects own sessions. */
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const store = await getSessionStore();
+  const session = await store.get(id);
+  if (!session) return NextResponse.json({ error: "session not found" }, { status: 404 });
+  await store.remove(id);
+  return NextResponse.json({ ok: true });
+}

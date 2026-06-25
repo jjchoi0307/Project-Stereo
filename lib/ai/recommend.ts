@@ -605,3 +605,30 @@ export async function recommendPlans(
     ensembleRuns,
   };
 }
+
+/**
+ * Lightweight selection probe for analysis/audits (e.g. carrier-fairness sims): the
+ * single-screen top-N plan ids for a profile, plus the eligible candidate ids. This
+ * is the SAME screen step that drives the live top-3 selection (the ensemble just
+ * votes over repeats of it), so it faithfully reflects WHICH plans surface — without
+ * the expensive ensemble + deep write-ups. Not used by the product runtime.
+ */
+export async function screenTopPlans(
+  profile: ClientProfileInput,
+  db: DataStore,
+  n = 3,
+): Promise<{ top: string[]; eligible: string[] }> {
+  const pack = await buildPlanFactsPack(profile, db);
+  const eligible = pack.candidates.map((c) => c.planId);
+  if (eligible.length === 0) return { top: [], eligible };
+  const todayPatient: RecommendationPatientFacts = { ...pack.patient, familyHistory: [], lifestyle: undefined };
+  const traj = newTrajectory("screen-probe");
+  const items = await callScreen(traj, todayPatient, pack.candidates);
+  const valid = new Set(eligible);
+  const top = [...items]
+    .filter((it) => valid.has(it.planId))
+    .sort((a, b) => b.fit - a.fit)
+    .slice(0, n)
+    .map((it) => it.planId);
+  return { top, eligible };
+}
