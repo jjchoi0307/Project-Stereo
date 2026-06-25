@@ -428,6 +428,11 @@ const BAND_STYLE: Record<RiskBand, { bg: string; fg: string; bar: string; label:
   high: { bg: "#fff7ed", fg: "#9a3412", bar: "#f97316", label: "High" },
   very_high: { bg: "#fff1f2", fg: "#9f1239", bar: "#f43f5e", label: "Very high" },
 };
+// The bar shows the BAND, not a raw 0–100 score. A precise number (e.g. "70")
+// reads as a false-precise measurement to brokers/members and is confusing; the
+// honest unit here is the band. Each band fills a fixed, representative width so
+// the bar communicates magnitude qualitatively without inventing precision.
+const BAND_FILL: Record<RiskBand, number> = { low: 28, moderate: 52, high: 76, very_high: 100 };
 const MARKERS: { key: keyof Omit<NormalizedProfile, "profileId">; label: string }[] = [
   { key: "diabetes", label: "Diabetes / metabolic" },
   { key: "networkSensitivity", label: "Network sensitivity" },
@@ -449,12 +454,12 @@ function MarkersCard({ clinical }: { clinical: ClinicalRead }) {
         </ReadLabel>
       </div>
       <p className="mb-[18px] text-[12.5px] text-slate-400">
-        Markers read from the captured facts. Click any to read why.
+        Each marker is rated Low → Very high from the captured facts. Click any to read why.
       </p>
       <div className="flex flex-col gap-3.5">
         {clinical.markers.map((m) => {
           const st = BAND_STYLE[m.band];
-          const p = Math.max(0, Math.min(100, Math.round(m.score)));
+          const p = BAND_FILL[m.band];
           const isOpen = !!open[m.key];
           return (
             <div key={m.key}>
@@ -469,9 +474,8 @@ function MarkersCard({ clinical }: { clinical: ClinicalRead }) {
                 <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
                   <span className="block h-full rounded-full" style={{ width: `${p}%`, background: st.bar }} />
                 </div>
-                <span className="num flex-[0_0_40px] text-right text-[13px] font-semibold text-slate-600">{p}</span>
                 <span
-                  className="flex-[0_0_86px] rounded-md py-[3px] text-center text-[11px] font-semibold"
+                  className="flex-[0_0_92px] rounded-md py-[3px] text-center text-[11px] font-semibold"
                   style={{ background: st.bg, color: st.fg }}
                 >
                   {st.label}
@@ -498,13 +502,13 @@ function MarkersCardDeterministic({ normalized }: { normalized: NormalizedProfil
         <ReadLabel>2 · Risk markers</ReadLabel>
       </div>
       <p className="mb-[18px] text-[12.5px] text-slate-400">
-        Six normalized markers from the captured profile. Click any to read its trace.
+        Six markers from the captured profile, each rated Low → Very high. Click any to read its trace.
       </p>
       <div className="flex flex-col gap-3.5">
         {MARKERS.map((m) => {
           const marker = normalized[m.key] as RiskMarker;
           const st = BAND_STYLE[marker.band];
-          const p = Math.round(marker.value * 100);
+          const p = BAND_FILL[marker.band];
           const isOpen = !!open[m.key];
           return (
             <div key={m.key}>
@@ -519,9 +523,8 @@ function MarkersCardDeterministic({ normalized }: { normalized: NormalizedProfil
                 <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
                   <span className="block h-full rounded-full" style={{ width: `${p}%`, background: st.bar }} />
                 </div>
-                <span className="num flex-[0_0_40px] text-right text-[13px] font-semibold text-slate-600">{p}</span>
                 <span
-                  className="flex-[0_0_86px] rounded-md py-[3px] text-center text-[11px] font-semibold"
+                  className="flex-[0_0_92px] rounded-md py-[3px] text-center text-[11px] font-semibold"
                   style={{ background: st.bg, color: st.fg }}
                 >
                   {st.label}

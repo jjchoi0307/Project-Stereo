@@ -24,7 +24,7 @@ interface Breakdown {
 interface CostItem { label: string; annualEstimate: number; basis: string }
 interface CostBreakdown { items: CostItem[]; estimatedAnnualTotal: number }
 interface PlanFeature { label: string; value: string | null; included: boolean }
-interface RankedItem {
+export interface RankedItem {
   planId: string; expectedFit: number; downsideRisk: number; confidence: number;
   preferenceContribution: number; total: number; reasons: Reason[];
   plan: PlanMeta; exposure: Exposure; providerGaps?: string[]; breakdown: Breakdown;
@@ -340,7 +340,7 @@ function FullAnalysis({ item }: { item: RankedItem }) {
 // Stacked detailed card — full width so nothing is squished. Header + an
 // "includes" grid + the full analysis inline. Used for the top-3 recommendation
 // and the near-miss ("closest plans") fallback.
-function TopCard({ item, rank, highlight, ensembleRuns }: { item: RankedItem; rank: number; highlight: boolean; ensembleRuns?: number }) {
+export function TopCard({ item, rank, highlight, ensembleRuns }: { item: RankedItem; rank: number; highlight: boolean; ensembleRuns?: number }) {
   const hasEnsemble = typeof ensembleRuns === "number" && ensembleRuns > 0 && typeof item.topThreeVotes === "number";
   return (
     <div
