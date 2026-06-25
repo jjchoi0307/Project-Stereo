@@ -57,7 +57,9 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
   const condLabel = (c: string) => CONDITION_OPTIONS.find((o) => o.value === c)?.label ?? c;
   const conditions = p.conditions.map(condLabel).join(", ") || "—";
   const requiredProviders = p.providerConstraints.map((c) => c.label).join(", ") || "None";
-  const topId = record.ranking[0];
+  // The delivered top pick is the AI recommendation's (what the member saw), not
+  // the legacy deterministic ranking.
+  const topId = record.aiRecommendation?.topPlanId ?? record.ranking[0];
   const seedHex = "0x" + (record.scenarioSeed >>> 0).toString(16).toUpperCase();
   const excluded = record.exclusionLog.filter((e) => e.severity === "exclude");
 
@@ -87,7 +89,7 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
               <div className="mb-1 text-sm font-semibold">Verify reproducibility</div>
               <p className="m-0 text-[12.5px] leading-[1.5] text-slate-400">
                 {record.aiRecommendation
-                  ? "The delivered AI recommendation is preserved verbatim below, every figure cited to a plan PDF + page. Verify re-runs the deterministic eligibility + engine backbone and confirms it reproduces exactly."
+                  ? "The delivered AI recommendation is preserved verbatim below — every figure cited to a plan PDF + page (reproducibility by record). Verify re-runs the deterministic eligibility gate against the recorded versions and confirms it's unchanged."
                   : "Re-runs the engine with the recorded seed and versions, then confirms the ranking reproduces exactly."}
               </p>
             </div>
@@ -189,29 +191,6 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
           )}
         </Card>
 
-        {/* Per-plan scores (deterministic engine backbone) */}
-        <Card title="Deterministic engine backbone · per-plan scores">
-          <table className="w-full border-collapse text-[12.5px]">
-            <thead>
-              <tr className="text-left text-[11px] uppercase tracking-[.03em] text-slate-500">
-                <th className="px-2 py-1.5 font-semibold">Rank</th>
-                <th className="px-2 py-1.5 font-semibold">Plan</th>
-                <th className="px-2 py-1.5 text-right font-semibold">Fit</th>
-                <th className="px-2 py-1.5 text-right font-semibold">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {record.perPlanScores.map((s, i) => (
-                <tr key={s.planId} className="border-t border-slate-100">
-                  <td className="num px-2 py-2 text-slate-400">{i + 1}</td>
-                  <td className="px-2 py-2 font-medium">{name(s.planId)}</td>
-                  <td className="num px-2 py-2 text-right font-semibold text-accent">{s.total}</td>
-                  <td className="px-2 py-2 text-right text-[11.5px] text-emerald-600">eligible</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
       </main>
     </div>
   );

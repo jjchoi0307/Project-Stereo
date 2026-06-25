@@ -73,9 +73,8 @@ export async function rlmLeaf<T>(traj: RlmTrajectory, opts: RlmLeafOptions): Pro
   const start = Date.now();
   let ok = false;
   let model = SIM_MODEL;
-  const controller = new AbortController();
   const timeoutMs = opts.timeoutMs ?? DEFAULT_LEAF_TIMEOUT_MS;
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     const client = getAnthropic();
     const stream = client.messages.stream(
@@ -87,10 +86,25 @@ export async function rlmLeaf<T>(traj: RlmTrajectory, opts: RlmLeafOptions): Pro
         system: opts.system,
         messages: [{ role: "user", content: opts.user }],
       },
-      // Bound the request (and its retries) so a stalled stream can't hang forever.
-      { signal: controller.signal, timeout: timeoutMs, maxRetries: 1 },
+      { maxRetries: 1 },
     );
-    const res = await stream.finalMessage();
+    // Hard wall-clock cap via Promise.race + stream.abort(). Relying on the SDK
+    // signal/timeout alone proved insufficient for a stalled STREAM (the spinner
+    // hung for minutes); racing finalMessage() against a timer that aborts the
+    // stream guarantees this leaf resolves or rejects within timeoutMs.
+    const res = await Promise.race([
+      stream.finalMessage(),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          try {
+            stream.abort();
+          } catch {
+            /* ignore */
+          }
+          reject(new Error(`${opts.label}: timed out after ${Math.round(timeoutMs / 1000)}s`));
+        }, timeoutMs);
+      }),
+    ]);
     model = res.model;
     if (res.stop_reason === "refusal") {
       throw new Error(`${opts.label}: refused — ${res.stop_details?.explanation ?? "no detail"}`);
