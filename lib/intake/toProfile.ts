@@ -18,7 +18,7 @@ const intOrUndef = (s: string): number | undefined => {
 const PROVENANCE_FIELDS: (keyof ClientProfileInput)[] = [
   "age", "gender", "marketRegion", "zip", "county", "medications", "conditions",
   "conditionsFreeText", "heightCm", "weightKg", "bmi", "familyHistory",
-  "providerConstraints", "utilization", "dualEligible",
+  "providerConstraints", "utilization", "lifestyle", "dualEligible",
 ];
 
 export function toProfileInput(
@@ -52,6 +52,14 @@ export function toProfileInput(
   };
   const hasUtilization = Object.values(utilization).some((x) => x !== undefined);
 
+  const lifestyle = {
+    avgDailySteps: intOrUndef(values.avgDailySteps),
+    sleepHoursPerNight: intOrUndef(values.sleepHoursPerNight),
+    sleepQuality: values.sleepQuality || undefined,
+    selfRatedHealth: intOrUndef(values.selfRatedHealth),
+  };
+  const hasLifestyle = Object.values(lifestyle).some((x) => x !== undefined);
+
   const conditionsFreeText = values.conditionsFreeText
     .split(/[\n,]/)
     .map((s) => s.trim())
@@ -75,6 +83,8 @@ export function toProfileInput(
     familyHistory: values.familyHistory,
     providerConstraints: constraints,
     utilization: hasUtilization ? utilization : undefined,
+    lifestyle: hasLifestyle ? lifestyle : undefined,
+    consentAcknowledged: values.consentAcknowledged || undefined,
     dualEligible: values.dualEligible || undefined,
   };
 

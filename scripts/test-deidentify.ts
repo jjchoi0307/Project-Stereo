@@ -21,6 +21,9 @@ const ALLOWED_KEYS = new Set([
   "bmi",
   "familyHistory",
   "utilization",
+  // lifestyle: measurable self-reported markers (steps, sleep, self-rated health) —
+  // clinical/aggregate facts, no identifiers; feeds the projection only.
+  "lifestyle",
 ]);
 
 async function main() {

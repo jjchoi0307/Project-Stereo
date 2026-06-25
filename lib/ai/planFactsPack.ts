@@ -101,6 +101,13 @@ export interface RecommendationPatientFacts {
     specialistVisits12mo?: number;
     priorYearInpatientEvents?: number;
   };
+  /** Self-reported lifestyle facts (advisory; low-weight, must not drive the projection). */
+  lifestyle?: {
+    avgDailySteps?: number;
+    sleepHoursPerNight?: number;
+    sleepQuality?: string;
+    selfRatedHealth?: number;
+  };
 }
 
 export interface PlanFactsPack {
@@ -193,6 +200,7 @@ function patientFacts(profile: ClientProfileInput, ctx: RulesContext): Recommend
       affectedRelativesCount: f.affectedRelativesCount,
     })),
     utilization: profile.utilization,
+    lifestyle: profile.lifestyle,
   };
 }
 

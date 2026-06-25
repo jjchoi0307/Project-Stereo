@@ -15,6 +15,7 @@ import type { ClientProfileInput } from "@/lib/domain";
 import { getAnthropic } from "@/lib/sim/client";
 import { deidentifyForSim, type DeidentifiedFacts } from "@/lib/sim/deidentify";
 import { SIM_MODEL } from "@/lib/sim/env";
+import { importanceGuidance } from "@/lib/engine/config";
 
 export interface AiMarker {
   key: string;
@@ -71,6 +72,8 @@ function buildUserMessage(facts: DeidentifiedFacts): string {
   return [
     "DE-IDENTIFIED CLINICAL FACTS:",
     JSON.stringify(facts, null, 2),
+    "",
+    importanceGuidance(),
     "",
     "Produce the risk markers and the 5- and 10-year health-futures read, grounded in the above facts.",
   ].join("\n");

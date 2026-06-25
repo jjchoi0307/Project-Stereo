@@ -28,8 +28,15 @@ export interface IntakeFormValues {
   acupunctureVisits12mo: string;
   specialistVisits12mo: string;
   priorYearInpatientEvents: string;
+  /** Self-reported lifestyle & well-being (optional, lightly weighted). */
+  avgDailySteps: string;
+  sleepHoursPerNight: string;
+  sleepQuality: "" | "poor" | "fair" | "good";
+  selfRatedHealth: "" | "1" | "2" | "3" | "4" | "5";
   /** Medicare + Medi-Cal dual eligibility (gates D-SNP plans). */
   dualEligible: boolean;
+  /** Member consent to use these facts to recommend a plan (required to submit). */
+  consentAcknowledged: boolean;
 }
 
 export function emptyIntakeValues(): IntakeFormValues {
@@ -49,7 +56,12 @@ export function emptyIntakeValues(): IntakeFormValues {
     acupunctureVisits12mo: "",
     specialistVisits12mo: "",
     priorYearInpatientEvents: "",
+    avgDailySteps: "",
+    sleepHoursPerNight: "",
+    sleepQuality: "",
+    selfRatedHealth: "",
     dualEligible: false,
+    consentAcknowledged: false,
   };
 }
 

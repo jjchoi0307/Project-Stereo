@@ -198,7 +198,11 @@ export type ConditionFlag =
   | "anxiety"
   | "obesity"
   | "osteoarthritis"
-  | "sleep_disorder";
+  | "sleep_disorder"
+  | "stroke"
+  | "dementia"
+  | "osteoporosis"
+  | "thyroid_disorder";
 
 export interface Medication {
   raw: string; // exactly as entered
@@ -226,6 +230,18 @@ export interface UtilizationFacts {
   priorYearInpatientEvents?: number;
 }
 
+/**
+ * Self-reported lifestyle facts (all optional, measurable). Low-weight/advisory
+ * context only — never identity, never opinion. Must not drive the projection
+ * (see lib/engine/config.ts INPUT_IMPORTANCE.lifestyle).
+ */
+export interface LifestyleFacts {
+  avgDailySteps?: number;
+  sleepHoursPerNight?: number;
+  sleepQuality?: "poor" | "fair" | "good";
+  selfRatedHealth?: number; // 1–5
+}
+
 export interface ClientProfileInput {
   id: ProfileId;
   capturedBy: CaptureSource; // which path created the profile
@@ -249,6 +265,10 @@ export interface ClientProfileInput {
   familyHistory: FamilyHistoryFlag[];
   providerConstraints: ProviderConstraint[];
   utilization?: UtilizationFacts;
+  lifestyle?: LifestyleFacts;
+
+  /** Member consent to use these facts to recommend a Medicare plan (required to submit). */
+  consentAcknowledged?: boolean;
 
   /**
    * Dual eligibility (Medicare + Medi-Cal/Medicaid). Required for a D-SNP — when

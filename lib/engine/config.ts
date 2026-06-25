@@ -3,6 +3,39 @@
  * here, not scattered through the logic. Step 6 adds the scoring weights below.
  */
 
+/**
+ * Relative importance of each intake input to the recommendation/projection.
+ * Centralized (not hardcoded in logic) so it can later be admin-exposed.
+ *
+ * Family history + hard clinical inputs (diagnosed conditions, medications, dual
+ * eligibility, provider requirements) are PRIMARY — they are facts that should
+ * drive eligibility and fit. Self-reported lifestyle is low-weight/advisory
+ * context only: it adds color but must never override or drive the projection.
+ */
+export const INPUT_IMPORTANCE = {
+  familyHistory: "high",
+  diagnosedConditions: "high",
+  medications: "high",
+  dualEligibility: "high",
+  providerRequirements: "high",
+  lifestyle: "low", // self-reported; advisory context only, must not drive the projection
+} as const;
+
+/**
+ * Build the input-weighting guidance the AI health-future projection consumes,
+ * derived from INPUT_IMPORTANCE so it stays in sync with the (admin-configurable)
+ * config rather than being hardcoded in each prompt.
+ */
+export function importanceGuidance(): string {
+  const high = Object.entries(INPUT_IMPORTANCE).filter(([, v]) => v === "high").map(([k]) => k);
+  const low = Object.entries(INPUT_IMPORTANCE).filter(([, v]) => v === "low").map(([k]) => k);
+  return (
+    `INPUT WEIGHTING (configurable): weight HIGH-importance inputs heavily — ${high.join(", ")} — as the primary drivers. ` +
+    `Treat LOW-importance, self-reported inputs — ${low.join(", ")} (e.g. steps, sleep, self-rated health) — as light advisory context only: ` +
+    `they may add color but a single self-reported value must NOT drive or swing the projection.`
+  );
+}
+
 /** Drug classes whose absence from a formulary is disqualifying, not just a gap. */
 export const CRITICAL_DRUG_CLASSES = new Set([
   "long-acting insulin",

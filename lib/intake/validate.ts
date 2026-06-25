@@ -1,7 +1,13 @@
 import type { ConditionFlag, YesNoUnknown } from "@/lib/domain";
 import { providerSystems } from "@/lib/data/fixtures/providers";
 import type { IntakeFormValues } from "./types";
-import { CONDITION_OPTIONS, FAMILY_HISTORY_CONDITIONS, GENDER_OPTIONS } from "./options";
+import {
+  CONDITION_OPTIONS,
+  FAMILY_HISTORY_CONDITIONS,
+  GENDER_OPTIONS,
+  SELF_RATED_HEALTH_OPTIONS,
+  SLEEP_QUALITY_OPTIONS,
+} from "./options";
 
 export interface IntakeValidation {
   ok: boolean;
@@ -16,6 +22,8 @@ const isInt = (s: string) => /^\d+$/.test(s.trim());
 const CONDITION_VALUES = new Set<string>(CONDITION_OPTIONS.map((o) => o.value));
 const FAMILY_CONDITION_VALUES = new Set<string>(FAMILY_HISTORY_CONDITIONS.map((o) => o.value));
 const GENDER_VALUES = new Set<string>(GENDER_OPTIONS.map((o) => o.value));
+const SLEEP_QUALITY_VALUES = new Set<string>(SLEEP_QUALITY_OPTIONS.map((o) => o.value));
+const SELF_RATED_HEALTH_VALUES = new Set<string>(SELF_RATED_HEALTH_OPTIONS.map((o) => o.value));
 const YES_NO_UNKNOWN = new Set<YesNoUnknown>(["yes", "no", "unknown"]);
 const PROVIDER_SYSTEM_IDS = new Set<string>(providerSystems.map((s) => s.id));
 
@@ -64,6 +72,20 @@ export function validateIntake(v: IntakeFormValues): IntakeValidation {
   }
   for (const k of ["acupunctureVisits12mo", "specialistVisits12mo", "priorYearInpatientEvents"] as const) {
     if (v[k].trim() && !isInt(v[k])) fields[k] = "Whole number only.";
+  }
+
+  // lifestyle & well-being — optional, but must be well-formed if provided
+  if (v.avgDailySteps.trim() && (!isInt(v.avgDailySteps) || Number(v.avgDailySteps) < 0 || Number(v.avgDailySteps) > 50000)) {
+    fields.avgDailySteps = "Daily steps (0–50000).";
+  }
+  if (v.sleepHoursPerNight.trim() && (!isInt(v.sleepHoursPerNight) || Number(v.sleepHoursPerNight) < 0 || Number(v.sleepHoursPerNight) > 24)) {
+    fields.sleepHoursPerNight = "Hours of sleep (0–24).";
+  }
+  if (v.sleepQuality !== "" && !SLEEP_QUALITY_VALUES.has(v.sleepQuality as string)) {
+    fields.sleepQuality = "Select a valid sleep quality.";
+  }
+  if (v.selfRatedHealth !== "" && !SELF_RATED_HEALTH_VALUES.has(v.selfRatedHealth as string)) {
+    fields.selfRatedHealth = "Select a rating from 1 to 5.";
   }
 
   // ── Controlled vocabulary + bounds (server-side hardening) ────────────────
@@ -129,6 +151,13 @@ export function validateIntake(v: IntakeFormValues): IntakeValidation {
   // dualEligible — boolean only (defensive; public token endpoint may pass arbitrary JSON)
   if (v.dualEligible !== undefined && typeof v.dualEligible !== "boolean") {
     fields.dualEligible = "Dual eligibility must be true or false.";
+  }
+
+  // consentAcknowledged — boolean only (defensive), and REQUIRED to be true to submit.
+  if (v.consentAcknowledged !== undefined && typeof v.consentAcknowledged !== "boolean") {
+    fields.consentAcknowledged = "Consent must be true or false.";
+  } else if (v.consentAcknowledged !== true) {
+    form = form ?? "Please acknowledge consent to continue.";
   }
 
   // zip / county — string length caps

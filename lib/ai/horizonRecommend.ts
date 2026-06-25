@@ -25,7 +25,7 @@ import type { ClientProfileInput } from "@/lib/domain";
 import type { DataStore } from "@/lib/data";
 import { getAnthropic } from "@/lib/sim/client";
 import { SIM_MODEL } from "@/lib/sim/env";
-import { HORIZON_REC, SCORING } from "@/lib/engine/config";
+import { HORIZON_REC, SCORING, importanceGuidance } from "@/lib/engine/config";
 import {
   buildPlanFactsPack,
   type PlanFacts,
@@ -102,6 +102,8 @@ function userMessage(patient: RecommendationPatientFacts, candidates: PlanFacts[
   return [
     "MEMBER CURRENT FACTS (de-identified):",
     JSON.stringify(patient, null, 2),
+    "",
+    `For the HEALTH PROJECTION part: ${importanceGuidance()}`,
     "",
     "ELIGIBLE PLAN FACTS — the ONLY plans you may recommend and the ONLY figures you may cite:",
     JSON.stringify(packForPrompt(candidates), null, 2),
