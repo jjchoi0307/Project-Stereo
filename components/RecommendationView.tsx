@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Ref, Sources, type Citation } from "@/components/ui/Citation";
 import PlanKind from "@/components/ui/PlanKind";
+import Spinner from "@/components/ui/Spinner";
 
 interface Reason { code: string; text: string; positive: boolean; citation?: Citation | null }
 interface PlanMeta {
@@ -120,9 +121,26 @@ export default function RecommendationView({ sessionId }: { sessionId: string })
 
   if (loading && !data)
     return (
-      <p className="text-sm text-slate-500">
-        Generating the AI recommendation from the 2026 plan files… (~30s)
-      </p>
+      <div className="flex flex-col items-center justify-center gap-4 rounded-[13px] border border-slate-200 bg-white px-6 py-12 text-center">
+        <Spinner size={26} />
+        <div>
+          <div className="text-[14px] font-semibold text-ink">Generating the AI recommendation…</div>
+          <div className="mt-1 text-[12.5px] text-slate-500">
+            Reasoning over the 2026 plan files to rank plans, score fit, and cite every figure. (~30–45s)
+          </div>
+        </div>
+        <div className="flex flex-col gap-2.5 pt-1">
+          {["Screening eligible plans", "Scoring fit & writing reasons", "Citing the source pages"].map((step, i) => (
+            <div key={step} className="flex items-center gap-2.5 text-[12px] text-slate-400">
+              <span
+                className="h-1.5 w-1.5 rounded-full bg-accent"
+                style={{ animation: "pulseDot 1.4s ease-in-out infinite", animationDelay: `${i * 0.25}s` }}
+              />
+              {step}
+            </div>
+          ))}
+        </div>
+      </div>
     );
   if (loadError && !data)
     return loadError.notConfigured ? (
