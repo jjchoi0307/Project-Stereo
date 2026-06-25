@@ -9,6 +9,7 @@ import { getSessionStore } from "@/lib/session/store";
 import { getBrokerContext } from "@/lib/supabase/auth";
 import { getInputImportance, guidanceFromConfig } from "@/lib/config/orgSettings";
 import { factsSignature, recCacheKey } from "@/lib/engine/factsSignature";
+import { HORIZON_REC } from "@/lib/engine/config";
 
 export const dynamic = "force-dynamic";
 // One grounded Claude call projects the member's future + recommends per horizon.
@@ -33,7 +34,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const config = await getInputImportance(ctx?.orgId);
   const cfgSig = Object.values(config).map((v) => (v === "high" ? "H" : "L")).join("");
 
-  const cacheKey = `aihorizon:${id}:${factsSignature(profile)}:${SIM_MODEL}:${DATA_VERSION}:${cfgSig}`;
+  const cacheKey = `aihorizon:${id}:${factsSignature(profile)}:${SIM_MODEL}:${DATA_VERSION}:${cfgSig}:h${HORIZON_REC.horizonsYears.join("-")}`;
   const cached = await getHorizonPayload(cacheKey);
   if (cached) return NextResponse.json(cached);
 

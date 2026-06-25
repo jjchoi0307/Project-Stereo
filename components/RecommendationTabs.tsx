@@ -49,12 +49,18 @@ export default function RecommendationTabs({ sessionId }: { sessionId: string })
   const [tab, setTab] = useState<Tab>("today");
   const [horizons, setHorizons] = useState<HorizonsData | null>(null);
   const [hStatus, setHStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [todayReady, setTodayReady] = useState(false);
 
-  // Prefetch the AI across-horizon recommendation on mount (cached server-side,
-  // so this is at most one Claude call per facts-version). It projects the
-  // member's future AND recommends the best plan at each horizon.
+  // Prefetch the across-horizon projection in the BACKGROUND once Today is done —
+  // not in parallel with it. The Today ensemble is the priority; firing the heavy
+  // horizon call alongside it just makes them compete (Anthropic rate limits) and
+  // slows Today. By waiting for Today, then computing the 3/5-year projection while
+  // the broker reads Today, the horizon tabs feel instant when opened. (If the
+  // broker jumps straight to a horizon tab, we load it then.) Cached server-side,
+  // so this is at most one call per facts-version.
   useEffect(() => {
     if (horizons || hStatus === "loading") return;
+    if (!todayReady && typeof tab !== "number") return;
     let active = true;
     setHStatus("loading");
     fetch(`/api/sessions/${sessionId}/recommendation/horizons`, { cache: "no-store" })
@@ -62,7 +68,7 @@ export default function RecommendationTabs({ sessionId }: { sessionId: string })
       .then((d) => active && (setHorizons(d), setHStatus("idle")))
       .catch(() => active && setHStatus("error"));
     return () => { active = false; };
-  }, [sessionId, horizons, hStatus]);
+  }, [sessionId, horizons, hStatus, todayReady, tab]);
 
   const years = horizons?.horizons.map((h) => h.years) ?? [...HORIZON_REC.horizonsYears];
   const activeHorizon =
@@ -102,7 +108,7 @@ export default function RecommendationTabs({ sessionId }: { sessionId: string })
 
       {/* Kept mounted (hidden when inactive) so its on-mount audit POST fires once. */}
       <div role="tabpanel" id="panel-today" aria-labelledby="tab-today" hidden={tab !== "today"}>
-        <RecommendationView sessionId={sessionId} />
+        <RecommendationView sessionId={sessionId} onLoaded={() => setTodayReady(true)} />
       </div>
 
       {typeof tab === "number" && (

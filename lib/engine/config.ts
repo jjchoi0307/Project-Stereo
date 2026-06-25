@@ -132,7 +132,10 @@ export const HEALTH_SIM = {
  * "changes vs today" flags.
  */
 export const HORIZON_REC = {
-  horizonsYears: [5, 10],
+  // 3- and 5-year horizons: Medicare Advantage plans renew annually, so a longer
+  // (10yr) projection outlives the plan it describes and is far more speculative.
+  // 3/5 is the actionable, defensible window.
+  horizonsYears: [3, 5],
   // Resolution of the nested simulation. Lowered from 120/500 after a stability
   // A/B (scripts/ab-horizon.ts): 64/300 reproduced the 120/500 top pick on 100% of
   // 78 patients across both horizons (max win-share drift 2.2%) at ~2.2× the speed.

@@ -1,5 +1,5 @@
 /**
- * AI-powered across-horizon recommendation (5-year / 10-year).
+ * AI-powered across-horizon recommendation (3-year / 5-year).
  *
  * The member's health legitimately evolves, and that projection does NOT come
  * from the plan files (the user's point: a patient's future health can't be read
@@ -7,7 +7,7 @@
  * one call for latency — nested per-horizon calls were the source of the "stuck
  * loading" problem):
  *
- *   - PROJECT the member's likely future facts at 5 and 10 years (added
+ *   - PROJECT the member's likely future facts at 3 and 5 years (added
  *     conditions / medications with a plain-language likelihood), grounded in the
  *     member's CURRENT facts (age, conditions, meds, family history).
  *   - RECOMMEND, at each horizon, the best plan for that projected member — fit
@@ -34,7 +34,7 @@ import {
 } from "./planFactsPack";
 import type { AiRankedPlan, AiReason, AiSubScores } from "./recommend";
 
-const HORIZONS = HORIZON_REC.horizonsYears; // [5, 10]
+const HORIZONS = HORIZON_REC.horizonsYears; // [3, 5]
 
 export type Likelihood = "low" | "moderate" | "high";
 
@@ -66,7 +66,7 @@ const SYSTEM = `You are a Medicare Advantage plan-fit analyst for Seoul Medical 
 
 You are given the member's CURRENT de-identified facts and the structured PLAN FACTS for every ELIGIBLE plan (extracted verbatim from the 2026 carrier documents).
 
-Do TWO things for EACH requested horizon (5 years and 10 years from now):
+Do TWO things for EACH requested horizon (the specific years are given in the user message):
 
 1) PROJECT the member's likely future health, grounded ONLY in their current facts (age, conditions, medications, family history, utilization). Give a one-line headline, a short plain-language summary a layperson understands, and the conditions / medications they are most likely to ADD by that horizon, each with a likelihood of "low" | "moderate" | "high". Be clinically reasonable and non-alarming. This projection is about the PERSON, not the plans.
 

@@ -78,7 +78,7 @@ function PlanChips({ plan }: { plan: PlanMeta }) {
   );
 }
 
-export default function RecommendationView({ sessionId }: { sessionId: string }) {
+export default function RecommendationView({ sessionId, onLoaded }: { sessionId: string; onLoaded?: () => void }) {
   const [data, setData] = useState<RecData | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<{ message: string; notConfigured: boolean } | null>(null);
@@ -99,6 +99,9 @@ export default function RecommendationView({ sessionId }: { sessionId: string })
         if (!active) return;
         if (r.ok) {
           setData(d);
+          // Today is done — let the parent kick off the 3/5-year projection in the
+          // background so it's ready by the time the broker opens a horizon tab.
+          onLoaded?.();
           // Now that the AI recommendation is warm in the server cache, snapshot it.
           fetch(`/api/sessions/${sessionId}/audit`, { method: "POST" })
             .then((res) => (res.ok ? res.json() : null))

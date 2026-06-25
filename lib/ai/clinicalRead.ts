@@ -43,7 +43,7 @@ export interface ClinicalRead {
   markers: AiMarker[];
   futures: {
     horizons: {
-      years: 5 | 10;
+      years: 3 | 5;
       headline: string;
       summary: string;
       outlook: "stable" | "watch" | "elevated";
@@ -57,7 +57,7 @@ export interface ClinicalRead {
 
 const SYSTEM_PROMPT = `You are a clinical-actuarial reasoning assistant for a Medicare Advantage broker tool at Seoul Medical Group. You are given a prospective member's DE-IDENTIFIED clinical facts (age, conditions, medications, BMI, family history, recent utilization).
 
-Your job: produce (a) a set of plain-language RISK MARKERS and (b) a 5- and 10-year HEALTH-FUTURES read for this person.
+Your job: produce (a) a set of plain-language RISK MARKERS and (b) a 3- and 5-year HEALTH-FUTURES read for this person.
 
 Hard rules:
 - GROUND every marker and every outcome in a SPECIFIC provided clinical fact (e.g. "the diagnosed diabetes", "metformin in the medication list", "family history of cardiovascular disease", "age 72", a BMI value). Never invent conditions, medications, probabilities, or risks the facts do not support.
@@ -65,7 +65,7 @@ Hard rules:
 - Stay factual and NON-ALARMING. This is an educational projection to inform plan selection, NOT medical advice, a diagnosis, or a treatment plan. Never tell the member what to do clinically.
 - No identity inferences — you have only clinical facts.
 - MARKERS: choose ~6 markers from this set, keeping only the ones the facts actually support: diabetes / metabolic, cardiovascular, network sensitivity, specialist need, drug utilization, mental health, oncology. Use a stable lowercase "key" (e.g. "diabetes_metabolic", "cardiovascular", "network_sensitivity", "specialist_need", "drug_utilization", "mental_health", "oncology"). Set "score" 0..100 and a "band" consistent with it (roughly: 0-24 low, 25-49 moderate, 50-74 high, 75-100 very_high). The "why" must reference the grounding fact.
-- FUTURES: give exactly two horizons (years 5 and 10). "headline" is a short phrase; "summary" is 1-3 plain sentences about where this person's health is most likely headed; "outlook" reflects overall trajectory (stable / watch / elevated). "outcomes" are ~3-5 specific clinically-grounded possibilities with a calibrated likelihood (unlikely / possible / likely) and a "why" tied to the facts. "caveat" must state this is an educational projection, not medical advice.
+- FUTURES: give exactly two horizons (years 3 and 5). "headline" is a short phrase; "summary" is 1-3 plain sentences about where this person's health is most likely headed; "outlook" reflects overall trajectory (stable / watch / elevated). "outcomes" are ~3-5 specific clinically-grounded possibilities with a calibrated likelihood (unlikely / possible / likely) and a "why" tied to the facts. "caveat" must state this is an educational projection, not medical advice.
 - Calibrate likelihood and band to how strongly the facts support them (sparse facts => lower scores / "unlikely"/"possible", stable outlook).`;
 
 function buildUserMessage(facts: DeidentifiedFacts, guidanceText?: string): string {
@@ -75,7 +75,7 @@ function buildUserMessage(facts: DeidentifiedFacts, guidanceText?: string): stri
     "",
     guidanceText ?? importanceGuidance(),
     "",
-    "Produce the risk markers and the 5- and 10-year health-futures read, grounded in the above facts.",
+    "Produce the risk markers and the 3- and 5-year health-futures read, grounded in the above facts.",
   ].join("\n");
 }
 
@@ -112,7 +112,7 @@ const OUTPUT_SCHEMA = {
             additionalProperties: false,
             required: ["years", "headline", "summary", "outlook"],
             properties: {
-              years: { type: "integer", enum: [5, 10] },
+              years: { type: "integer", enum: [3, 5] },
               headline: { type: "string" },
               summary: { type: "string" },
               outlook: { type: "string", enum: ["stable", "watch", "elevated"] },
