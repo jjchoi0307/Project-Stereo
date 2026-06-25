@@ -260,6 +260,7 @@ function synthPlan(g: GenPlan, pack: PlanFactsPack): AiRankedPlan | null {
     annualOOPMax: facts.annualOOPMax,
     topUncoveredDrugs: facts.medicationCoverage.notCovered,
     providerGaps: facts.providerGaps,
+    deepWritten: true,
   };
 }
 
@@ -304,7 +305,9 @@ export async function recommendHorizons(
   const stream = client.messages.stream({
     model: SIM_MODEL,
     max_tokens: 28000,
-    thinking: { type: "adaptive" },
+    // No extended thinking — it dominated latency; temperature 0 keeps the
+    // projection + grounded recommendation stable. Synthesize enforces grounding.
+    temperature: 0,
     output_config: { effort: "low", format: { type: "json_schema", schema: OUTPUT_SCHEMA } },
     system: SYSTEM,
     messages: [{ role: "user", content: userMessage(pack.patient, shortlist) }],

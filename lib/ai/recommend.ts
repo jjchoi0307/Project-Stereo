@@ -1,26 +1,27 @@
 /**
  * AI-powered plan recommendation — grounded strictly in the 2026 plan files.
  *
- * The recommendation (ranking, fit score, scoring reasons, bullet points, source
- * citations) is produced by Claude reasoning over ONLY the plan-facts pack
- * (lib/ai/planFactsPack.ts) — the structured benefits extracted from the carrier
- * PDFs, every figure tagged with its sourceFile + sourcePage. The model never
- * sees, and may never invent, anything outside that pack.
+ * Two-stage RLM pipeline (decompose → delegate → synthesize):
+ *   1. SCREEN  — one fast Claude pass ranks ALL eligible plans (any carrier) by
+ *      fit to the member and picks the best few. This is the "which plans fit
+ *      best" triage; output is small (ids + a one-line rationale) so it's quick.
+ *   2. DEEP    — the top plans each get a PARALLEL detailed Claude call producing
+ *      the fit-score sub-components (each with a grounded "why"), the bullet
+ *      points, the source citations, and a cost breakdown tied to the member's
+ *      expected utilization. Running these concurrently keeps latency low while
+ *      every shown top plan is fully written up.
+ *   3. SYNTHESIZE — programmatic guardrails: every planId is a real candidate,
+ *      every citation points at that plan's own file/page and its quote is present
+ *      in the facts, the fit score is recomputed from the sub-scores, and the
+ *      deterministic facts (meds-covered rate, MOOP, provider gaps) are attached.
  *
- * RLM method (generate → verify → synthesize):
- *   1. GENERATE — Claude ranks the eligible candidates and, per plan, returns
- *      sub-scores, reasons (strengths + caveats), and a citation for every figure.
- *   2. VERIFY  — a second Claude pass audits each reason/citation against the
- *      authoritative pack and repairs or drops anything not grounded in the data.
- *   3. SYNTHESIZE — programmatic guardrails enforce the hard invariants the model
- *      can't be trusted to: every planId is a real candidate, every citation
- *      points at that plan's own source file/page, the fit score is recomputed
- *      from the sub-scores, and the deterministic facts (meds-covered rate, MOOP
- *      ceiling, provider gaps) are attached from the pack — not the model.
- *
- * Eligibility stays deterministic (the pack is already gated), so an ineligible
- * plan can never be recommended. The verify pass + server-side caching make the
- * output grounded and repeatable for the same client.
+ * The model's only knowledge of any plan is the structured plan-facts pack
+ * (lib/ai/planFactsPack.ts) extracted from the carrier PDFs — it can't invent a
+ * plan or a figure. Eligibility stays a deterministic gate, so an ineligible plan
+ * can never be recommended. (The literal "recursive REPL over near-infinite
+ * context" RLM variant isn't used here — the plan facts fit easily in one prompt,
+ * so it would only add latency; we use the RLM decompose/delegate/synthesize
+ * structure, which is what fits this bounded, grounded task.)
  */
 
 import "server-only";
@@ -39,13 +40,7 @@ import {
 
 // ── Public result shape (the routes map this into the UI response) ───────────
 
-export type ReasonCategory =
-  | "coverage"
-  | "network"
-  | "medication"
-  | "cost"
-  | "supplemental"
-  | "other";
+export type ReasonCategory = "coverage" | "network" | "medication" | "cost" | "supplemental" | "other";
 
 export interface AiCitation {
   sourceFile: string;
@@ -69,20 +64,44 @@ export interface AiSubScores {
   catastrophicDownside: number; // subtracted
 }
 
+/** A grounded one-line explanation of WHY each fit-score component scored as it did. */
+export interface AiSubScoreWhy {
+  coverageFit: string;
+  networkFit: string;
+  medicationFit: string;
+  mismatchPenalty: string;
+  catastrophicDownside: string;
+}
+
+/** One line item of the predicted annual cost, tied to the member's expected use. */
+export interface AiCostItem {
+  label: string; // e.g. "Premium", "Metformin (Tier 1)", "Specialist visits"
+  annualEstimate: number; // USD/year
+  basis: string; // how it was computed, e.g. "$0/mo × 12" or "$0 copay × 4 visits"
+}
+
+export interface AiCostBreakdown {
+  items: AiCostItem[];
+  estimatedAnnualTotal: number;
+}
+
 export interface AiRankedPlan {
   planId: string;
   fitScore: number; // recomputed from sub-scores × weights
   subScores: AiSubScores; // 0..1 each
+  subScoreWhy?: AiSubScoreWhy | null; // per-component grounded explanation (deep-written plans)
   confidence: "low" | "moderate" | "high";
   reasons: AiReason[];
-  /** Grounded cost picture (estimate flagged as such in the prompt). */
-  estAnnualCost: number; // typical expected annual out-of-pocket
+  costBreakdown?: AiCostBreakdown | null; // predicted cost, tied to expected utilization (deep plans)
+  estAnnualCost: number; // = costBreakdown.estimatedAnnualTotal when present
   catastrophicExposure: number; // 0..1 likelihood of approaching the MOOP ceiling
   // Deterministic facts attached during synthesize (NOT model-produced):
   medsCoveredRate: number;
   annualOOPMax: number;
   topUncoveredDrugs: string[];
   providerGaps: string[];
+  /** True when this plan got the full parallel deep write-up (top picks). */
+  deepWritten: boolean;
 }
 
 export interface AiRecommendation {
@@ -94,74 +113,98 @@ export interface AiRecommendation {
   groundingPackSignature: string;
 }
 
-// ── Prompt construction ──────────────────────────────────────────────────────
+// How many top plans get the full parallel deep write-up (the prominent cards).
+const DEEP_COUNT = 3;
 
-const SYSTEM_GENERATE = `You are a Medicare Advantage plan-fit analyst for Seoul Medical Group brokers. You recommend plans for a prospective member.
+// ── Stage 1: SCREEN ──────────────────────────────────────────────────────────
 
-ABSOLUTE GROUNDING RULE: your ONLY knowledge of any plan is the structured "PLAN FACTS" provided in the user message. These facts were extracted verbatim from the 2026 carrier plan documents. You MUST NOT use any outside knowledge of these or any other plans, invent figures, or reference a plan not in the list. Every dollar amount, copay, benefit, or coverage claim you make MUST appear in the provided facts for that specific plan.
+const SYSTEM_SCREEN = `You are a Medicare Advantage plan-fit analyst for Seoul Medical Group brokers. You are screening which plans best fit a prospective member.
 
-Your job: rank ALL the provided eligible plans best-first for THIS member, and for each plan produce:
-- Five sub-scores in [0,1] (1 = ideal fit): coverageFit (non-drug benefits & OOP protection vs the member's needs), networkFit (keeps required + likely-needed providers), medicationFit (covers the member's current/likely medications), mismatchPenalty (expected coverage gaps & cost — HIGHER = worse), catastrophicDownside (worst-case financial exposure — HIGHER = worse).
-- confidence: "low" | "moderate" | "high" — how strongly the facts support this plan's placement.
-- reasons: clear, plain-language BULLET POINTS a broker would show the member — 3–5 specific strengths and any caveats. Each is one concrete sentence referencing an actual figure from this plan's facts (e.g. "$0 monthly premium with a $4,900 in-network out-of-pocket maximum"). For the strongest-fit plans, give the fuller set (toward 5 strengths) so the top recommendations are well-explained. Mark each positive=true (strength) or positive=false (caveat). Categorize each: coverage | network | medication | cost | supplemental | other.
-- For EVERY reason, a citation: { sourceFile, sourcePage, quote } where sourceFile and sourcePage are this plan's own provenance from the facts, and quote is the exact figure/phrase from the facts the reason relies on. If a reason somehow cites no specific figure, set citation to null (avoid this).
-- estAnnualCost: a grounded estimate (USD/year) of this member's typical out-of-pocket, reasoning from the premium, copays, and drug tiers in the facts. This is an estimate.
-- catastrophicExposure: a value in [0,1], your estimate of the likelihood this member approaches the plan's out-of-pocket maximum, given their conditions/medications.
+ABSOLUTE GROUNDING RULE: your only knowledge of any plan is the structured PLAN FACTS provided (extracted verbatim from 2026 carrier documents). Never invent plans or figures, and never reference a plan not in the list.
 
-Be specific and member-centric: tie reasons to the member's actual conditions, medications, and must-keep providers. Do not show bias toward any carrier — rank purely on fit to the member's facts.`;
+Rank ALL the provided eligible plans best-first for THIS member. For each, return only:
+- planId (exactly as given)
+- fit: an integer 0–100 (how well it fits this member's conditions, medications, providers, and cost needs)
 
-const SYSTEM_VERIFY = `You are a meticulous compliance auditor. You are given (a) the AUTHORITATIVE plan facts (extracted from 2026 carrier documents) and (b) a draft recommendation produced by another analyst.
+Rank purely on fit to the member's facts — no carrier bias. Consider any plan; the best fit may be from any carrier. Keep output minimal (ids + fit only) — the detailed write-ups happen in a later step.`;
 
-Your sole job is to make the draft 100% grounded in the authoritative facts. For every plan and every reason:
-- VERIFY each dollar figure, copay, benefit, and coverage claim against that plan's authoritative facts. If a figure does not appear in the facts, CORRECT it to the right value from the facts, or REMOVE that reason if it has no grounding.
-- VERIFY each citation: sourceFile and sourcePage MUST equal that plan's own provenance in the facts; the quote MUST be a phrase/figure present in the facts. Repair any mismatch.
-- REMOVE any plan that is not present in the authoritative facts.
-- Keep sub-scores, confidence, estAnnualCost, and catastrophicExposure, adjusting only if a removed/corrected reason makes them indefensible.
+const SCREEN_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["ranked"],
+  properties: {
+    ranked: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["planId", "fit"],
+        properties: {
+          planId: { type: "string" },
+          fit: { type: "integer" },
+        },
+      },
+    },
+  },
+} as const;
 
-Return the corrected recommendation in the same structure. Do not add new plans. Do not introduce any figure not in the authoritative facts.`;
-
-/** Compact the pack for the prompt (drop nulls to save tokens, keep provenance). */
-function packForPrompt(candidates: PlanFacts[]) {
+/** Compact facts for the screen — enough to judge fit, small enough to be fast. */
+function screenPack(candidates: PlanFacts[]) {
   return candidates.map((c) => ({
     planId: c.planId,
     name: c.name,
     carrier: c.carrier,
-    planType: c.planType,
     kind: c.kind,
-    snpType: c.snpType,
-    snpConditions: c.snpConditions ?? undefined,
-    dsnpDualEligibility: c.dsnpDualEligibility ?? undefined,
-    source: { sourceFile: c.sourceFile, sourcePage: c.sourcePage },
     monthlyPremium: c.monthlyPremium,
     annualOOPMax: c.annualOOPMax,
-    annualOOPMaxOutOfNetwork: c.annualOOPMaxOutOfNetwork ?? undefined,
-    partCDeductible: c.partCDeductible ?? undefined,
     pcpCopay: c.pcpCopay,
     specialistCopay: c.specialistCopay,
-    inpatient: { perDay: c.inpatientPerDay, days: c.inpatientDays },
-    mentalHealthOutpatientCopay: c.mentalHealthOutpatientCopay,
-    acupuncture: { visitsPerYear: c.acupunctureVisitsPerYear, copay: c.acupunctureCopay },
-    insulinMonthlyCap: c.insulinMonthlyCap ?? undefined,
-    drugTiers: c.drugTiers.map((t) => ({ tier: t.tier, costShare: t.costShare, printed: t.display ?? undefined })),
-    supplemental: Object.fromEntries(Object.entries(c.supplemental).filter(([, v]) => v != null)),
     networkSystems: c.networkSystems,
-    medicationCoverage: c.medicationCoverage,
+    medsCovered: `${c.medicationCoverage.covered.length}/${c.medicationCoverage.covered.length + c.medicationCoverage.notCovered.length}`,
+    supplementalCount: Object.values(c.supplemental).filter((v) => v != null).length,
   }));
 }
 
-function userMessage(patient: RecommendationPatientFacts, candidates: PlanFacts[]): string {
-  return [
+interface ScreenItem {
+  planId: string;
+  fit: number;
+}
+
+async function callScreen(
+  client: Anthropic,
+  patient: RecommendationPatientFacts,
+  candidates: PlanFacts[],
+): Promise<{ items: ScreenItem[]; model: string }> {
+  const user = [
     "MEMBER FACTS (de-identified):",
     JSON.stringify(patient, null, 2),
     "",
-    "PLAN FACTS — the ONLY plans you may recommend, and the ONLY figures you may cite (one block per eligible plan; `source` is that plan's provenance for citations):",
-    JSON.stringify(packForPrompt(candidates), null, 2),
+    "ELIGIBLE PLANS (the only plans you may rank):",
+    JSON.stringify(screenPack(candidates), null, 2),
     "",
-    "Rank ALL of the above plans best-first for this member. Use ONLY these facts.",
+    "Rank ALL of these plans best-first for this member.",
   ].join("\n");
+  const { parsed, model } = await callStructured(client, SYSTEM_SCREEN, user, SCREEN_SCHEMA, "low");
+  const items = Array.isArray((parsed as { ranked?: unknown }).ranked)
+    ? ((parsed as { ranked: ScreenItem[] }).ranked)
+    : [];
+  return { items, model };
 }
 
-// ── Structured-output schemas ────────────────────────────────────────────────
+// ── Stage 2: DEEP write-up (one plan, full detail) ───────────────────────────
+
+const SYSTEM_DEEP = `You are a Medicare Advantage plan-fit analyst for Seoul Medical Group brokers. You are writing the detailed recommendation for ONE plan for a prospective member.
+
+ABSOLUTE GROUNDING RULE: your only knowledge of this plan is the PLAN FACTS provided (extracted verbatim from the 2026 carrier document). Every dollar amount, copay, benefit, or coverage claim MUST appear in those facts. Never invent a figure.
+
+Produce, for this single plan and this member:
+- subScores: five values in [0,1] (1 = ideal): coverageFit (non-drug benefits & OOP protection vs needs), networkFit (keeps required + likely providers), medicationFit (covers the member's current/likely meds), mismatchPenalty (expected coverage gaps & cost — HIGHER = worse), catastrophicDownside (worst-case exposure — HIGHER = worse).
+- subScoreWhy: for EACH of the five sub-scores, one concrete sentence explaining WHY it scored that way, referencing the member's facts and this plan's figures (e.g. "Medication fit is high: both metformin and atorvastatin are $0 Tier 1.").
+- confidence: "low" | "moderate" | "high".
+- reasons: 3–5 plain-language bullet points (strengths, plus any caveats) a broker would show the member. Each references an actual figure from the facts. Mark positive true/false and categorize: coverage|network|medication|cost|supplemental|other.
+- For EVERY reason, a citation { sourceFile, sourcePage, quote } using THIS plan's own provenance and an exact figure/phrase from the facts.
+- costBreakdown: a predicted ANNUAL out-of-pocket cost for THIS member, built bottom-up and tied to their expected utilization. Provide line items, each { label, annualEstimate (USD), basis }, e.g. premium ($/mo × 12), each current medication (tier cost-share × ~12 fills), specialist visits (copay × the member's specialist visits/yr), and any cost their conditions make likely. estimatedAnnualTotal = the sum. Ground every figure in the plan facts + the member's utilization.
+- catastrophicExposure: a value in [0,1], the likelihood this member approaches the plan's out-of-pocket maximum.`;
 
 const CITATION_SCHEMA = {
   type: ["object", "null"],
@@ -174,19 +217,11 @@ const CITATION_SCHEMA = {
   },
 } as const;
 
-const PLAN_ITEM_SCHEMA = {
+const DEEP_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: [
-    "planId",
-    "subScores",
-    "confidence",
-    "reasons",
-    "estAnnualCost",
-    "catastrophicExposure",
-  ],
+  required: ["subScores", "subScoreWhy", "confidence", "reasons", "costBreakdown", "catastrophicExposure"],
   properties: {
-    planId: { type: "string" },
     subScores: {
       type: "object",
       additionalProperties: false,
@@ -197,6 +232,18 @@ const PLAN_ITEM_SCHEMA = {
         medicationFit: { type: "number" },
         mismatchPenalty: { type: "number" },
         catastrophicDownside: { type: "number" },
+      },
+    },
+    subScoreWhy: {
+      type: "object",
+      additionalProperties: false,
+      required: ["coverageFit", "networkFit", "medicationFit", "mismatchPenalty", "catastrophicDownside"],
+      properties: {
+        coverageFit: { type: "string" },
+        networkFit: { type: "string" },
+        medicationFit: { type: "string" },
+        mismatchPenalty: { type: "string" },
+        catastrophicDownside: { type: "string" },
       },
     },
     confidence: { type: "string", enum: ["low", "moderate", "high"] },
@@ -214,27 +261,83 @@ const PLAN_ITEM_SCHEMA = {
         },
       },
     },
-    estAnnualCost: { type: "number" },
+    costBreakdown: {
+      type: "object",
+      additionalProperties: false,
+      required: ["items", "estimatedAnnualTotal"],
+      properties: {
+        items: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["label", "annualEstimate", "basis"],
+            properties: {
+              label: { type: "string" },
+              annualEstimate: { type: "number" },
+              basis: { type: "string" },
+            },
+          },
+        },
+        estimatedAnnualTotal: { type: "number" },
+      },
+    },
     catastrophicExposure: { type: "number" },
   },
 } as const;
 
-const OUTPUT_SCHEMA = {
-  type: "object",
-  additionalProperties: false,
-  required: ["ranked"],
-  properties: {
-    ranked: { type: "array", items: PLAN_ITEM_SCHEMA },
-  },
-} as const;
-
-interface GenPlan {
-  planId: string;
+interface DeepResult {
   subScores: AiSubScores;
+  subScoreWhy: AiSubScoreWhy;
   confidence: "low" | "moderate" | "high";
   reasons: AiReason[];
-  estAnnualCost: number;
+  costBreakdown: AiCostBreakdown;
   catastrophicExposure: number;
+}
+
+/** Full facts for a single plan (the deep call sees everything for one plan). */
+function deepPlanFacts(c: PlanFacts) {
+  return {
+    planId: c.planId,
+    name: c.name,
+    carrier: c.carrier,
+    planType: c.planType,
+    kind: c.kind,
+    snpType: c.snpType,
+    source: { sourceFile: c.sourceFile, sourcePage: c.sourcePage },
+    monthlyPremium: c.monthlyPremium,
+    annualOOPMax: c.annualOOPMax,
+    annualOOPMaxOutOfNetwork: c.annualOOPMaxOutOfNetwork ?? undefined,
+    partCDeductible: c.partCDeductible ?? undefined,
+    pcpCopay: c.pcpCopay,
+    specialistCopay: c.specialistCopay,
+    inpatient: { perDay: c.inpatientPerDay, days: c.inpatientDays },
+    mentalHealthOutpatientCopay: c.mentalHealthOutpatientCopay,
+    acupuncture: { visitsPerYear: c.acupunctureVisitsPerYear, copay: c.acupunctureCopay },
+    insulinMonthlyCap: c.insulinMonthlyCap ?? undefined,
+    drugTiers: c.drugTiers.map((t) => ({ tier: t.tier, costShare: t.costShare, printed: t.display ?? undefined })),
+    supplemental: Object.fromEntries(Object.entries(c.supplemental).filter(([, v]) => v != null)),
+    networkSystems: c.networkSystems,
+    medicationCoverage: c.medicationCoverage,
+  };
+}
+
+async function callDeep(
+  client: Anthropic,
+  patient: RecommendationPatientFacts,
+  facts: PlanFacts,
+): Promise<{ result: DeepResult; model: string }> {
+  const user = [
+    "MEMBER FACTS (de-identified):",
+    JSON.stringify(patient, null, 2),
+    "",
+    "PLAN FACTS (the only plan you may describe; cite figures from here):",
+    JSON.stringify(deepPlanFacts(facts), null, 2),
+    "",
+    "Write the detailed recommendation for this plan and this member.",
+  ].join("\n");
+  const { parsed, model } = await callStructured(client, SYSTEM_DEEP, user, DEEP_SCHEMA, "low");
+  return { result: parsed as DeepResult, model };
 }
 
 // ── Anthropic call helper (streamed, structured) ─────────────────────────────
@@ -243,79 +346,65 @@ async function callStructured(
   client: Anthropic,
   system: string,
   user: string,
-): Promise<{ ranked: GenPlan[]; model: string }> {
+  schema: Record<string, unknown>,
+  effort: "low" | "medium",
+): Promise<{ parsed: unknown; model: string }> {
   const stream = client.messages.stream({
     model: SIM_MODEL,
-    max_tokens: 24000,
-    // Adaptive thinking requires the default temperature; grounding + the
-    // programmatic verify in synthesize + server-side caching (not temperature)
-    // are what make output stable. Effort "low" keeps latency well under the
-    // route's 120s budget — the task is well-structured (rank a short candidate
-    // list against given facts), so deep deliberation isn't needed.
-    thinking: { type: "adaptive" },
-    output_config: {
-      effort: "low",
-      format: { type: "json_schema", schema: OUTPUT_SCHEMA },
-    },
+    max_tokens: 16000,
+    // No extended thinking: it was the dominant latency cost (adaptive thinking
+    // pushed the 3 parallel deep calls past the route budget) and adds little for
+    // this well-structured, grounded task — the programmatic synthesize guardrails
+    // enforce correctness. temperature 0 (allowed without thinking) keeps output
+    // stable + repeatable for the same client.
+    temperature: 0,
+    output_config: { effort, format: { type: "json_schema", schema } },
     system,
     messages: [{ role: "user", content: user }],
   });
   const response = await stream.finalMessage();
   if (response.stop_reason === "refusal") {
-    throw new Error(`Recommendation refused: ${response.stop_details?.explanation ?? "no detail"}`);
+    throw new Error(`AI call refused: ${response.stop_details?.explanation ?? "no detail"}`);
   }
   if (response.stop_reason === "max_tokens") {
-    throw new Error("Recommendation truncated (hit max_tokens) — raise the cap in lib/ai/recommend.ts.");
+    throw new Error("AI call truncated (hit max_tokens).");
   }
   const text = response.content
     .filter((b): b is Anthropic.TextBlock => b.type === "text")
     .map((b) => b.text)
     .join("");
-  if (!text.trim()) throw new Error(`Empty recommendation (stop_reason=${response.stop_reason}).`);
-  let parsed: unknown;
+  if (!text.trim()) throw new Error(`Empty AI response (stop_reason=${response.stop_reason}).`);
   try {
-    parsed = JSON.parse(text);
+    return { parsed: JSON.parse(text), model: response.model };
   } catch (e) {
-    throw new Error(`Recommendation was not valid JSON: ${(e as Error).message}`);
+    throw new Error(`AI response was not valid JSON: ${(e as Error).message}`);
   }
-  const ranked = (parsed as { ranked?: unknown }).ranked;
-  if (!Array.isArray(ranked)) throw new Error("Recommendation missing `ranked` array.");
-  return { ranked: ranked as GenPlan[], model: response.model };
 }
+
+// ── Scoring + grounding helpers ──────────────────────────────────────────────
 
 const clamp01 = (n: number) => (Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0);
 const W = SCORING.weights;
 
-/** Recompute the fit score from sub-scores × weights (never trust a model total). */
 function fitFromSubScores(s: AiSubScores): number {
   const expected =
     clamp01(s.coverageFit) * W.coverageFit +
     clamp01(s.networkFit) * W.networkFit +
     clamp01(s.medicationFit) * W.medicationFit -
     clamp01(s.mismatchPenalty) * W.mismatchPenalty;
-  const total = expected - clamp01(s.catastrophicDownside) * W.catastrophicDownside;
-  return Math.round(total * 10) / 10;
+  return Math.round((expected - clamp01(s.catastrophicDownside) * W.catastrophicDownside) * 10) / 10;
 }
-
-/** How many candidates the AI scores in full detail (the rest get a heuristic listing). */
-const SHORTLIST_SIZE = 8;
 
 const medsRateOf = (c: PlanFacts) => {
   const total = c.medicationCoverage.covered.length + c.medicationCoverage.notCovered.length;
   return total > 0 ? c.medicationCoverage.covered.length / total : 1;
 };
 
-/**
- * Cheap, grounded heuristic sub-scores — used ONLY to (a) shortlist which plans
- * the AI scores in full, and (b) give the un-shortlisted eligible plans a sensible
- * ranking in the "other eligible" table. The actual fit score, reasons, bullets,
- * and citations for the shown plans are all AI-produced.
- */
+/** Heuristic sub-scores for the "other eligible" tail (no LLM detail needed there). */
 function heuristicSubScores(c: PlanFacts, mustKeep: boolean, maxPremium: number, maxMoop: number, medCount: number): AiSubScores {
   const moopN = maxMoop > 0 ? c.annualOOPMax / maxMoop : 0;
   const premN = maxPremium > 0 ? c.monthlyPremium / maxPremium : 0;
-  const suppCount = Object.values(c.supplemental).filter((v) => v != null).length;
-  const suppScore = Math.min(1, suppCount / 8);
+  const suppScore = Math.min(1, Object.values(c.supplemental).filter((v) => v != null).length / 8);
   const notCoveredShare = medCount > 0 ? c.medicationCoverage.notCovered.length / medCount : 0;
   return {
     coverageFit: clamp01(0.5 * (1 - moopN) + 0.5 * suppScore),
@@ -326,191 +415,173 @@ function heuristicSubScores(c: PlanFacts, mustKeep: boolean, maxPremium: number,
   };
 }
 
-/** Normalize a citation quote + plan facts to a comparable token bag for grounding. */
-function groundTokens(s: string): string {
-  return s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-}
+const groundTokens = (s: string): string => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
-/**
- * Programmatic anti-hallucination guard (replaces a second slow LLM pass): a
- * citation's quote must actually appear in that plan's authoritative facts. If
- * the quote's tokens aren't found, the citation is dropped (the reason stays, but
- * uncited, so it can't masquerade as sourced).
- */
+/** A citation's quote must actually appear in that plan's facts (anti-hallucination). */
 function citationIsGrounded(quote: string, factsHaystack: string): boolean {
-  const q = groundTokens(quote);
-  if (!q) return false;
-  // Require each significant token of the quote to be present in the facts.
-  const tokens = q.split(" ").filter((t) => t.length >= 2);
-  if (tokens.length === 0) return false;
-  return tokens.every((t) => factsHaystack.includes(t));
+  const tokens = groundTokens(quote).split(" ").filter((t) => t.length >= 2);
+  return tokens.length > 0 && tokens.every((t) => factsHaystack.includes(t));
 }
 
-interface SynthInput {
-  gen: GenPlan[];
-  pack: PlanFactsPack;
-  mustKeep: boolean;
-  maxPremium: number;
-  maxMoop: number;
-  medCount: number;
-  shortlist: Set<string>;
+/** Build the AiRankedPlan for a deep-written top plan, with grounding guardrails. */
+function deepToRanked(facts: PlanFacts, d: DeepResult): AiRankedPlan {
+  const haystack = groundTokens(JSON.stringify(deepPlanFacts(facts)));
+  const reasons: AiReason[] = (d.reasons ?? []).map((r) => {
+    const grounded = r.citation && citationIsGrounded(String(r.citation.quote), haystack);
+    return {
+      category: r.category,
+      positive: Boolean(r.positive),
+      text: String(r.text),
+      citation: grounded
+        ? { sourceFile: facts.sourceFile, sourcePage: facts.sourcePage, quote: String(r.citation!.quote) }
+        : null,
+    };
+  });
+  const cost = d.costBreakdown;
+  const total = cost ? Math.max(0, Math.round(Number(cost.estimatedAnnualTotal) || 0)) : 0;
+  return {
+    planId: facts.planId,
+    subScores: d.subScores,
+    subScoreWhy: d.subScoreWhy ?? null,
+    fitScore: fitFromSubScores(d.subScores),
+    confidence: d.confidence ?? "moderate",
+    reasons,
+    costBreakdown: cost
+      ? {
+          items: (cost.items ?? []).map((i) => ({
+            label: String(i.label),
+            annualEstimate: Math.max(0, Math.round(Number(i.annualEstimate) || 0)),
+            basis: String(i.basis),
+          })),
+          estimatedAnnualTotal: total,
+        }
+      : null,
+    estAnnualCost: total,
+    catastrophicExposure: clamp01(Number(d.catastrophicExposure)),
+    medsCoveredRate: medsRateOf(facts),
+    annualOOPMax: facts.annualOOPMax,
+    topUncoveredDrugs: facts.medicationCoverage.notCovered,
+    providerGaps: facts.providerGaps,
+    deepWritten: true,
+  };
 }
 
-/**
- * Synthesize: enforce the hard invariants the model can't be trusted with.
- *  - keep only real candidates; attach deterministic facts from the pack
- *  - every citation points at the plan's own file/page AND its quote must be
- *    present in that plan's facts, else the citation is dropped
- *  - recompute fit score; sort best-first
- *  - eligible plans the AI didn't score get a heuristic listing (clearly flagged)
- */
-function synthesize(input: SynthInput): AiRankedPlan[] {
-  const { gen, pack, mustKeep, maxPremium, maxMoop, medCount } = input;
-  const factsById = new Map(pack.candidates.map((c) => [c.planId, c]));
-  const seen = new Set<string>();
-  const out: AiRankedPlan[] = [];
-
-  for (const g of gen) {
-    const facts = factsById.get(g.planId);
-    if (!facts || seen.has(g.planId)) continue; // drop hallucinated / duplicate plans
-    seen.add(g.planId);
-
-    const factsHaystack = groundTokens(JSON.stringify(packForPrompt([facts])));
-    const reasons: AiReason[] = (g.reasons ?? []).map((r) => {
-      const grounded = r.citation && citationIsGrounded(String(r.citation.quote), factsHaystack);
-      return {
-        category: r.category,
-        positive: Boolean(r.positive),
-        text: String(r.text),
-        // Citation always points at THIS plan's own provenance; kept only if its
-        // quote is actually present in the plan's facts.
-        citation: grounded
-          ? { sourceFile: facts.sourceFile, sourcePage: facts.sourcePage, quote: String(r.citation!.quote) }
-          : null,
-      };
-    });
-
-    out.push({
-      planId: g.planId,
-      subScores: g.subScores,
-      fitScore: fitFromSubScores(g.subScores),
-      confidence: g.confidence,
-      reasons,
-      estAnnualCost: Math.max(0, Math.round(Number(g.estAnnualCost) || 0)),
-      catastrophicExposure: clamp01(Number(g.catastrophicExposure)),
-      medsCoveredRate: medsRateOf(facts),
-      annualOOPMax: facts.annualOOPMax,
-      topUncoveredDrugs: facts.medicationCoverage.notCovered,
-      providerGaps: facts.providerGaps,
-    });
-  }
-
-  // Eligible plans the AI didn't individually score → heuristic listing so they
-  // still appear (ranked sensibly) in the "other eligible" table.
-  for (const c of pack.candidates) {
-    if (seen.has(c.planId)) continue;
-    const sub = heuristicSubScores(c, mustKeep, maxPremium, maxMoop, medCount);
-    out.push({
-      planId: c.planId,
-      subScores: sub,
-      fitScore: fitFromSubScores(sub),
-      confidence: "low",
-      reasons: [
-        {
-          category: "other",
-          positive: false,
-          text: "Eligible; not individually written up in this run — open its benefits to review in detail.",
-          citation: { sourceFile: c.sourceFile, sourcePage: c.sourcePage, quote: `${c.name}` },
-        },
-      ],
-      estAnnualCost: 0,
-      catastrophicExposure: clamp01(sub.catastrophicDownside),
-      medsCoveredRate: medsRateOf(c),
-      annualOOPMax: c.annualOOPMax,
-      topUncoveredDrugs: c.medicationCoverage.notCovered,
-      providerGaps: c.providerGaps,
-    });
-  }
-
-  out.sort((a, b) => b.fitScore - a.fitScore);
-  return out;
+/** Heuristic-only entry for the "other eligible" tail (table row; no bullets needed). */
+function heuristicToRanked(c: PlanFacts, sub: AiSubScores): AiRankedPlan {
+  return {
+    planId: c.planId,
+    subScores: sub,
+    subScoreWhy: null,
+    fitScore: fitFromSubScores(sub),
+    confidence: "low",
+    reasons: [
+      {
+        category: "other",
+        positive: false,
+        text: "Eligible; not among the top picks written up in detail — open its benefits to review.",
+        citation: { sourceFile: c.sourceFile, sourcePage: c.sourcePage, quote: `${c.name}` },
+      },
+    ],
+    costBreakdown: null,
+    estAnnualCost: 0,
+    catastrophicExposure: clamp01(sub.catastrophicDownside),
+    medsCoveredRate: medsRateOf(c),
+    annualOOPMax: c.annualOOPMax,
+    topUncoveredDrugs: c.medicationCoverage.notCovered,
+    providerGaps: c.providerGaps,
+    deepWritten: false,
+  };
 }
 
 export interface RecommendOptions {
-  /** Run the extra LLM verify pass (slower; off by default — synthesize already grounds). */
-  runVerify?: boolean;
   /** Relax hard provider requirements (near-miss path when nothing is eligible). */
   ignoreProviderConstraints?: boolean;
 }
 
 /**
  * Produce the AI recommendation for a profile, grounded in the 2026 plan files.
- * Returns ranked candidates (best-first) + the excluded plans from the gate.
+ * Screen → parallel deep write-ups for the top picks → synthesize.
  */
 export async function recommendPlans(
   profile: ClientProfileInput,
   db: DataStore,
   opts: RecommendOptions = {},
 ): Promise<AiRecommendation> {
-  const pack = await buildPlanFactsPack(profile, db, {
-    ignoreProviderConstraints: opts.ignoreProviderConstraints,
-  });
-  const fullSignature = JSON.stringify(packForPrompt(pack.candidates));
+  const pack = await buildPlanFactsPack(profile, db, { ignoreProviderConstraints: opts.ignoreProviderConstraints });
+  const fullSignature = JSON.stringify(pack.candidates.map((c) => c.planId).sort());
 
-  // No eligible plan — nothing for the model to rank.
   if (pack.candidates.length === 0) {
     return { model: SIM_MODEL, topPlanId: null, ranked: [], excluded: pack.excluded, groundingPackSignature: fullSignature };
   }
 
+  const factsById = new Map(pack.candidates.map((c) => [c.planId, c]));
   const mustKeep = pack.patient.mustKeepProviders.length > 0;
   const maxPremium = Math.max(1, ...pack.candidates.map((c) => c.monthlyPremium));
   const maxMoop = Math.max(1, ...pack.candidates.map((c) => c.annualOOPMax));
   const medCount = pack.patient.medications.length;
 
-  // Shortlist the most promising candidates (by the grounded heuristic) for full
-  // AI scoring — keeps latency under the route budget while the AI still produces
-  // the real fit score / reasons / bullets / citations for every shown plan.
-  const shortlistFacts = [...pack.candidates]
-    .map((c) => ({ c, fit: fitFromSubScores(heuristicSubScores(c, mustKeep, maxPremium, maxMoop, medCount)) }))
-    .sort((a, b) => b.fit - a.fit)
-    .slice(0, SHORTLIST_SIZE)
-    .map((x) => x.c);
-  const shortlist = new Set(shortlistFacts.map((c) => c.planId));
-
   const client = getAnthropic();
-  const user = userMessage(pack.patient, shortlistFacts);
 
-  // 1. GENERATE — AI scores the shortlist.
-  const generated = await callStructured(client, SYSTEM_GENERATE, user);
-  let finalGen = generated.ranked;
-  let model = generated.model;
+  // 1. SCREEN — AI ranks all eligible plans; pick the top picks for deep write-up.
+  const screen = await callScreen(client, pack.patient, pack.candidates);
+  const screenOrder = screen.items.filter((s) => factsById.has(s.planId));
+  // Fall back to a heuristic ordering if the screen returned nothing usable.
+  const orderedIds = screenOrder.length
+    ? screenOrder.map((s) => s.planId)
+    : [...pack.candidates]
+        .sort(
+          (a, b) =>
+            fitFromSubScores(heuristicSubScores(b, mustKeep, maxPremium, maxMoop, medCount)) -
+            fitFromSubScores(heuristicSubScores(a, mustKeep, maxPremium, maxMoop, medCount)),
+        )
+        .map((c) => c.planId);
 
-  // 2. (optional) VERIFY pass — off by default; the synthesize guardrails below
-  // already enforce grounding programmatically (real plan, real provenance, quote
-  // present in facts) without a second multi-minute LLM call.
-  if (opts.runVerify) {
-    const verifyUser = [
-      "AUTHORITATIVE PLAN FACTS (the source of truth):",
-      JSON.stringify(packForPrompt(shortlistFacts), null, 2),
-      "",
-      "DRAFT RECOMMENDATION to audit and correct:",
-      JSON.stringify({ ranked: generated.ranked }, null, 2),
-      "",
-      "Return the corrected recommendation. Remove any plan not in the authoritative facts; correct or remove any ungrounded figure or citation.",
-    ].join("\n");
-    try {
-      const verified = await callStructured(client, SYSTEM_VERIFY, verifyUser);
-      if (verified.ranked.length > 0) {
-        finalGen = verified.ranked;
-        model = verified.model;
+  const topIds = orderedIds.slice(0, DEEP_COUNT);
+
+  // 2. DEEP — parallel detailed write-ups for the top picks (fast: small per-call).
+  const deepResults = await Promise.all(
+    topIds.map(async (id) => {
+      try {
+        const facts = factsById.get(id)!;
+        const { result, model } = await callDeep(client, pack.patient, facts);
+        return { id, ranked: deepToRanked(facts, result), model };
+      } catch (e) {
+        console.error("deep write-up failed for", id, (e as Error).message);
+        return null;
       }
-    } catch (e) {
-      console.error("recommend verify pass failed:", (e as Error).name, (e as Error).message);
-    }
+    }),
+  );
+
+  const deepOk = deepResults.filter((x): x is NonNullable<typeof x> => x !== null);
+  const model = deepOk[0]?.model ?? screen.model;
+  const deepById = new Map(deepOk.map((d) => [d.id, d.ranked]));
+
+  // 3. SYNTHESIZE — deep-written top plans first (best-fit by their fit score),
+  // then everything else as heuristic "other eligible" rows (AI screen order).
+  const topRanked = topIds
+    .map((id) => deepById.get(id))
+    .filter((x): x is AiRankedPlan => Boolean(x))
+    .sort((a, b) => b.fitScore - a.fitScore);
+
+  const topSet = new Set(topRanked.map((r) => r.planId));
+  // Tail in the AI screen's order; any plan the deep call dropped also lands here.
+  const tail: AiRankedPlan[] = [];
+  for (const id of orderedIds) {
+    if (topSet.has(id)) continue;
+    const c = factsById.get(id);
+    if (!c) continue;
+    tail.push(heuristicToRanked(c, heuristicSubScores(c, mustKeep, maxPremium, maxMoop, medCount)));
   }
 
-  // 3. SYNTHESIZE — programmatic guardrails + deterministic facts.
-  const ranked = synthesize({ gen: finalGen, pack, mustKeep, maxPremium, maxMoop, medCount, shortlist });
+  // Keep the displayed fit monotonic: the heuristic tail and the deep top picks
+  // are scored on the same scale but can overlap at the boundary, so clamp each
+  // tail row strictly below the lowest top-pick fit (the tail is a rough table).
+  let prev = topRanked.length ? topRanked[topRanked.length - 1].fitScore : Infinity;
+  for (const t of tail) {
+    if (t.fitScore >= prev) t.fitScore = Math.max(0, Math.round((prev - 0.1) * 10) / 10);
+    prev = t.fitScore;
+  }
 
+  const ranked = [...topRanked, ...tail];
   return { model, topPlanId: ranked[0]?.planId ?? null, ranked, excluded: pack.excluded, groundingPackSignature: fullSignature };
 }

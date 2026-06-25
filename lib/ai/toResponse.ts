@@ -47,12 +47,13 @@ export type NetworkStatus = "in" | "gap" | "keeps";
 export function shapeRankedPlan(item: AiRankedPlan, plan: Plan, mustKeep: boolean) {
   const s = item.subScores;
   const clamp01 = (n: number) => Math.min(1, Math.max(0, Number.isFinite(n) ? n : 0));
+  const why = item.subScoreWhy;
   const breakdown = {
-    coverageFit: { value: clamp01(s.coverageFit) * W.coverageFit, max: W.coverageFit },
-    networkFit: { value: clamp01(s.networkFit) * W.networkFit, max: W.networkFit },
-    medicationFit: { value: clamp01(s.medicationFit) * W.medicationFit, max: W.medicationFit },
-    mismatchPenalty: { value: clamp01(s.mismatchPenalty) * W.mismatchPenalty, max: W.mismatchPenalty },
-    catastrophicDownside: { value: clamp01(s.catastrophicDownside) * W.catastrophicDownside, max: W.catastrophicDownside },
+    coverageFit: { value: clamp01(s.coverageFit) * W.coverageFit, max: W.coverageFit, why: why?.coverageFit ?? null },
+    networkFit: { value: clamp01(s.networkFit) * W.networkFit, max: W.networkFit, why: why?.networkFit ?? null },
+    medicationFit: { value: clamp01(s.medicationFit) * W.medicationFit, max: W.medicationFit, why: why?.medicationFit ?? null },
+    mismatchPenalty: { value: clamp01(s.mismatchPenalty) * W.mismatchPenalty, max: W.mismatchPenalty, why: why?.mismatchPenalty ?? null },
+    catastrophicDownside: { value: clamp01(s.catastrophicDownside) * W.catastrophicDownside, max: W.catastrophicDownside, why: why?.catastrophicDownside ?? null },
     preference: 0,
   };
   const expectedFit =
@@ -78,6 +79,8 @@ export function shapeRankedPlan(item: AiRankedPlan, plan: Plan, mustKeep: boolea
       citation: toCitation(r),
     })),
     breakdown,
+    costBreakdown: item.costBreakdown ?? null,
+    deepWritten: item.deepWritten,
     exposure: {
       mean: item.estAnnualCost,
       worst: item.annualOOPMax,
