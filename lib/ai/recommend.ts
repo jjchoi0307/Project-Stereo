@@ -329,7 +329,11 @@ function deepPlanFacts(c: PlanFacts) {
 }
 
 // RLM leaf: the deep write-up sub-call for ONE plan (delegate step).
-async function callDeep(
+// Exported so the horizon recommendation reuses the SAME deep write-up (full
+// reasons + citations + per-component why + cost breakdown) as the Today path —
+// run in parallel there too, so the top-3 horizon cards match Today without
+// serializing three write-ups into one slow call.
+export async function callDeep(
   traj: RlmTrajectory,
   patient: RecommendationPatientFacts,
   facts: PlanFacts,
@@ -394,7 +398,7 @@ function citationIsGrounded(quote: string, factsHaystack: string): boolean {
 }
 
 /** Build the AiRankedPlan for a deep-written top plan, with grounding guardrails. */
-function deepToRanked(facts: PlanFacts, d: DeepResult, topThreeVotes: number): AiRankedPlan {
+export function deepToRanked(facts: PlanFacts, d: DeepResult, topThreeVotes: number): AiRankedPlan {
   const haystack = groundTokens(JSON.stringify(deepPlanFacts(facts)));
   const reasons: AiReason[] = (d.reasons ?? []).map((r) => {
     const grounded = r.citation && citationIsGrounded(String(r.citation.quote), haystack);

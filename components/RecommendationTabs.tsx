@@ -1,26 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import RecommendationView from "./RecommendationView";
+import RecommendationView, { TopCard, type RankedItem } from "./RecommendationView";
 import { HORIZON_REC, SCORING } from "@/lib/engine/config";
 import Spinner from "@/components/ui/Spinner";
-import PlanKind from "@/components/ui/PlanKind";
-import { Ref, Sources, type Citation } from "@/components/ui/Citation";
 
 // ── Shapes returned by the AI horizon route ──────────────────────────────────
 interface PlanMeta {
   id: string; name: string; carrier: string; planType: string; snpType?: string;
   smgSupported: boolean; isScan: boolean; isCompetitor: boolean;
   monthlyPremium: number; annualOOPMax: number;
-}
-interface Reason { code: string; text: string; positive: boolean; citation?: Citation | null }
-interface Exposure {
-  mean: number; worst: number; medCoverageRate: number; catastrophicRate: number;
-  topUncoveredDrugs: { name: string; rate: number }[];
-}
-interface RankedPlan {
-  planId: string; total: number; confidence: number; plan: PlanMeta;
-  reasons: Reason[]; exposure: Exposure; providerGaps?: string[]; networkStatus?: "in" | "gap" | "keeps";
 }
 type Likelihood = "low" | "moderate" | "high";
 interface HorizonProjection {
@@ -31,17 +20,14 @@ interface HorizonProjection {
 interface HorizonRec {
   years: number; changedVsToday: boolean;
   projection: HorizonProjection;
-  recommended: RankedPlan | null;
+  // Full-detail top-3, shaped exactly like the Today recommendation.
+  recommended: RankedItem | null;
+  ranked: RankedItem[];
   distribution: { plan: PlanMeta; fitScore: number }[];
 }
 interface HorizonsData {
   model?: string; todayTopPlanId: string | null; todayTopPlanName: string | null; horizons: HorizonRec[];
 }
-
-const usd = (n: number) => "$" + n.toLocaleString();
-const pct = (n: number) => Math.round(n * 100) + "%";
-const premiumLabel = (n: number) => (n === 0 ? "$0/mo" : "$" + n + "/mo");
-const confLabel = (c: number) => (c >= 66 ? "High" : c >= 33 ? "Moderate" : "Low");
 
 type Tab = "today" | number;
 
@@ -167,6 +153,7 @@ const LIKELIHOOD_STYLE: Record<Likelihood, string> = {
 
 function HorizonPanel({ horizon: h, todayName }: { horizon: HorizonRec; todayName: string | null }) {
   const rec = h.recommended;
+  const top = h.ranked ?? [];
   const hasAssumptions = h.projection.conditions.length > 0 || h.projection.medications.length > 0;
 
   return (
@@ -217,106 +204,24 @@ function HorizonPanel({ horizon: h, todayName }: { horizon: HorizonRec; todayNam
         </div>
       )}
 
-      {!rec ? (
+      {!rec || top.length === 0 ? (
         <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           No plan stays eligible for the projected member at {h.years} years.
         </div>
       ) : (
         <>
-          {/* Hero */}
-          <div className="mb-6 rounded-[13px] border border-accent bg-white p-6 shadow-hero">
-            <div className="flex flex-wrap items-start gap-5">
-              <div className="min-w-[220px] flex-1">
-                <div className="mb-1.5 text-[11px] font-bold uppercase tracking-[.05em] text-accent">
-                  Best fit at {h.years} years
-                </div>
-                <div className="mb-1 flex flex-wrap items-center gap-2.5">
-                  <h3 className="text-xl font-semibold">{rec.plan.name}</h3>
-                  <PlanKind snpType={rec.plan.snpType} />
-                </div>
-                <div className="text-[12.5px] text-slate-500">
-                  {rec.plan.carrier} · {rec.plan.planType} · {premiumLabel(rec.plan.monthlyPremium)} ·{" "}
-                  {usd(rec.plan.annualOOPMax)} OOP max
-                </div>
-              </div>
-              <div className="flex-none text-right">
-                <div className="num text-[38px] font-bold leading-none text-accent">{rec.total}</div>
-                <div className="text-[11px] text-slate-400">fit score · {confLabel(rec.confidence)} confidence</div>
-              </div>
-            </div>
-
-            {(() => {
-              const positives = rec.reasons.filter((r) => r.positive);
-              const cited = positives.filter((r) => r.citation);
-              const refOf = (r: Reason) => {
-                const i = cited.indexOf(r);
-                return i >= 0 ? i + 1 : null;
-              };
-              return (
-                <>
-                  <div className="my-4 grid grid-cols-2 gap-x-6 gap-y-2">
-                    <div>
-                      {positives.map((r) => (
-                        <div key={r.code} className="mb-[5px] flex gap-2 text-[12.5px] leading-[1.45] text-slate-700">
-                          <span className="flex-none text-emerald-600">✓</span>
-                          <span>{r.text}<Ref n={refOf(r)} /></span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="grid grid-cols-2 content-start gap-2.5">
-                      <HeroStat label="Est. / yr">{usd(rec.exposure.mean)}</HeroStat>
-                      <HeroStat label="OOP max">{usd(rec.exposure.worst)}</HeroStat>
-                      <HeroStat label="Meds covered">{pct(rec.exposure.medCoverageRate)}</HeroStat>
-                      <HeroStat label="Catastrophic est.">{pct(rec.exposure.catastrophicRate)}</HeroStat>
-                    </div>
-                  </div>
-                  {cited.length > 0 && <Sources cited={cited} />}
-                </>
-              );
-            })()}
+          <div className="mb-3 text-xs font-bold uppercase tracking-[.04em] text-slate-500">
+            Best fit at {h.years} years — full detail for each pick
           </div>
-
-          {/* Fit-score comparison across the projected candidates */}
-          {h.distribution.length > 1 && (
-            <>
-              <div className="mb-3 text-xs font-bold uppercase tracking-[.04em] text-slate-500">
-                Fit at {h.years} years
-              </div>
-              <div className="mb-6 flex flex-col gap-[11px] rounded-[11px] border border-slate-200 bg-white p-[18px]">
-                {(() => {
-                  const max = Math.max(...h.distribution.map((d) => d.fitScore), 1);
-                  return h.distribution.map((d) => (
-                    <div key={d.plan.id} className="flex items-center gap-3">
-                      <span className="flex-[0_0_220px] truncate text-[12.5px] text-slate-700">{d.plan.name}</span>
-                      <span className="h-[9px] flex-1 overflow-hidden rounded-full bg-slate-100">
-                        <span
-                          className="block h-full rounded-full"
-                          style={{
-                            width: `${Math.round((d.fitScore / max) * 100)}%`,
-                            background: d.plan.id === rec.plan.id ? "#0d6e6e" : "#cbd5e1",
-                          }}
-                        />
-                      </span>
-                      <span className="num flex-[0_0_38px] text-right text-[12.5px] font-semibold text-slate-600">
-                        {d.fitScore}
-                      </span>
-                    </div>
-                  ));
-                })()}
-              </div>
-            </>
-          )}
+          {/* Same full-detail cards as Today: fit-score breakdown, "includes",
+              sources & cost all live behind each card's drill-down. */}
+          <div className="flex flex-col gap-5">
+            {top.map((item, i) => (
+              <TopCard key={item.planId} item={item} rank={i + 1} highlight={i === 0} />
+            ))}
+          </div>
         </>
       )}
-    </div>
-  );
-}
-
-function HeroStat({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div className="text-[10.5px] uppercase text-slate-400">{label}</div>
-      <div className="num text-[15px] font-semibold">{children}</div>
     </div>
   );
 }

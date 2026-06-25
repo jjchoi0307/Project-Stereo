@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDataStore } from "@/lib/data";
 import { recommendHorizons } from "@/lib/ai/horizonRecommend";
-import { planMeta, shapeRankedPlan } from "@/lib/ai/toResponse";
+import { shapeRankedPlan } from "@/lib/ai/toResponse";
 import { getHorizonPayload, setHorizonPayload } from "@/lib/engine/horizonCacheStore";
 import { simConfigured, SIM_MODEL } from "@/lib/sim/env";
 import { DATA_VERSION } from "@/lib/version";
@@ -60,21 +60,21 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const rec = await recommendHorizons(profile, db, todayTopPlanId, guidanceFromConfig(config));
 
     const horizons = rec.horizons.map((h) => {
-      const recommended = h.recommended ? planById.get(h.recommended.planId) : undefined;
+      // Full-detail top-3 cards, shaped exactly like the Today recommendation.
+      const ranked = h.ranked
+        .map((r) => {
+          const p = planById.get(r.planId);
+          return p ? shapeRankedPlan(r, p, mustKeep) : null;
+        })
+        .filter((x): x is NonNullable<typeof x> => x !== null);
       return {
         years: h.years,
         changedVsToday: h.changedVsToday,
         projection: h.projection,
-        recommended:
-          h.recommended && recommended
-            ? shapeRankedPlan(h.recommended, recommended, mustKeep)
-            : null,
-        distribution: h.ranked
-          .map((r) => {
-            const p = planById.get(r.planId);
-            return p ? { plan: planMeta(p), fitScore: r.fitScore } : null;
-          })
-          .filter((x): x is { plan: ReturnType<typeof planMeta>; fitScore: number } => x !== null),
+        recommended: ranked[0] ?? null,
+        ranked,
+        // Kept for the fit-comparison bar (derived from the same top-3).
+        distribution: ranked.map((r) => ({ plan: r.plan, fitScore: r.total })),
       };
     });
 
