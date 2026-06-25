@@ -44,19 +44,6 @@ interface RecData {
   excluded: { plan: PlanMeta; reasons: { detail: string }[] }[];
   nearMiss?: NearMiss | null;
 }
-interface ScenarioResult {
-  id: string; label: string; description: string;
-  topPlanId: string | null; topPlanName: string | null; topTotal: number | null;
-  changed: boolean; eligibleCount: number;
-  baselineTop: {
-    planId: string | null; planName: string | null;
-    rankUnderScenario: number | null; totalUnderScenario: number | null;
-  };
-}
-interface ScenarioData {
-  baseline: { topPlanId: string | null; topPlanName: string | null; topTotal: number | null };
-  scenarios: ScenarioResult[];
-}
 
 const usd = (n: number) => "$" + n.toLocaleString();
 const premiumLabel = (n: number) => (n === 0 ? "$0" : "$" + n);
@@ -83,7 +70,6 @@ export default function RecommendationView({ sessionId, onLoaded }: { sessionId:
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<{ message: string; notConfigured: boolean } | null>(null);
   const [auditId, setAuditId] = useState<string | null>(null);
-  const [scenarios, setScenarios] = useState<ScenarioData | null>(null);
 
   // The delivered recommendation is AI-powered, so the audit record preserves the
   // exact AI output + citations. POST it AFTER the recommendation loads, so the
@@ -115,16 +101,6 @@ export default function RecommendationView({ sessionId, onLoaded }: { sessionId:
       })
       .catch(() => active && setLoadError({ message: "Could not reach the recommendation service.", notConfigured: false }))
       .finally(() => active && setLoading(false));
-    return () => { active = false; };
-  }, [sessionId]);
-
-  // Stress-test: how the recommendation holds up under "what-if" scenarios.
-  useEffect(() => {
-    let active = true;
-    setScenarios(null);
-    fetch(`/api/sessions/${sessionId}/scenarios`, { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => active && d && !d.error && setScenarios(d));
     return () => { active = false; };
   }, [sessionId]);
 
@@ -256,9 +232,6 @@ export default function RecommendationView({ sessionId, onLoaded }: { sessionId:
         </>
       )}
 
-      {/* Stress tests */}
-      {scenarios && scenarios.scenarios.length > 0 && <StressTests data={scenarios} />}
-
       {/* Not recommended */}
       {data.excluded.length > 0 && (
         <>
@@ -293,45 +266,6 @@ export default function RecommendationView({ sessionId, onLoaded }: { sessionId:
         </div>
       )}
     </div>
-  );
-}
-
-function StressTests({ data }: { data: ScenarioData }) {
-  return (
-    <>
-      <div className="mb-2.5 text-xs font-bold uppercase tracking-[.04em] text-slate-500">Stress tests</div>
-      <div className="mb-7 rounded-[11px] border border-slate-200 bg-white px-[18px] py-2">
-        {data.scenarios.map((s) => {
-          const bt = s.baselineTop;
-          const baselineFate =
-            bt.rankUnderScenario == null
-              ? `${bt.planName ?? "baseline pick"} becomes ineligible`
-              : bt.rankUnderScenario === 1
-                ? `${bt.planName ?? "baseline pick"} stays #1`
-                : `${bt.planName ?? "baseline pick"} falls to #${bt.rankUnderScenario}`;
-          const note = s.changed
-            ? `Top pick shifts to ${s.topPlanName ?? "— none eligible"}. ${baselineFate}.`
-            : `Top pick unchanged. ${baselineFate}.`;
-          return (
-            <div key={s.id} className="flex items-start gap-3 border-b border-slate-100 py-3 last:border-b-0">
-              <span
-                className="flex-none rounded-md px-2.5 py-[3px] text-xs font-bold"
-                style={{
-                  background: s.changed ? "#fffbeb" : "#ecfdf5",
-                  color: s.changed ? "#d97706" : "#059669",
-                }}
-              >
-                {s.changed ? "⚑" : "✓"}
-              </span>
-              <div className="flex-1">
-                <div className="text-[13px] font-semibold">{s.label}</div>
-                <div className="mt-0.5 text-[12.5px] leading-[1.45] text-slate-500">{note}</div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </>
   );
 }
 
@@ -441,12 +375,15 @@ function TopCard({ item, rank, highlight, ensembleRuns }: { item: RankedItem; ra
         <div className="flex-none text-right">
           <div className="num text-[34px] font-bold leading-none text-accent">{item.total}</div>
           <div className="text-[10.5px] uppercase tracking-[.03em] text-slate-400">fit score</div>
-          {hasEnsemble && (
-            <div className="mt-1 text-[11px] leading-[1.35] text-slate-400">
-              top 3 in <span className="num font-semibold text-slate-600">{item.topThreeVotes}</span>/
-              <span className="num">{ensembleRuns}</span> runs
-            </div>
-          )}
+          {hasEnsemble &&
+            (item.topThreeVotes && item.topThreeVotes > 0 ? (
+              <div className="mt-1 text-[11px] leading-[1.35] text-slate-400">
+                top 3 in <span className="num font-semibold text-slate-600">{item.topThreeVotes}</span>/
+                <span className="num">{ensembleRuns}</span> runs
+              </div>
+            ) : (
+              <div className="mt-1 text-[11px] leading-[1.35] text-slate-400">alternative carrier · shown for choice</div>
+            ))}
         </div>
       </div>
 

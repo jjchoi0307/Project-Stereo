@@ -119,6 +119,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   } catch (e) {
     const err = e as Error;
     console.error("AI recommendation failed:", err?.name, err?.message);
+    // Audit the FAILURE too, so the trail's outcome column reflects reality
+    // (ok vs error), not a constant "ok". PHI-free: error message only.
+    await recordEvent(await getBrokerContext(), {
+      action: "recommendation.surface",
+      sessionId: id,
+      metadata: { error: err?.message ?? "unknown" },
+      outcome: "error",
+    });
     return NextResponse.json({ error: "recommendation failed", detail: err?.message }, { status: 502 });
   }
 }
