@@ -453,27 +453,64 @@ function TopCard({ item, rank, highlight, ensembleRuns }: { item: RankedItem; ra
         </div>
       )}
 
-      {item.features && item.features.length > 0 && (
-        <div className="mt-4 border-t border-slate-100 pt-3.5">
-          <div className="mb-2 text-[10.5px] font-bold uppercase tracking-[.03em] text-slate-400">What it includes</div>
-          <div className="grid grid-cols-1 gap-x-8 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
-            {item.features.map((f) => (
-              <div key={f.label} className="flex items-baseline justify-between gap-3 border-b border-slate-50 py-[5px]">
-                <span className="text-[12px] text-slate-500">{f.label}</span>
-                {f.included ? (
-                  <span className="flex items-baseline gap-1 text-right text-[12.5px] font-semibold text-ink">
-                    <span className="text-emerald-600">✓</span> <span className="num">{f.value}</span>
-                  </span>
-                ) : (
-                  <span className="text-right text-[12px] text-slate-300">Not included</span>
-                )}
+      {/* ── Calm surface: a fifth-grader read ──────────────────────────────────
+          Plain "why it fits" (no footnotes) + the few facts a broker says out
+          loud. All the depth — full benefit list, cited bullets + sources, the
+          fit-score breakdown, and the cost detail — sits one click below. */}
+      {(() => {
+        const surfaceWhy = item.reasons.filter((r) => r.positive).slice(0, 3);
+        return surfaceWhy.length > 0 ? (
+          <div className="mt-3.5 flex flex-col gap-1.5">
+            {surfaceWhy.map((r) => (
+              <div key={r.code} className="flex gap-2 text-[13px] leading-[1.45] text-slate-700">
+                <span className="flex-none text-emerald-600">✓</span>
+                <span>{r.text}</span>
               </div>
             ))}
           </div>
-        </div>
-      )}
+        ) : null;
+      })()}
 
-      <FullAnalysis item={item} />
+      <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-[12.5px] text-slate-500">
+        <span>
+          Your medications <span className="font-semibold text-ink">{pct(item.exposure.medCoverageRate)} covered</span>
+        </span>
+        <span>
+          Network:{" "}
+          <span className="font-semibold text-emerald-600">
+            {item.networkStatus === "gap" ? "gap risk" : item.networkStatus === "keeps" ? "keeps your providers" : "in network"}
+          </span>
+        </span>
+      </div>
+
+      {/* ── Depth, one click away (nothing removed) ──────────────────────────── */}
+      <details className="mt-3.5 border-t border-slate-100 pt-3">
+        <summary className="cursor-pointer list-none text-[12.5px] font-medium text-accent">
+          ▸ See full details, sources &amp; cost
+        </summary>
+        <div className="mt-3">
+          {item.features && item.features.length > 0 && (
+            <div className="mb-1">
+              <div className="mb-2 text-[10.5px] font-bold uppercase tracking-[.03em] text-slate-400">What it includes</div>
+              <div className="grid grid-cols-1 gap-x-8 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
+                {item.features.map((f) => (
+                  <div key={f.label} className="flex items-baseline justify-between gap-3 border-b border-slate-50 py-[5px]">
+                    <span className="text-[12px] text-slate-500">{f.label}</span>
+                    {f.included ? (
+                      <span className="flex items-baseline gap-1 text-right text-[12.5px] font-semibold text-ink">
+                        <span className="text-emerald-600">✓</span> <span className="num">{f.value}</span>
+                      </span>
+                    ) : (
+                      <span className="text-right text-[12px] text-slate-300">Not included</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          <FullAnalysis item={item} />
+        </div>
+      </details>
     </div>
   );
 }
