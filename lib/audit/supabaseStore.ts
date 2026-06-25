@@ -7,7 +7,7 @@
  * Skeleton: runs once auth provides a BrokerContext and STATE_STORE=supabase.
  */
 import type { AuditRecord } from "@/lib/domain";
-import { logAccess } from "@/lib/security/accessLog";
+import { recordEvent } from "./eventStore";
 import type { BrokerContext } from "@/lib/supabase/client";
 import type { AuditStore } from "./store";
 
@@ -38,7 +38,7 @@ export class SupabaseAuditStore implements AuditStore {
       { onConflict: "id", ignoreDuplicates: true },
     );
     if (error) throw error;
-    logAccess({ actor: this.ctx.brokerId, action: "audit.write", sessionId: sessionIdOf(record) });
+    await recordEvent(this.ctx, { action: "audit.write", sessionId: sessionIdOf(record) });
     return record;
   }
 
@@ -53,7 +53,7 @@ export class SupabaseAuditStore implements AuditStore {
       .eq("broker_id", this.ctx.brokerId)
       .maybeSingle();
     const record = (data?.payload as AuditRecord) ?? null;
-    if (record) logAccess({ actor: this.ctx.brokerId, action: "audit.read", sessionId: sessionIdOf(record) });
+    if (record) await recordEvent(this.ctx, { action: "audit.read", sessionId: sessionIdOf(record) });
     return record;
   }
 
@@ -64,7 +64,7 @@ export class SupabaseAuditStore implements AuditStore {
       .eq("org_id", this.ctx.orgId)
       .eq("broker_id", this.ctx.brokerId)
       .order("created_at", { ascending: false });
-    logAccess({ actor: this.ctx.brokerId, action: "audit.list" });
+    await recordEvent(this.ctx, { action: "audit.list" });
     return ((data as { payload: AuditRecord }[]) ?? []).map((r) => r.payload);
   }
 }

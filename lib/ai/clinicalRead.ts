@@ -68,12 +68,12 @@ Hard rules:
 - FUTURES: give exactly two horizons (years 5 and 10). "headline" is a short phrase; "summary" is 1-3 plain sentences about where this person's health is most likely headed; "outlook" reflects overall trajectory (stable / watch / elevated). "outcomes" are ~3-5 specific clinically-grounded possibilities with a calibrated likelihood (unlikely / possible / likely) and a "why" tied to the facts. "caveat" must state this is an educational projection, not medical advice.
 - Calibrate likelihood and band to how strongly the facts support them (sparse facts => lower scores / "unlikely"/"possible", stable outlook).`;
 
-function buildUserMessage(facts: DeidentifiedFacts): string {
+function buildUserMessage(facts: DeidentifiedFacts, guidanceText?: string): string {
   return [
     "DE-IDENTIFIED CLINICAL FACTS:",
     JSON.stringify(facts, null, 2),
     "",
-    importanceGuidance(),
+    guidanceText ?? importanceGuidance(),
     "",
     "Produce the risk markers and the 5- and 10-year health-futures read, grounded in the above facts.",
   ].join("\n");
@@ -143,7 +143,7 @@ const OUTPUT_SCHEMA = {
  * de-identified facts, returning both markers and futures. Throws on
  * refusal / max_tokens / empty / malformed output.
  */
-export async function aiClinicalRead(profile: ClientProfileInput): Promise<ClinicalRead> {
+export async function aiClinicalRead(profile: ClientProfileInput, guidanceText?: string): Promise<ClinicalRead> {
   const facts = deidentifyForSim(profile);
   const client = getAnthropic();
 
@@ -159,7 +159,7 @@ export async function aiClinicalRead(profile: ClientProfileInput): Promise<Clini
       format: { type: "json_schema", schema: OUTPUT_SCHEMA },
     },
     system: SYSTEM_PROMPT,
-    messages: [{ role: "user", content: buildUserMessage(facts) }],
+    messages: [{ role: "user", content: buildUserMessage(facts, guidanceText) }],
   });
   const response = await stream.finalMessage();
 

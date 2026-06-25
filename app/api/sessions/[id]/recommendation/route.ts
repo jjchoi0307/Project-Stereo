@@ -6,6 +6,8 @@ import { planMeta, shapeRankedPlan } from "@/lib/ai/toResponse";
 import { getHorizonPayload, setHorizonPayload } from "@/lib/engine/horizonCacheStore";
 import { simConfigured, SIM_MODEL } from "@/lib/sim/env";
 import { DATA_VERSION } from "@/lib/version";
+import { getBrokerContext } from "@/lib/supabase/auth";
+import { recordEvent } from "@/lib/audit/eventStore";
 
 export const dynamic = "force-dynamic";
 // Two grounded Claude passes (generate + verify) over the eligible candidates.
@@ -97,6 +99,15 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       nearMiss,
     };
     await setHorizonPayload(cacheKey, payload);
+
+    // Audit trail: record which plan was surfaced to which session (PHI-free).
+    const topName = ranked.find((r) => r.planId === rec.topPlanId)?.plan.name ?? null;
+    await recordEvent(await getBrokerContext(), {
+      action: "recommendation.surface",
+      sessionId: id,
+      metadata: { topPlanId: rec.topPlanId, topPlanName: topName, model: rec.model, eligibleCount: ranked.length },
+    });
+
     return NextResponse.json(payload);
   } catch (e) {
     const err = e as Error;

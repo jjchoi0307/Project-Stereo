@@ -6,6 +6,8 @@ import { getHorizonPayload, setHorizonPayload } from "@/lib/engine/horizonCacheS
 import { simConfigured, SIM_MODEL } from "@/lib/sim/env";
 import { DATA_VERSION } from "@/lib/version";
 import { getSessionStore } from "@/lib/session/store";
+import { getBrokerContext } from "@/lib/supabase/auth";
+import { getInputImportance, guidanceFromConfig } from "@/lib/config/orgSettings";
 
 export const dynamic = "force-dynamic";
 // One grounded Claude call projects the member's future + recommends per horizon.
@@ -25,7 +27,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (!session.profile) return NextResponse.json({ error: "no profile yet" }, { status: 409 });
   const profile = session.profile;
 
-  const cacheKey = `aihorizon:${id}:${profile.capturedAt}:${SIM_MODEL}:${DATA_VERSION}`;
+  // Admin-configurable input importance feeds the projection; fold it into the key.
+  const ctx = await getBrokerContext();
+  const config = await getInputImportance(ctx?.orgId);
+  const cfgSig = Object.values(config).map((v) => (v === "high" ? "H" : "L")).join("");
+
+  const cacheKey = `aihorizon:${id}:${profile.capturedAt}:${SIM_MODEL}:${DATA_VERSION}:${cfgSig}`;
   const cached = await getHorizonPayload(cacheKey);
   if (cached) return NextResponse.json(cached);
 
@@ -49,7 +56,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     )) as { topPlanId?: string | null } | null;
     const todayTopPlanId = todayCache?.topPlanId ?? null;
 
-    const rec = await recommendHorizons(profile, db, todayTopPlanId);
+    const rec = await recommendHorizons(profile, db, todayTopPlanId, guidanceFromConfig(config));
 
     const horizons = rec.horizons.map((h) => {
       const recommended = h.recommended ? planById.get(h.recommended.planId) : undefined;
