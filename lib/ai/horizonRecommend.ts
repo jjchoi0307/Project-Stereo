@@ -23,14 +23,14 @@ import "server-only";
 import type { ClientProfileInput } from "@/lib/domain";
 import type { DataStore } from "@/lib/data";
 import { SIM_MODEL } from "@/lib/sim/env";
-import { HORIZON_REC, SCORING, importanceGuidance } from "@/lib/engine/config";
+import { HORIZON_REC, importanceGuidance } from "@/lib/engine/config";
 import { newTrajectory, rlmLeaf, rlmParallel, logTrajectory } from "./rlm";
 import {
   buildPlanFactsPack,
   type PlanFacts,
   type RecommendationPatientFacts,
 } from "./planFactsPack";
-import { callDeep, deepToRanked, type AiRankedPlan, type AiSubScores } from "./recommend";
+import { callDeep, deepToRanked, type AiRankedPlan } from "./recommend";
 
 const HORIZONS = HORIZON_REC.horizonsYears; // [3, 5]
 
@@ -60,49 +60,25 @@ export interface AiHorizonRecommendation {
 
 // ── Prompt ───────────────────────────────────────────────────────────────────
 
-const SYSTEM = `You are a Medicare Advantage plan-fit analyst for Seoul Medical Group brokers. You think about how a prospective member's plan fit changes as their health evolves.
+const SYSTEM = `You are a clinical-actuarial reasoning assistant for a Medicare Advantage broker tool at Seoul Medical Group. You think about how a prospective member's health is likely to evolve.
 
-You are given the member's CURRENT de-identified facts and the structured PLAN FACTS for every ELIGIBLE plan (extracted verbatim from the 2026 carrier documents). The user message specifies ONE horizon (a number of years from now). Do TWO things for THAT horizon:
+You are given the member's CURRENT de-identified facts. The user message specifies ONE horizon (a number of years from now). PROJECT the member's likely future health at that horizon, grounded ONLY in their current facts (age, conditions, medications, family history, utilization):
+- a one-line "headline",
+- a short plain-language "summary" a layperson understands,
+- the "conditions" and "medications" they are most likely to ADD by then, each with a likelihood "low" | "moderate" | "high".
 
-1) PROJECT the member's likely future health at that horizon, grounded ONLY in their current facts (age, conditions, medications, family history, utilization). Give a one-line headline, a short plain-language summary a layperson understands, and the conditions / medications they are most likely to ADD by then, each with a likelihood "low" | "moderate" | "high". Be clinically reasonable and non-alarming. This projection is about the PERSON, not the plans.
+Be clinically reasonable and non-alarming. This projection is about the PERSON, not any insurance plan. Never invent conditions or medications the current facts do not support; sparse facts → fewer, lower-likelihood additions.`;
 
-2) SCREEN the eligible plans for that PROJECTED member: score EACH provided plan with five sub-scores in [0,1] (coverageFit, networkFit, medicationFit, mismatchPenalty[higher=worse], catastrophicDownside[higher=worse]), reasoning about how well it fits the projected member's needs. Order "ranked" best-fit first. Do NOT write reasons or citations here — this is the ranking pass; the top picks get a full write-up separately.
-
-ABSOLUTE GROUNDING RULE: use ONLY the provided PLAN FACTS. Never invent a plan or a figure. Rank purely on fit to the projected member — no carrier bias.`;
-
-function packForPrompt(candidates: PlanFacts[]) {
-  return candidates.map((c) => ({
-    planId: c.planId,
-    name: c.name,
-    carrier: c.carrier,
-    planType: c.planType,
-    kind: c.kind,
-    source: { sourceFile: c.sourceFile, sourcePage: c.sourcePage },
-    monthlyPremium: c.monthlyPremium,
-    annualOOPMax: c.annualOOPMax,
-    pcpCopay: c.pcpCopay,
-    specialistCopay: c.specialistCopay,
-    mentalHealthOutpatientCopay: c.mentalHealthOutpatientCopay,
-    acupuncture: { visitsPerYear: c.acupunctureVisitsPerYear, copay: c.acupunctureCopay },
-    insulinMonthlyCap: c.insulinMonthlyCap ?? undefined,
-    drugTiers: c.drugTiers.map((t) => ({ tier: t.tier, costShare: t.costShare, printed: t.display ?? undefined })),
-    supplemental: Object.fromEntries(Object.entries(c.supplemental).filter(([, v]) => v != null)),
-    networkSystems: c.networkSystems,
-    medicationCoverage: c.medicationCoverage,
-  }));
-}
-
-function userMessage(patient: RecommendationPatientFacts, candidates: PlanFacts[], years: number, guidanceText?: string): string {
+// Projection prompt: member facts ONLY (no plan pack). The projection is about
+// the person, so omitting the plan facts keeps the input small → faster call.
+function projectionMessage(patient: RecommendationPatientFacts, years: number, guidanceText?: string): string {
   return [
     "MEMBER CURRENT FACTS (de-identified):",
     JSON.stringify(patient, null, 2),
     "",
-    `For the HEALTH PROJECTION part: ${guidanceText ?? importanceGuidance()}`,
+    guidanceText ?? importanceGuidance(),
     "",
-    "ELIGIBLE PLAN FACTS — the ONLY plans you may score:",
-    JSON.stringify(packForPrompt(candidates), null, 2),
-    "",
-    `Produce the projection + a best-fit-first ranking (sub-scores only) for the ${years}-year horizon (${years} years from now).`,
+    `Produce the health projection for the ${years}-year horizon (${years} years from now).`,
   ].join("\n");
 }
 
@@ -110,38 +86,14 @@ function userMessage(patient: RecommendationPatientFacts, candidates: PlanFacts[
 
 const LIKELIHOOD = { type: "string", enum: ["low", "moderate", "high"] } as const;
 
-// A screen item — planId + the five sub-scores. The screen pass RANKS the plans
-// for the projected member; the top picks then get a full deep write-up (reasons,
-// citations, per-component why, cost breakdown) via the SAME machinery as Today,
-// run in parallel. This keeps each model call small (a screen, or one plan's
-// write-up) so the horizon never serializes three write-ups into one slow call.
-const SCREEN_ITEM_SCHEMA = {
-  type: "object",
-  additionalProperties: false,
-  required: ["planId", "subScores"],
-  properties: {
-    planId: { type: "string" },
-    subScores: {
-      type: "object",
-      additionalProperties: false,
-      required: ["coverageFit", "networkFit", "medicationFit", "mismatchPenalty", "catastrophicDownside"],
-      properties: {
-        coverageFit: { type: "number" },
-        networkFit: { type: "number" },
-        medicationFit: { type: "number" },
-        mismatchPenalty: { type: "number" },
-        catastrophicDownside: { type: "number" },
-      },
-    },
-  },
-} as const;
-
-// Single-horizon SCREEN output — projection + a ranked list of plans (sub-scores
-// only). One call per horizon, the two horizons run in parallel (RLM decompose).
+// Single-horizon PROJECTION output — just the member's projected health. Plan
+// selection is deterministic (the shortlist) and the full plan write-ups run via
+// the SAME deep machinery as Today, in parallel — so no model call here serializes
+// plan scoring + projection together (that was the horizon's redundant slow step).
 const OUTPUT_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["projection", "ranked"],
+  required: ["projection"],
   properties: {
     projection: {
       type: "object",
@@ -170,24 +122,8 @@ const OUTPUT_SCHEMA = {
         },
       },
     },
-    ranked: { type: "array", items: SCREEN_ITEM_SCHEMA },
   },
 } as const;
-
-interface ScreenItem {
-  planId: string;
-  subScores: AiSubScores;
-}
-const clamp01 = (n: number) => (Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0);
-const W = SCORING.weights;
-function fitFromSubScores(s: AiSubScores): number {
-  const expected =
-    clamp01(s.coverageFit) * W.coverageFit +
-    clamp01(s.networkFit) * W.networkFit +
-    clamp01(s.medicationFit) * W.medicationFit -
-    clamp01(s.mismatchPenalty) * W.mismatchPenalty;
-  return Math.round((expected - clamp01(s.catastrophicDownside) * W.catastrophicDownside) * 10) / 10;
-}
 
 // How many plans get the full deep write-up per horizon — matches the Today path,
 // so the horizon's top-3 cards carry the same detail (reasons, citations,
@@ -243,53 +179,45 @@ export async function recommendHorizons(
     };
   }
 
-  // Shallow→deep, same as the Today path: shortlist the most promising candidates
-  // by a cheap grounded heuristic so the model reasons over a focused set (keeps
-  // latency under the route budget). Synthesize still validates against the full
-  // pack, so a shortlisted plan can never be ungrounded.
+  // Deterministic candidate shortlist (instant). The top-3 get the full deep
+  // write-up; the deep write-ups produce the real fit scores that decide the final
+  // order. This replaces the old LLM "screen" pass (which re-scored every plan only
+  // to throw it away when the deep write-up re-scored the same plans) — removing a
+  // serial ~8s model call from the horizon's critical path.
   const medsRate = (c: PlanFacts) => {
     const t = c.medicationCoverage.covered.length + c.medicationCoverage.notCovered.length;
     return t > 0 ? c.medicationCoverage.covered.length / t : 1;
   };
-  const shortlist = [...pack.candidates]
+  const topIds = [...pack.candidates]
     .sort((a, b) =>
       a.providerGaps.length - b.providerGaps.length ||
       medsRate(b) - medsRate(a) ||
       a.annualOOPMax - b.annualOOPMax ||
       a.monthlyPremium - b.monthlyPremium,
     )
-    // Only the single recommended plan + a short comparison bar surface, so a
-    // smaller candidate set means less input + faster reasoning. Synthesize still
-    // validates against the FULL pack, so a shortlisted plan can never be ungrounded.
-    .slice(0, 6);
+    .slice(0, DEEP_COUNT)
+    .map((c) => c.planId);
 
   const emptyProjection: HorizonProjection = { headline: "", summary: "", conditions: [], medications: [] };
   const factsById = new Map(pack.candidates.map((c) => [c.planId, c]));
   const traj = newTrajectory("horizon-projection");
 
-  // RLM DECOMPOSE → DELEGATE: one focused pipeline PER horizon, the two horizons
-  // run in PARALLEL. Within each horizon: a cheap SCREEN call (project the member +
-  // rank the plans by sub-scores), then the top-3 get the SAME full deep write-up
-  // as Today — run in PARALLEL, one plan per call. So no horizon ever serializes
-  // three write-ups into one slow generation; wall-clock ≈ screen + one write-up.
-  // A failed horizon degrades to an empty card, not a failed projection.
+  // RLM DECOMPOSE → DELEGATE: one pipeline PER horizon, the two horizons run in
+  // PARALLEL. Within each horizon: a cheap PROJECTION call (member facts only — no
+  // plan pack, so small + fast), then the deterministic top-3 get the SAME full
+  // deep write-up as Today, reasoning over the PROJECTED member, run in PARALLEL
+  // (one plan per call). So no horizon serializes three write-ups, and the only
+  // serial step is the small projection. A failed horizon degrades to an empty card.
   const horizons = await rlmParallel(traj, "horizons", [...HORIZONS], HORIZONS.length, async (years): Promise<AiHorizon> => {
     try {
-      const screen = await rlmLeaf<{ projection?: HorizonProjection; ranked?: ScreenItem[] }>(traj, {
-        label: `horizon-screen:${years}`,
+      const proj = await rlmLeaf<{ projection?: HorizonProjection }>(traj, {
+        label: `horizon-project:${years}`,
         system: SYSTEM,
-        user: userMessage(pack.patient, shortlist, years, guidanceText),
+        user: projectionMessage(pack.patient, years, guidanceText),
         schema: OUTPUT_SCHEMA,
-        maxTokens: 3000, // projection + sub-scores only — small, fast
+        maxTokens: 1500, // projection narrative only — small, fast
       });
-      const projection = screen.projection ?? emptyProjection;
-
-      // Rank the screened plans by the same weighted fit as Today, take the top 3.
-      const topIds = (screen.ranked ?? [])
-        .filter((r) => factsById.has(r.planId))
-        .sort((a, b) => fitFromSubScores(b.subScores) - fitFromSubScores(a.subScores))
-        .slice(0, DEEP_COUNT)
-        .map((r) => r.planId);
+      const projection = proj.projection ?? emptyProjection;
 
       // Full deep write-up for each top pick, reasoning about the PROJECTED member,
       // run in parallel (reuses the Today machinery → identical card detail).

@@ -35,18 +35,16 @@ export default function RecommendationTabs({ sessionId }: { sessionId: string })
   const [tab, setTab] = useState<Tab>("today");
   const [horizons, setHorizons] = useState<HorizonsData | null>(null);
   const [hStatus, setHStatus] = useState<"idle" | "loading" | "error">("idle");
-  const [todayReady, setTodayReady] = useState(false);
+  const [today, setToday] = useState<{ topPlanId: string | null; topPlanName: string | null } | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
-  // Prefetch the across-horizon projection in the BACKGROUND once Today is done —
-  // not in parallel with it. The Today ensemble is the priority; firing the heavy
-  // horizon call alongside it just makes them compete (Anthropic rate limits) and
-  // slows Today. By waiting for Today, then computing the 3/5-year projection while
-  // the broker reads Today, the horizon tabs feel instant when opened. (If the
-  // broker jumps straight to a horizon tab, we load it then.) Cached server-side,
-  // so this is at most one call per facts-version.
+  // Prefetch the across-horizon projection IN PARALLEL with Today (on mount).
+  // Measured: running both concurrently does not slow Today (it still completes in
+  // ~20s), and the horizon finishes ~the same time instead of stacking 20s + 30s
+  // serially after Today. The horizon route no longer needs Today's cached top pick
+  // (we label "changes vs today" client-side from the Today result below), so there
+  // is no ordering dependency. Cached server-side → at most one call per facts-version.
   useEffect(() => {
-    if (horizons || hStatus === "loading") return;
-    if (!todayReady && typeof tab !== "number") return;
     let active = true;
     setHStatus("loading");
     fetch(`/api/sessions/${sessionId}/recommendation/horizons`, { cache: "no-store" })
@@ -54,7 +52,7 @@ export default function RecommendationTabs({ sessionId }: { sessionId: string })
       .then((d) => active && (setHorizons(d), setHStatus("idle")))
       .catch(() => active && setHStatus("error"));
     return () => { active = false; };
-  }, [sessionId, horizons, hStatus, todayReady, tab]);
+  }, [sessionId, reloadKey]);
 
   const years = horizons?.horizons.map((h) => h.years) ?? [...HORIZON_REC.horizonsYears];
   const activeHorizon =
@@ -94,7 +92,7 @@ export default function RecommendationTabs({ sessionId }: { sessionId: string })
 
       {/* Kept mounted (hidden when inactive) so its on-mount audit POST fires once. */}
       <div role="tabpanel" id="panel-today" aria-labelledby="tab-today" hidden={tab !== "today"}>
-        <RecommendationView sessionId={sessionId} onLoaded={() => setTodayReady(true)} />
+        <RecommendationView sessionId={sessionId} onLoaded={setToday} />
       </div>
 
       {typeof tab === "number" && (
@@ -108,7 +106,7 @@ export default function RecommendationTabs({ sessionId }: { sessionId: string })
             <div className="flex items-center gap-3 text-sm text-rose-600">
               <span>Could not load the projection.</span>
               <button
-                onClick={() => setHStatus("idle")}
+                onClick={() => setReloadKey((k) => k + 1)}
                 className="rounded-[7px] border border-slate-300 bg-white px-3 py-1.5 text-[12.5px] font-medium text-slate-700 hover:bg-slate-50"
               >
                 Retry
@@ -117,7 +115,15 @@ export default function RecommendationTabs({ sessionId }: { sessionId: string })
           )}
           {horizons &&
             (activeHorizon ? (
-              <HorizonPanel horizon={activeHorizon} todayName={horizons.todayTopPlanName} />
+              <HorizonPanel
+                horizon={activeHorizon}
+                // "changes vs today" is decided client-side from the Today result,
+                // so the horizon load doesn't depend on Today finishing first.
+                changed={
+                  !!(activeHorizon.recommended && today?.topPlanId && activeHorizon.recommended.planId !== today.topPlanId)
+                }
+                todayName={today?.topPlanName ?? horizons.todayTopPlanName}
+              />
             ) : (
               <p className="text-sm text-slate-500">No data for this horizon.</p>
             ))}
@@ -151,7 +157,7 @@ const LIKELIHOOD_STYLE: Record<Likelihood, string> = {
   high: "text-orange-500",
 };
 
-function HorizonPanel({ horizon: h, todayName }: { horizon: HorizonRec; todayName: string | null }) {
+function HorizonPanel({ horizon: h, changed, todayName }: { horizon: HorizonRec; changed: boolean; todayName: string | null }) {
   const rec = h.recommended;
   const top = h.ranked ?? [];
   const hasAssumptions = h.projection.conditions.length > 0 || h.projection.medications.length > 0;
@@ -190,7 +196,7 @@ function HorizonPanel({ horizon: h, todayName }: { horizon: HorizonRec; todayNam
       </section>
 
       {/* Changes-vs-today banner */}
-      {h.changedVsToday ? (
+      {changed ? (
         <div className="mb-[18px] rounded-[10px] border border-amber-200 bg-amber-50 px-4 py-3">
           <div className="mb-0.5 text-[13px] font-bold text-amber-800">⚑ Changes vs today</div>
           <div className="text-[12.5px] leading-[1.5] text-amber-700">

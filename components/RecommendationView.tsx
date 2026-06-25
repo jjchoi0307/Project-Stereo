@@ -65,7 +65,13 @@ function PlanChips({ plan }: { plan: PlanMeta }) {
   );
 }
 
-export default function RecommendationView({ sessionId, onLoaded }: { sessionId: string; onLoaded?: () => void }) {
+export default function RecommendationView({
+  sessionId,
+  onLoaded,
+}: {
+  sessionId: string;
+  onLoaded?: (today: { topPlanId: string | null; topPlanName: string | null }) => void;
+}) {
   const [data, setData] = useState<RecData | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<{ message: string; notConfigured: boolean } | null>(null);
@@ -85,9 +91,12 @@ export default function RecommendationView({ sessionId, onLoaded }: { sessionId:
         if (!active) return;
         if (r.ok) {
           setData(d);
-          // Today is done — let the parent kick off the 3/5-year projection in the
-          // background so it's ready by the time the broker opens a horizon tab.
-          onLoaded?.();
+          // Hand the parent today's top pick so it can label "changes vs today"
+          // on the horizon tabs without the horizon route having to wait for /
+          // read today's cache (the two now load in parallel).
+          const topId: string | null = d?.topPlanId ?? null;
+          const topName = d?.ranked?.find((x: RankedItem) => x.planId === topId)?.plan?.name ?? null;
+          onLoaded?.({ topPlanId: topId, topPlanName: topName });
           // Now that the AI recommendation is warm in the server cache, snapshot it.
           fetch(`/api/sessions/${sessionId}/audit`, { method: "POST" })
             .then((res) => (res.ok ? res.json() : null))

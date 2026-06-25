@@ -16,6 +16,10 @@ const ALLOWED_KEYS = new Set([
   // conditionsFreeText is intentionally NOT allowed: de-identify DROPS the
   // free-text field (it can carry identifiers), and the test enforces that drop.
   "medications",
+  // mustKeepProviders: only the RESOLVED canonical system name (controlled value)
+  // or the generic token "a required provider" — never the patient-entered label
+  // or the raw system id. The sentinel checks below enforce that.
+  "mustKeepProviders",
   "heightCm",
   "weightKg",
   "bmi",
@@ -76,6 +80,24 @@ async function main() {
   expect(out.medications.includes("atorvastatin"), "medication name should be preserved");
   expect(out.bmi === 32.9, "bmi should be preserved");
   expect(out.familyHistory.length === 1, "family history should be preserved");
+
+  // A hard provider requirement with an UNRESOLVABLE system id (no map passed)
+  // must collapse to the generic token — never the label or the raw id.
+  expect(
+    JSON.stringify(out.mustKeepProviders) === JSON.stringify(["a required provider"]),
+    `mustKeepProviders should be the generic token when unresolved, got ${JSON.stringify(out.mustKeepProviders)}`,
+  );
+
+  // With a resolver map, the canonical system name comes through (and still no label).
+  const resolved = deidentifyForSim(profile, new Map([["sys-PROVIDERSENTINEL", "Seoul Medical Group"]]));
+  expect(
+    resolved.mustKeepProviders.includes("Seoul Medical Group"),
+    "resolved system name should be sent when a map is provided",
+  );
+  expect(
+    !JSON.stringify(resolved).includes("NAMESENTINEL"),
+    "patient-entered provider label must never leak even when resolving",
+  );
 
   if (errors.length) {
     console.error(`\n✗ ${errors.length} problem(s):`);

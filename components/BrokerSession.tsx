@@ -558,9 +558,13 @@ const LIKELIHOOD_STYLE: Record<"unlikely" | "possible" | "likely", { bg: string;
 };
 
 // AI-powered health futures, grounded in the captured de-identified facts.
+// Progressive disclosure: the front face is just the outlook + one-line headline
+// per horizon; the summaries, the possible-outcomes list, and the caveat live
+// behind a single "See the detail" toggle so the surface stays simple.
 function HealthFuturesCard({ clinical }: { clinical: ClinicalRead }) {
   const { horizons, outcomes, caveat } = clinical.futures;
   const ordered = [...horizons].sort((a, b) => a.years - b.years);
+  const [open, setOpen] = useState(false);
   return (
     <Card>
       <div className="mb-1.5">
@@ -573,7 +577,8 @@ function HealthFuturesCard({ clinical }: { clinical: ClinicalRead }) {
         Where this person&apos;s health is most likely headed, read from the captured facts.
       </p>
 
-      <div className="mb-5 grid grid-cols-2 gap-3">
+      {/* Front face: outlook + headline only — the simple read at a glance. */}
+      <div className="grid grid-cols-2 gap-3">
         {ordered.map((h) => {
           const st = OUTLOOK_STYLE[h.outlook];
           return (
@@ -588,34 +593,59 @@ function HealthFuturesCard({ clinical }: { clinical: ClinicalRead }) {
                 </span>
               </div>
               <div className="text-[13.5px] font-semibold text-ink">{h.headline}</div>
-              <p className="mt-1 text-[12.5px] leading-[1.5] text-slate-600">{h.summary}</p>
             </div>
           );
         })}
       </div>
 
-      <div className="mb-2.5 text-xs font-semibold text-slate-600">Possible outcomes</div>
-      <div className="mb-[18px] flex flex-col gap-2.5">
-        {outcomes.map((o, i) => {
-          const st = LIKELIHOOD_STYLE[o.likelihood];
-          return (
-            <div key={i} className="rounded-lg border border-slate-200 bg-white px-3.5 py-[11px]">
-              <div className="flex items-center gap-2.5">
-                <span className="flex-1 text-[13px] font-medium text-slate-700">{o.label}</span>
-                <span
-                  className="flex-none rounded-md px-2 py-[3px] text-[11px] font-semibold"
-                  style={{ background: st.bg, color: st.fg }}
-                >
-                  {st.label}
-                </span>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="mt-3.5 flex items-center gap-1.5 text-[12.5px] font-semibold text-accent"
+      >
+        <span className="text-[10px]">{open ? "▾" : "▸"}</span>
+        {open ? "Hide the detail" : "See what could change & why"}
+      </button>
+
+      {open && (
+        <div className="mt-3.5 border-t border-slate-100 pt-4">
+          {/* Per-horizon summaries */}
+          <div className="mb-4 flex flex-col gap-3">
+            {ordered.map((h) => (
+              <div key={h.years}>
+                <div className="num mb-0.5 text-[11px] font-bold uppercase tracking-[.04em] text-slate-500">
+                  {h.years}-year
+                </div>
+                <p className="text-[12.5px] leading-[1.5] text-slate-600">{h.summary}</p>
               </div>
-              <p className="mt-1 text-[12.5px] leading-[1.5] text-slate-500">{o.why}</p>
-            </div>
-          );
-        })}
-      </div>
+            ))}
+          </div>
 
-      <p className="text-[11.5px] italic leading-[1.5] text-slate-400">{caveat}</p>
+          <div className="mb-2.5 text-xs font-semibold text-slate-600">Possible outcomes</div>
+          <div className="mb-[18px] flex flex-col gap-2.5">
+            {outcomes.map((o, i) => {
+              const st = LIKELIHOOD_STYLE[o.likelihood];
+              return (
+                <div key={i} className="rounded-lg border border-slate-200 bg-white px-3.5 py-[11px]">
+                  <div className="flex items-center gap-2.5">
+                    <span className="flex-1 text-[13px] font-medium text-slate-700">{o.label}</span>
+                    <span
+                      className="flex-none rounded-md px-2 py-[3px] text-[11px] font-semibold"
+                      style={{ background: st.bg, color: st.fg }}
+                    >
+                      {st.label}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[12.5px] leading-[1.5] text-slate-500">{o.why}</p>
+                </div>
+              );
+            })}
+          </div>
+
+          <p className="text-[11.5px] italic leading-[1.5] text-slate-400">{caveat}</p>
+        </div>
+      )}
     </Card>
   );
 }

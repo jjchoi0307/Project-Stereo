@@ -14,6 +14,13 @@ export interface DeidentifiedFacts {
   age: number;
   conditions: string[];
   medications: string[]; // normalized names only (no raw free-text the patient typed)
+  /**
+   * Health systems / providers the member requires to stay in network (hard
+   * requirements only). These drive the NETWORK-SENSITIVITY marker — without them
+   * the clinical read can't tell there's a constraint narrowing the plans. Same
+   * facts the recommendation model already receives (planFactsPack.mustKeepProviders).
+   */
+  mustKeepProviders: string[];
   heightCm?: number;
   weightKg?: number;
   bmi?: number;
@@ -32,8 +39,27 @@ export interface DeidentifiedFacts {
   };
 }
 
-/** Build the clinical-facts-only payload that may be sent to the LLM. */
-export function deidentifyForSim(profile: ClientProfileInput): DeidentifiedFacts {
+/**
+ * Build the clinical-facts-only payload that may be sent to the LLM.
+ *
+ * `systemNames` maps a controlled provider-system id (e.g. "sys-smg") to its
+ * canonical name ("Seoul Medical Group"). We send the RESOLVED canonical name —
+ * never the patient-entered `label` (free text that can carry a person's name)
+ * and never the raw id. A hard requirement with no resolvable system collapses to
+ * the generic token "a required provider" so the network-sensitivity signal still
+ * fires without leaking who/where.
+ */
+export function deidentifyForSim(
+  profile: ClientProfileInput,
+  systemNames?: Map<string, string>,
+): DeidentifiedFacts {
+  const mustKeepProviders = Array.from(
+    new Set(
+      profile.providerConstraints
+        .filter((c) => c.hardRequirement)
+        .map((c) => (c.systemId && systemNames?.get(c.systemId)) || "a required provider"),
+    ),
+  );
   return {
     age: profile.age,
     conditions: [...profile.conditions].sort(),
@@ -43,6 +69,7 @@ export function deidentifyForSim(profile: ClientProfileInput): DeidentifiedFacts
     // name only — the raw `m.raw` string is what the patient typed and may carry
     // dosing notes / identifiers, so we drop it.
     medications: profile.medications.map((m) => m.name ?? m.drugId ?? "").filter(Boolean),
+    mustKeepProviders,
     heightCm: profile.heightCm,
     weightKg: profile.weightKg,
     bmi: profile.bmi,

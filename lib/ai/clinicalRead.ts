@@ -12,6 +12,7 @@ import "server-only";
 
 import type { ClientProfileInput } from "@/lib/domain";
 import { deidentifyForSim, type DeidentifiedFacts } from "@/lib/sim/deidentify";
+import { getDataStore } from "@/lib/data";
 import { SIM_MODEL } from "@/lib/sim/env";
 import { importanceGuidance } from "@/lib/engine/config";
 import { newTrajectory, rlmLeaf, logTrajectory } from "./rlm";
@@ -69,7 +70,7 @@ Hard rules:
     • "moderate" — ONE soft or indirect indicator (e.g. age alone, a single family-history item, an elevated BMI without a diagnosis).
     • "high" — ONE clear, directly relevant fact (a diagnosed condition, an active medication treating it, or — for network sensitivity — a hard "must-keep" provider requirement that constrains which plans fit).
     • "very_high" — MULTIPLE compounding facts (e.g. a diagnosed condition PLUS its medication PLUS family history; or a must-keep provider PLUS multiple specialist needs).
-  For network sensitivity specifically: a hard requirement to keep a named provider/system in network is a "high" band, because it directly narrows the eligible plans; two or more such constraints, or a constraint plus heavy specialist use, is "very_high". A member with no required providers is "low".
+  For network sensitivity specifically, decide from the "mustKeepProviders" field of the facts: if it lists ONE provider/system, the band is "high" (it directly narrows the eligible plans); TWO OR MORE, or one plus heavy specialist use, is "very_high"; if it is EMPTY, the band is "low". When it is non-empty you MUST include a network_sensitivity marker and the "why" MUST name the provider(s) from that field verbatim.
 - Also set an integer "score" 0..100 used only for internal ordering, consistent with the band (low 0-24, moderate 25-49, high 50-74, very_high 75-100). Brokers see the BAND and the "why", not the number, so the band and the "why" must be self-explanatory on their own.
 - The "why" must (a) name the specific grounding fact and (b) explain in one plain sentence WHY that fact lands the marker in its band. For network sensitivity, say plainly that keeping the required provider in network is what raises it (e.g. "Because they want to keep Seoul Medical Group, only plans where that group stays in network fit — which narrows the choices.").
 - FUTURES: give exactly two horizons (years 3 and 5). "headline" is a short phrase; "summary" is 1-3 plain sentences about where this person's health is most likely headed; "outlook" reflects overall trajectory (stable / watch / elevated). "outcomes" are ~3-5 specific clinically-grounded possibilities with a calibrated likelihood (unlikely / possible / likely) and a "why" tied to the facts. "caveat" must state this is an educational projection, not medical advice.
@@ -151,7 +152,13 @@ const OUTPUT_SCHEMA = {
  * refusal / max_tokens / empty / malformed output.
  */
 export async function aiClinicalRead(profile: ClientProfileInput, guidanceText?: string): Promise<ClinicalRead> {
-  const facts = deidentifyForSim(profile);
+  // Resolve must-keep provider SYSTEM ids → canonical names (e.g. "Seoul Medical
+  // Group") so the network-sensitivity marker can ground on the real requirement.
+  // De-identify still only emits the canonical name or a generic token — never
+  // the patient-entered label.
+  const systems = await getDataStore().listProviderSystems();
+  const systemNames = new Map(systems.map((s) => [s.id, s.name]));
+  const facts = deidentifyForSim(profile, systemNames);
 
   // RLM leaf: the clinical read is a single grounded sub-call (small, bounded
   // context — no decomposition needed), run through the shared orchestrator so it
