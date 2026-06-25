@@ -1,15 +1,19 @@
 import Image from "next/image";
 import Link from "next/link";
 import { signOut } from "@/app/login/actions";
+import { getBrokerContext } from "@/lib/supabase/auth";
 
 /**
  * Sticky branded top bar for the authed broker routes (dashboard, session,
  * recommendation, audit, plans). Replaces the per-page inline headers.
  *
  * `authed` controls whether the sign-out / nav actions show — pass false on
- * memory-mode renders where there's no broker to sign out.
+ * memory-mode renders where there's no broker to sign out. The Admin link only
+ * appears for elevated roles (org_admin / security).
  */
-export default function Header({ authed = true }: { authed?: boolean }) {
+export default async function Header({ authed = true }: { authed?: boolean }) {
+  const ctx = authed ? await getBrokerContext() : null;
+  const isElevated = ctx?.role === "org_admin" || ctx?.role === "security";
   return (
     <header className="sticky top-0 z-20 border-b border-slate-200 bg-white">
       <div className="mx-auto flex h-[60px] max-w-[1120px] items-center gap-5 px-7">
@@ -41,6 +45,14 @@ export default function Header({ authed = true }: { authed?: boolean }) {
           >
             Plan data
           </Link>
+          {isElevated && (
+            <Link
+              href="/admin/audit"
+              className="rounded-[7px] px-3 py-2 text-[13px] font-medium text-accent hover:bg-slate-50"
+            >
+              Admin
+            </Link>
+          )}
           {authed && (
             <>
               <span className="mx-1.5 h-5 w-px bg-slate-200" />

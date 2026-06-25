@@ -613,11 +613,13 @@ export async function recommendPlans(
   const model = deepOk[0]?.model ?? screenModel;
   const deepById = new Map(deepOk.map((d) => [d.id, d.ranked]));
 
-  // 3. SYNTHESIZE — keep the VOTED order (frequency decides the ranking, not a
-  // single run's fit score), then the heuristic "other eligible" tail.
+  // 3. SYNTHESIZE — the three SHOWN plans are SELECTED by top-3 vote frequency
+  // (stability), but DISPLAYED in descending fit order so the headline numbers read
+  // monotonically (#1 ≥ #2 ≥ #3). Each card still carries its own vote confidence.
   const topRanked = topIds
     .map((id) => deepById.get(id))
-    .filter((x): x is AiRankedPlan => Boolean(x));
+    .filter((x): x is AiRankedPlan => Boolean(x))
+    .sort((a, b) => b.fitScore - a.fitScore);
 
   const topSet = new Set(topRanked.map((r) => r.planId));
   const tail: AiRankedPlan[] = [];
