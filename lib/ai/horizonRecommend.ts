@@ -64,17 +64,13 @@ export interface AiHorizonRecommendation {
 
 const SYSTEM = `You are a Medicare Advantage plan-fit analyst for Seoul Medical Group brokers. You think about how a prospective member's plan fit changes as their health evolves.
 
-You are given the member's CURRENT de-identified facts and the structured PLAN FACTS for every ELIGIBLE plan (extracted verbatim from the 2026 carrier documents).
+You are given the member's CURRENT de-identified facts and the structured PLAN FACTS for every ELIGIBLE plan (extracted verbatim from the 2026 carrier documents). The user message specifies ONE horizon (a number of years from now). Do TWO things for THAT horizon:
 
-Do TWO things for EACH requested horizon (the specific years are given in the user message):
+1) PROJECT the member's likely future health at that horizon, grounded ONLY in their current facts (age, conditions, medications, family history, utilization). Give a one-line headline, a short plain-language summary a layperson understands, and the conditions / medications they are most likely to ADD by then, each with a likelihood "low" | "moderate" | "high". Be clinically reasonable and non-alarming. This projection is about the PERSON, not the plans.
 
-1) PROJECT the member's likely future health, grounded ONLY in their current facts (age, conditions, medications, family history, utilization). Give a one-line headline, a short plain-language summary a layperson understands, and the conditions / medications they are most likely to ADD by that horizon, each with a likelihood of "low" | "moderate" | "high". Be clinically reasonable and non-alarming. This projection is about the PERSON, not the plans.
+2) RECOMMEND, for that PROJECTED member, the best 1–3 plans from the provided eligible plans (no more than 3). For each: five sub-scores in [0,1] (coverageFit, networkFit, medicationFit, mismatchPenalty[higher=worse], catastrophicDownside[higher=worse]); confidence; 2–4 specific reasons each citing a real figure from THAT plan's facts; for every reason a citation {sourceFile, sourcePage, quote} using that plan's own provenance; estAnnualCost (USD/yr estimate) and catastrophicExposure [0,1].
 
-2) RECOMMEND, for that PROJECTED member, the best 1–3 plans from the provided eligible plans. For each, exactly as in the standard recommendation: five sub-scores in [0,1] (coverageFit, networkFit, medicationFit, mismatchPenalty[higher=worse], catastrophicDownside[higher=worse]); confidence; 2–5 specific reasons each citing a real figure from THAT plan's facts; and for every reason a citation {sourceFile, sourcePage, quote} using that plan's own provenance. Also estAnnualCost (USD/yr estimate) and catastrophicExposure [0,1].
-
-ABSOLUTE GROUNDING RULE for the plan recommendation: use ONLY the provided PLAN FACTS. Never invent a plan, a figure, or a benefit. Every cited number must appear in that plan's facts. Rank purely on fit to the projected member — no carrier bias.
-
-Order each horizon's "ranked" best-first; the first is the recommended plan for that horizon.`;
+ABSOLUTE GROUNDING RULE: use ONLY the provided PLAN FACTS. Never invent a plan, a figure, or a benefit. Every cited number must appear in that plan's facts. Rank purely on fit to the projected member — no carrier bias. Order "ranked" best-first.`;
 
 function packForPrompt(candidates: PlanFacts[]) {
   return candidates.map((c) => ({
@@ -98,7 +94,7 @@ function packForPrompt(candidates: PlanFacts[]) {
   }));
 }
 
-function userMessage(patient: RecommendationPatientFacts, candidates: PlanFacts[], guidanceText?: string): string {
+function userMessage(patient: RecommendationPatientFacts, candidates: PlanFacts[], years: number, guidanceText?: string): string {
   return [
     "MEMBER CURRENT FACTS (de-identified):",
     JSON.stringify(patient, null, 2),
@@ -108,7 +104,7 @@ function userMessage(patient: RecommendationPatientFacts, candidates: PlanFacts[
     "ELIGIBLE PLAN FACTS — the ONLY plans you may recommend and the ONLY figures you may cite:",
     JSON.stringify(packForPrompt(candidates), null, 2),
     "",
-    `Produce a projection + plan recommendation for EACH of these horizons (years from now): ${HORIZONS.join(", ")}.`,
+    `Produce the projection + plan recommendation for the ${years}-year horizon (${years} years from now).`,
   ].join("\n");
 }
 
@@ -165,50 +161,42 @@ const PLAN_ITEM_SCHEMA = {
 
 const LIKELIHOOD = { type: "string", enum: ["low", "moderate", "high"] } as const;
 
+// Single-horizon output — one call per horizon, run in parallel (RLM decompose).
+// Half the output of the old both-horizons-in-one call, and the two run
+// concurrently, so wall-clock ≈ one horizon instead of two.
 const OUTPUT_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["horizons"],
+  required: ["projection", "ranked"],
   properties: {
-    horizons: {
-      type: "array",
-      items: {
-        type: "object",
-        additionalProperties: false,
-        required: ["years", "projection", "ranked"],
-        properties: {
-          years: { type: "integer" },
-          projection: {
+    projection: {
+      type: "object",
+      additionalProperties: false,
+      required: ["headline", "summary", "conditions", "medications"],
+      properties: {
+        headline: { type: "string" },
+        summary: { type: "string" },
+        conditions: {
+          type: "array",
+          items: {
             type: "object",
             additionalProperties: false,
-            required: ["headline", "summary", "conditions", "medications"],
-            properties: {
-              headline: { type: "string" },
-              summary: { type: "string" },
-              conditions: {
-                type: "array",
-                items: {
-                  type: "object",
-                  additionalProperties: false,
-                  required: ["label", "likelihood"],
-                  properties: { label: { type: "string" }, likelihood: LIKELIHOOD },
-                },
-              },
-              medications: {
-                type: "array",
-                items: {
-                  type: "object",
-                  additionalProperties: false,
-                  required: ["name", "likelihood"],
-                  properties: { name: { type: "string" }, likelihood: LIKELIHOOD },
-                },
-              },
-            },
+            required: ["label", "likelihood"],
+            properties: { label: { type: "string" }, likelihood: LIKELIHOOD },
           },
-          ranked: { type: "array", items: PLAN_ITEM_SCHEMA },
+        },
+        medications: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["name", "likelihood"],
+            properties: { name: { type: "string" }, likelihood: LIKELIHOOD },
+          },
         },
       },
     },
+    ranked: { type: "array", items: PLAN_ITEM_SCHEMA },
   },
 } as const;
 
@@ -220,12 +208,6 @@ interface GenPlan {
   estAnnualCost: number;
   catastrophicExposure: number;
 }
-interface GenHorizon {
-  years: number;
-  projection: HorizonProjection;
-  ranked: GenPlan[];
-}
-
 const clamp01 = (n: number) => (Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0);
 const W = SCORING.weights;
 function fitFromSubScores(s: AiSubScores): number {
@@ -306,47 +288,53 @@ export async function recommendHorizons(
     .slice(0, 10);
 
   const client = getAnthropic();
-  const stream = client.messages.stream({
-    model: SIM_MODEL,
-    max_tokens: 28000,
-    // No extended thinking — it dominated latency; temperature 0 keeps the
-    // projection + grounded recommendation stable. Synthesize enforces grounding.
-    temperature: 0,
-    output_config: { effort: "low", format: { type: "json_schema", schema: OUTPUT_SCHEMA } },
-    system: SYSTEM,
-    messages: [{ role: "user", content: userMessage(pack.patient, shortlist, guidanceText) }],
-  });
-  const response = await stream.finalMessage();
-  if (response.stop_reason === "refusal") {
-    throw new Error(`Horizon recommendation refused: ${response.stop_details?.explanation ?? "no detail"}`);
-  }
-  if (response.stop_reason === "max_tokens") {
-    throw new Error("Horizon recommendation truncated (hit max_tokens).");
-  }
-  const text = response.content
-    .filter((b): b is Anthropic.TextBlock => b.type === "text")
-    .map((b) => b.text)
-    .join("");
-  if (!text.trim()) throw new Error(`Empty horizon recommendation (stop_reason=${response.stop_reason}).`);
-  const parsed = JSON.parse(text) as { horizons?: GenHorizon[] };
-  const genHorizons = Array.isArray(parsed.horizons) ? parsed.horizons : [];
+  const emptyProjection: HorizonProjection = { headline: "", summary: "", conditions: [], medications: [] };
+  let modelUsed = SIM_MODEL;
 
-  const byYear = new Map(genHorizons.map((h) => [h.years, h]));
-  const horizons: AiHorizon[] = HORIZONS.map((years) => {
-    const g = byYear.get(years);
-    const ranked = (g?.ranked ?? [])
-      .map((p) => synthPlan(p, pack))
-      .filter((x): x is AiRankedPlan => x !== null)
-      .sort((a, b) => b.fitScore - a.fitScore);
-    const recommended = ranked[0] ?? null;
-    return {
-      years,
-      changedVsToday: Boolean(recommended && todayTopPlanId && recommended.planId !== todayTopPlanId),
-      projection: g?.projection ?? { headline: "", summary: "", conditions: [], medications: [] },
-      recommended,
-      ranked,
-    };
-  });
+  // RLM DECOMPOSE: one focused call PER horizon, run in PARALLEL. Each emits ~half
+  // the output of the old both-horizons-in-one call, and they run concurrently, so
+  // wall-clock ≈ a single horizon instead of two. A failed horizon degrades to an
+  // empty card rather than failing the whole projection.
+  const horizons: AiHorizon[] = await Promise.all(
+    HORIZONS.map(async (years): Promise<AiHorizon> => {
+      try {
+        const stream = client.messages.stream({
+          model: SIM_MODEL,
+          max_tokens: 12000,
+          temperature: 0,
+          output_config: { effort: "low", format: { type: "json_schema", schema: OUTPUT_SCHEMA } },
+          system: SYSTEM,
+          messages: [{ role: "user", content: userMessage(pack.patient, shortlist, years, guidanceText) }],
+        });
+        const response = await stream.finalMessage();
+        modelUsed = response.model;
+        if (response.stop_reason === "refusal" || response.stop_reason === "max_tokens") {
+          throw new Error(`horizon ${years}: ${response.stop_reason}`);
+        }
+        const text = response.content
+          .filter((b): b is Anthropic.TextBlock => b.type === "text")
+          .map((b) => b.text)
+          .join("");
+        if (!text.trim()) throw new Error(`horizon ${years}: empty`);
+        const parsed = JSON.parse(text) as { projection?: HorizonProjection; ranked?: GenPlan[] };
+        const ranked = (parsed.ranked ?? [])
+          .map((p) => synthPlan(p, pack))
+          .filter((x): x is AiRankedPlan => x !== null)
+          .sort((a, b) => b.fitScore - a.fitScore);
+        const recommended = ranked[0] ?? null;
+        return {
+          years,
+          changedVsToday: Boolean(recommended && todayTopPlanId && recommended.planId !== todayTopPlanId),
+          projection: parsed.projection ?? emptyProjection,
+          recommended,
+          ranked,
+        };
+      } catch (e) {
+        console.error("horizon projection failed:", (e as Error).message);
+        return { years, changedVsToday: false, projection: emptyProjection, recommended: null, ranked: [] };
+      }
+    }),
+  );
 
-  return { model: response.model, todayTopPlanId, horizons };
+  return { model: modelUsed, todayTopPlanId, horizons };
 }

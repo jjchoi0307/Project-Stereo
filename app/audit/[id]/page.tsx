@@ -7,6 +7,7 @@ import { getDataStore } from "@/lib/data";
 import { getIntakeReference } from "@/lib/intake/reference";
 import { CONDITION_OPTIONS } from "@/lib/intake/options";
 import type { ExclusionReason, NormalizedProfile, RiskBand } from "@/lib/domain";
+import { clientRef } from "@/lib/session/ref";
 
 export const dynamic = "force-dynamic";
 
@@ -74,6 +75,7 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
           </span>
         </div>
         <p className="text-[13px] text-slate-500">
+          Client <span className="num font-semibold text-slate-700">{clientRef(p.id.replace(/^profile-/, ""))}</span> ·{" "}
           {fmtDate(record.createdAt)} · recommended{" "}
           <strong className="font-semibold text-ink">{topId ? name(topId) : "—"}</strong>
         </p>

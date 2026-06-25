@@ -2,6 +2,9 @@ import Link from "next/link";
 import Header from "@/components/ui/Header";
 import { getAuditStore } from "@/lib/audit/store";
 import { getDataStore } from "@/lib/data";
+import { clientRef } from "@/lib/session/ref";
+
+const sessionIdOf = (profileId: string) => profileId.replace(/^profile-/, "");
 
 export const dynamic = "force-dynamic";
 
@@ -29,8 +32,9 @@ export default async function AuditLogPage() {
           </div>
         ) : (
           <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-            <div className="grid grid-cols-[150px_1fr_1fr_140px] gap-4 border-b border-slate-200 bg-slate-50 px-5 py-3 text-[11px] font-semibold uppercase tracking-[.04em] text-slate-500">
+            <div className="grid grid-cols-[140px_110px_1fr_1fr_120px] gap-4 border-b border-slate-200 bg-slate-50 px-5 py-3 text-[11px] font-semibold uppercase tracking-[.04em] text-slate-500">
               <div>Record</div>
+              <div>Client</div>
               <div>Recommended plan</div>
               <div>Versions</div>
               <div className="text-right">Date</div>
@@ -41,9 +45,10 @@ export default async function AuditLogPage() {
                 <Link
                   key={r.id}
                   href={`/audit/${r.id}`}
-                  className="grid grid-cols-[150px_1fr_1fr_140px] items-center gap-4 border-b border-slate-100 px-5 py-[15px] last:border-b-0 hover:bg-slate-50"
+                  className="grid grid-cols-[140px_110px_1fr_1fr_120px] items-center gap-4 border-b border-slate-100 px-5 py-[15px] last:border-b-0 hover:bg-slate-50"
                 >
                   <div className="num text-[12.5px] font-medium text-accent">{r.id}</div>
+                  <div className="num text-[12.5px] font-semibold text-slate-600">{clientRef(sessionIdOf(r.profileSnapshot.id))}</div>
                   <div>
                     <div className="text-[13.5px] font-semibold">{topId ? planName.get(topId) ?? topId : "—"}</div>
                     <div className="text-xs text-slate-400">{topId ? planCarrier.get(topId) ?? "" : ""}</div>
