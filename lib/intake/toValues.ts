@@ -24,6 +24,11 @@ export function profileToValues(profile: ClientProfileInput): IntakeFormValues {
     acupunctureVisits12mo: profile.utilization?.acupunctureVisits12mo?.toString() ?? "",
     specialistVisits12mo: profile.utilization?.specialistVisits12mo?.toString() ?? "",
     priorYearInpatientEvents: profile.utilization?.priorYearInpatientEvents?.toString() ?? "",
+    avgDailySteps: profile.lifestyle?.avgDailySteps?.toString() ?? "",
+    sleepHoursPerNight: profile.lifestyle?.sleepHoursPerNight?.toString() ?? "",
+    sleepQuality: profile.lifestyle?.sleepQuality ?? "",
+    selfRatedHealth: (profile.lifestyle?.selfRatedHealth?.toString() ?? "") as IntakeFormValues["selfRatedHealth"],
     dualEligible: profile.dualEligible ?? false,
+    consentAcknowledged: profile.consentAcknowledged ?? false,
   };
 }

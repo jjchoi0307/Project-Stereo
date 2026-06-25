@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { computeBmi, type CaptureSource, type ConditionFlag, type Gender, type YesNoUnknown } from "@/lib/domain";
 import { emptyIntakeValues, type IntakeFormValues, type IntakeReference } from "@/lib/intake/types";
 import { validateIntake, type IntakeValidation } from "@/lib/intake/validate";
+import { SELF_RATED_HEALTH_OPTIONS, SLEEP_QUALITY_OPTIONS } from "@/lib/intake/options";
 import type { BrokerSession } from "@/lib/session/store";
 import { StepLabel } from "@/components/ui/SectionLabel";
 import Spinner from "@/components/ui/Spinner";
@@ -294,8 +295,44 @@ export default function IntakeForm({
 
       {divider}
 
-      {/* 8 Dual eligibility — gates D-SNP plans */}
-      <StepLabel step={8}>Dual eligibility</StepLabel>
+      {/* 8 Lifestyle & well-being */}
+      <StepLabel step={8}>Lifestyle &amp; well-being</StepLabel>
+      <p className="-mt-1.5 mb-3 text-xs text-slate-400">
+        All optional and self-reported — these add light context and are not weighted heavily.
+      </p>
+      <div className="grid grid-cols-2 gap-3.5">
+        <NumField label="Average daily steps" value={v.avgDailySteps} err={errors.fields.avgDailySteps}
+          onChange={(x) => update({ avgDailySteps: x })} />
+        <NumField label="Sleep (hours/night)" value={v.sleepHoursPerNight} err={errors.fields.sleepHoursPerNight}
+          onChange={(x) => update({ sleepHoursPerNight: x })} />
+        <div>
+          <label className={labelCls}>Sleep quality</label>
+          <select className={`${inputCls} bg-white`} value={v.sleepQuality}
+            onChange={(e) => update({ sleepQuality: e.target.value as IntakeFormValues["sleepQuality"] })}>
+            <option value="">Select…</option>
+            {SLEEP_QUALITY_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          {errors.fields.sleepQuality && <div className={errCls}>{errors.fields.sleepQuality}</div>}
+        </div>
+        <div>
+          <label className={labelCls}>Overall health, self-rated</label>
+          <select className={`${inputCls} bg-white`} value={v.selfRatedHealth}
+            onChange={(e) => update({ selfRatedHealth: e.target.value as IntakeFormValues["selfRatedHealth"] })}>
+            <option value="">Select…</option>
+            {SELF_RATED_HEALTH_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          {errors.fields.selfRatedHealth && <div className={errCls}>{errors.fields.selfRatedHealth}</div>}
+        </div>
+      </div>
+
+      {divider}
+
+      {/* 9 Dual eligibility — gates D-SNP plans */}
+      <StepLabel step={9}>Dual eligibility</StepLabel>
       <label className="flex cursor-pointer items-start gap-3 rounded-[9px] border border-slate-200 bg-white px-3.5 py-3">
         <input
           type="checkbox"
@@ -311,6 +348,23 @@ export default function IntakeForm({
           </span>
         </span>
       </label>
+
+      {divider}
+
+      {/* Consent — required to submit (enforced in validateIntake) */}
+      <label className="flex cursor-pointer items-start gap-3 rounded-[9px] border border-slate-200 bg-white px-3.5 py-3">
+        <input
+          type="checkbox"
+          className="mt-0.5"
+          checked={v.consentAcknowledged}
+          onChange={(e) => update({ consentAcknowledged: e.target.checked })}
+        />
+        <span className="text-[13px] leading-[1.5] text-slate-700">
+          I confirm the member consents to using this information to recommend a Medicare plan.{" "}
+          <span className="text-slate-500">This is not medical advice.</span>
+        </span>
+      </label>
+      {errors.fields.consentAcknowledged && <div className={errCls}>{errors.fields.consentAcknowledged}</div>}
 
       <button type="submit" disabled={submitting}
         className="mt-[26px] flex w-full items-center justify-center gap-2.5 rounded-[9px] bg-accent py-[13px] text-[14.5px] font-semibold text-white hover:opacity-90 disabled:opacity-50">

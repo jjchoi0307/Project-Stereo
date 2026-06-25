@@ -23,6 +23,13 @@ export interface DeidentifiedFacts {
     specialistVisits12mo?: number;
     priorYearInpatientEvents?: number;
   };
+  /** Self-reported lifestyle facts (advisory; no identifiers). */
+  lifestyle?: {
+    avgDailySteps?: number;
+    sleepHoursPerNight?: number;
+    sleepQuality?: string;
+    selfRatedHealth?: number;
+  };
 }
 
 /** Build the clinical-facts-only payload that may be sent to the LLM. */
@@ -45,5 +52,6 @@ export function deidentifyForSim(profile: ClientProfileInput): DeidentifiedFacts
       affectedRelativesCount: f.affectedRelativesCount,
     })),
     utilization: profile.utilization,
+    lifestyle: profile.lifestyle,
   };
 }

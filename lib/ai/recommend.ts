@@ -522,8 +522,14 @@ export async function recommendPlans(
 
   const client = getAnthropic();
 
+  // TODAY's plan-fit is grounded in the 2026 plan files + the member's HARD
+  // clinical needs (conditions, meds, providers, dual eligibility, region). Family
+  // history and self-reported lifestyle are projection inputs only — they must NOT
+  // steer which plan fits today — so they're withheld from the screen/deep prompts.
+  const todayPatient: RecommendationPatientFacts = { ...pack.patient, familyHistory: [], lifestyle: undefined };
+
   // 1. SCREEN — AI ranks all eligible plans; pick the top picks for deep write-up.
-  const screen = await callScreen(client, pack.patient, pack.candidates);
+  const screen = await callScreen(client, todayPatient, pack.candidates);
   const screenOrder = screen.items.filter((s) => factsById.has(s.planId));
   // Fall back to a heuristic ordering if the screen returned nothing usable.
   const orderedIds = screenOrder.length
@@ -543,7 +549,7 @@ export async function recommendPlans(
     topIds.map(async (id) => {
       try {
         const facts = factsById.get(id)!;
-        const { result, model } = await callDeep(client, pack.patient, facts);
+        const { result, model } = await callDeep(client, todayPatient, facts);
         return { id, ranked: deepToRanked(facts, result), model };
       } catch (e) {
         console.error("deep write-up failed for", id, (e as Error).message);
