@@ -28,7 +28,7 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import type { ClientProfileInput } from "@/lib/domain";
 import type { DataStore } from "@/lib/data";
-import { SCORING } from "@/lib/engine/config";
+import { SCORING, ENSEMBLE, TIEBREAK_RULE } from "@/lib/engine/config";
 import { getAnthropic } from "@/lib/sim/client";
 import { SIM_MODEL } from "@/lib/sim/env";
 import {
@@ -102,6 +102,8 @@ export interface AiRankedPlan {
   providerGaps: string[];
   /** True when this plan got the full parallel deep write-up (top picks). */
   deepWritten: boolean;
+  /** How many of the ensemble runs placed this plan in the top 3 (confidence). */
+  topThreeVotes: number;
 }
 
 export interface AiRecommendation {
@@ -111,6 +113,8 @@ export interface AiRecommendation {
   excluded: { planId: string; name: string; reasons: string[] }[];
   /** The exact grounding inputs, kept for the audit record (reproducibility by record). */
   groundingPackSignature: string;
+  /** Ensemble: number of screen runs the top-3 frequency was voted across. */
+  ensembleRuns: number;
 }
 
 // How many top plans get the full parallel deep write-up (the prominent cards).
@@ -424,7 +428,7 @@ function citationIsGrounded(quote: string, factsHaystack: string): boolean {
 }
 
 /** Build the AiRankedPlan for a deep-written top plan, with grounding guardrails. */
-function deepToRanked(facts: PlanFacts, d: DeepResult): AiRankedPlan {
+function deepToRanked(facts: PlanFacts, d: DeepResult, topThreeVotes: number): AiRankedPlan {
   const haystack = groundTokens(JSON.stringify(deepPlanFacts(facts)));
   const reasons: AiReason[] = (d.reasons ?? []).map((r) => {
     const grounded = r.citation && citationIsGrounded(String(r.citation.quote), haystack);
@@ -463,11 +467,12 @@ function deepToRanked(facts: PlanFacts, d: DeepResult): AiRankedPlan {
     topUncoveredDrugs: facts.medicationCoverage.notCovered,
     providerGaps: facts.providerGaps,
     deepWritten: true,
+    topThreeVotes,
   };
 }
 
 /** Heuristic-only entry for the "other eligible" tail (table row; no bullets needed). */
-function heuristicToRanked(c: PlanFacts, sub: AiSubScores): AiRankedPlan {
+function heuristicToRanked(c: PlanFacts, sub: AiSubScores, topThreeVotes = 0): AiRankedPlan {
   return {
     planId: c.planId,
     subScores: sub,
@@ -490,7 +495,22 @@ function heuristicToRanked(c: PlanFacts, sub: AiSubScores): AiRankedPlan {
     topUncoveredDrugs: c.medicationCoverage.notCovered,
     providerGaps: c.providerGaps,
     deepWritten: false,
+    topThreeVotes,
   };
+}
+
+/** Run `tasks` with a bounded number in flight (Anthropic rate-limit hygiene). */
+async function withConcurrency<T, R>(items: T[], limit: number, fn: (item: T, i: number) => Promise<R>): Promise<R[]> {
+  const out: R[] = new Array(items.length);
+  let next = 0;
+  async function worker() {
+    while (next < items.length) {
+      const i = next++;
+      out[i] = await fn(items[i], i);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => worker()));
+  return out;
 }
 
 export interface RecommendOptions {
@@ -511,7 +531,7 @@ export async function recommendPlans(
   const fullSignature = JSON.stringify(pack.candidates.map((c) => c.planId).sort());
 
   if (pack.candidates.length === 0) {
-    return { model: SIM_MODEL, topPlanId: null, ranked: [], excluded: pack.excluded, groundingPackSignature: fullSignature };
+    return { model: SIM_MODEL, topPlanId: null, ranked: [], excluded: pack.excluded, groundingPackSignature: fullSignature, ensembleRuns: 0 };
   }
 
   const factsById = new Map(pack.candidates.map((c) => [c.planId, c]));
@@ -528,29 +548,60 @@ export async function recommendPlans(
   // steer which plan fits today — so they're withheld from the screen/deep prompts.
   const todayPatient: RecommendationPatientFacts = { ...pack.patient, familyHistory: [], lifestyle: undefined };
 
-  // 1. SCREEN — AI ranks all eligible plans; pick the top picks for deep write-up.
-  const screen = await callScreen(client, todayPatient, pack.candidates);
-  const screenOrder = screen.items.filter((s) => factsById.has(s.planId));
-  // Fall back to a heuristic ordering if the screen returned nothing usable.
-  const orderedIds = screenOrder.length
-    ? screenOrder.map((s) => s.planId)
-    : [...pack.candidates]
-        .sort(
-          (a, b) =>
-            fitFromSubScores(heuristicSubScores(b, mustKeep, maxPremium, maxMoop, medCount)) -
-            fitFromSubScores(heuristicSubScores(a, mustKeep, maxPremium, maxMoop, medCount)),
-        )
-        .map((c) => c.planId);
+  // 1. ENSEMBLE SCREEN — run the cheap ranking N times and VOTE on top-3 frequency.
+  // The model isn't perfectly deterministic and fit scores cluster, so one run's
+  // top pick is a coin flip; voting across runs makes the shown top-3 stable.
+  //
+  // CONCURRENCY / LOAD (≈500 brokers, many patients each): this fan-out is the
+  // dominant per-patient model-call multiplier. The route caches the whole result
+  // by facts-version (one ensemble per patient unless intake changes / explicit
+  // refresh), and ENSEMBLE.concurrency bounds parallel calls to respect Anthropic
+  // rate limits. Raising ENSEMBLE.runs multiplies spend + latency linearly, and at
+  // high broker concurrency the cache table (horizon_cache) write throughput may
+  // warrant a higher Supabase tier — see supabase/migrations/0006.
+  const screens = await withConcurrency(
+    Array.from({ length: ENSEMBLE.runs }),
+    ENSEMBLE.concurrency,
+    () => callScreen(client, todayPatient, pack.candidates).then((r) => r).catch(() => null),
+  );
+  const okScreens = screens.filter((s): s is { items: ScreenItem[]; model: string } => !!s && s.items.length > 0);
+  const ensembleRuns = okScreens.length;
+
+  // Each run's top 3 (by that run's fit) earns the plan one top-3 "vote".
+  const votes = new Map<string, number>();
+  let screenModel = SIM_MODEL;
+  for (const s of okScreens) {
+    screenModel = s.model;
+    const top3 = [...s.items]
+      .filter((it) => factsById.has(it.planId))
+      .sort((a, b) => b.fit - a.fit)
+      .slice(0, DEEP_COUNT);
+    for (const it of top3) votes.set(it.planId, (votes.get(it.planId) ?? 0) + 1);
+  }
+
+  // Rank by top-3 frequency, then the NEUTRAL member-benefit tiebreak (named rule
+  // TIEBREAK_RULE — auditable in config): plans within tieBandVotes are "effectively
+  // tied" and ordered by lower OOP max → lower premium → plan id. NO carrier bias.
+  const band = TIEBREAK_RULE.tieBandVotes;
+  const voteBand = (id: string) => Math.floor((votes.get(id) ?? 0) / (band + 1));
+  const orderedIds = [...pack.candidates]
+    .sort((a, b) => {
+      if (voteBand(b.planId) !== voteBand(a.planId)) return voteBand(b.planId) - voteBand(a.planId);
+      if (a.annualOOPMax !== b.annualOOPMax) return a.annualOOPMax - b.annualOOPMax;
+      if (a.monthlyPremium !== b.monthlyPremium) return a.monthlyPremium - b.monthlyPremium;
+      return a.planId.localeCompare(b.planId);
+    })
+    .map((c) => c.planId);
 
   const topIds = orderedIds.slice(0, DEEP_COUNT);
 
-  // 2. DEEP — parallel detailed write-ups for the top picks (fast: small per-call).
+  // 2. DEEP — parallel detailed write-ups for the voted winners (small per-call).
   const deepResults = await Promise.all(
     topIds.map(async (id) => {
       try {
         const facts = factsById.get(id)!;
         const { result, model } = await callDeep(client, todayPatient, facts);
-        return { id, ranked: deepToRanked(facts, result), model };
+        return { id, ranked: deepToRanked(facts, result, votes.get(id) ?? 0), model };
       } catch (e) {
         console.error("deep write-up failed for", id, (e as Error).message);
         return null;
@@ -559,35 +610,39 @@ export async function recommendPlans(
   );
 
   const deepOk = deepResults.filter((x): x is NonNullable<typeof x> => x !== null);
-  const model = deepOk[0]?.model ?? screen.model;
+  const model = deepOk[0]?.model ?? screenModel;
   const deepById = new Map(deepOk.map((d) => [d.id, d.ranked]));
 
-  // 3. SYNTHESIZE — deep-written top plans first (best-fit by their fit score),
-  // then everything else as heuristic "other eligible" rows (AI screen order).
+  // 3. SYNTHESIZE — keep the VOTED order (frequency decides the ranking, not a
+  // single run's fit score), then the heuristic "other eligible" tail.
   const topRanked = topIds
     .map((id) => deepById.get(id))
-    .filter((x): x is AiRankedPlan => Boolean(x))
-    .sort((a, b) => b.fitScore - a.fitScore);
+    .filter((x): x is AiRankedPlan => Boolean(x));
 
   const topSet = new Set(topRanked.map((r) => r.planId));
-  // Tail in the AI screen's order; any plan the deep call dropped also lands here.
   const tail: AiRankedPlan[] = [];
   for (const id of orderedIds) {
     if (topSet.has(id)) continue;
     const c = factsById.get(id);
     if (!c) continue;
-    tail.push(heuristicToRanked(c, heuristicSubScores(c, mustKeep, maxPremium, maxMoop, medCount)));
+    tail.push(heuristicToRanked(c, heuristicSubScores(c, mustKeep, maxPremium, maxMoop, medCount), votes.get(id) ?? 0));
   }
 
-  // Keep the displayed fit monotonic: the heuristic tail and the deep top picks
-  // are scored on the same scale but can overlap at the boundary, so clamp each
-  // tail row strictly below the lowest top-pick fit (the tail is a rough table).
-  let prev = topRanked.length ? topRanked[topRanked.length - 1].fitScore : Infinity;
+  // Keep displayed fit monotonic across the card→table boundary (the tail is a
+  // rough table; the deep top picks are the authoritative cards).
+  let prev = topRanked.length ? Math.min(...topRanked.map((r) => r.fitScore)) : Infinity;
   for (const t of tail) {
     if (t.fitScore >= prev) t.fitScore = Math.max(0, Math.round((prev - 0.1) * 10) / 10);
     prev = t.fitScore;
   }
 
   const ranked = [...topRanked, ...tail];
-  return { model, topPlanId: ranked[0]?.planId ?? null, ranked, excluded: pack.excluded, groundingPackSignature: fullSignature };
+  return {
+    model,
+    topPlanId: ranked[0]?.planId ?? null,
+    ranked,
+    excluded: pack.excluded,
+    groundingPackSignature: fullSignature,
+    ensembleRuns,
+  };
 }

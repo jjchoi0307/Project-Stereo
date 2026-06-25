@@ -35,7 +35,8 @@ async function main() {
 
   const t0 = Date.now();
   const rec = await recommendPlans(profile, db);
-  console.log(`\nModel: ${rec.model} — ${rec.ranked.length} ranked in ${((Date.now() - t0) / 1000).toFixed(1)}s\n`);
+  console.log(`\nModel: ${rec.model} — ${rec.ranked.length} ranked across ${rec.ensembleRuns} ensemble runs in ${((Date.now() - t0) / 1000).toFixed(1)}s`);
+  console.log(`TOP 3 (by vote): ${rec.ranked.slice(0, 3).map((r) => `${r.planId}(${r.topThreeVotes}/${rec.ensembleRuns})`).join("  ")}\n`);
 
   const factsById = new Map(pack.candidates.map((c) => [c.planId, c]));
   let citationCount = 0;

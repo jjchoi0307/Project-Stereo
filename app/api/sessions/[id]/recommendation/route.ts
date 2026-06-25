@@ -4,14 +4,14 @@ import { getSessionStore } from "@/lib/session/store";
 import { recommendPlans } from "@/lib/ai/recommend";
 import { planMeta, shapeRankedPlan } from "@/lib/ai/toResponse";
 import { getHorizonPayload, setHorizonPayload } from "@/lib/engine/horizonCacheStore";
-import { simConfigured, SIM_MODEL } from "@/lib/sim/env";
-import { DATA_VERSION } from "@/lib/version";
+import { simConfigured } from "@/lib/sim/env";
+import { recCacheKey } from "@/lib/engine/factsSignature";
 import { getBrokerContext } from "@/lib/supabase/auth";
 import { recordEvent } from "@/lib/audit/eventStore";
 
 export const dynamic = "force-dynamic";
-// Two grounded Claude passes (generate + verify) over the eligible candidates.
-export const maxDuration = 120;
+// Ensemble screen runs (parallel) + 3 deep write-ups; can run a while on first compute.
+export const maxDuration = 300;
 
 /**
  * AI-powered recommendation for "today" — Claude ranks the eligible plans and
@@ -23,16 +23,22 @@ export const maxDuration = 120;
  * instant + stable thereafter (also keeps the same client → same recommendation,
  * which the broker needs, and survives serverless cold starts).
  */
-export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const session = await (await getSessionStore()).get(id);
   if (!session) return NextResponse.json({ error: "session not found" }, { status: 404 });
   if (!session.profile) return NextResponse.json({ error: "no profile yet" }, { status: 409 });
   const profile = session.profile;
 
-  const cacheKey = `airec:${id}:${profile.capturedAt}:${SIM_MODEL}:${DATA_VERSION}`;
-  const cached = await getHorizonPayload(cacheKey);
-  if (cached) return NextResponse.json(cached);
+  // Cache keyed by the CONTENT of the intake (recCacheKey) — editing facts changes
+  // the key, so "continue" after a correction always recomputes; unchanged facts
+  // are served from cache. `?refresh=1` forces a fresh ensemble run (explicit refresh).
+  const cacheKey = recCacheKey(id, profile);
+  const refresh = new URL(req.url).searchParams.get("refresh") === "1";
+  if (!refresh) {
+    const cached = await getHorizonPayload(cacheKey);
+    if (cached) return NextResponse.json(cached);
+  }
 
   if (!simConfigured()) {
     return NextResponse.json(
@@ -91,6 +97,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       scenarioCount: 0,
       model: rec.model,
       aiPowered: true,
+      ensembleRuns: rec.ensembleRuns,
       preferenceWeightingEnabled: false,
       preferenceChangedTop: false,
       topPlanId: rec.topPlanId,

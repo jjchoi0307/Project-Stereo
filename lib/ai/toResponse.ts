@@ -62,10 +62,33 @@ export function shapeRankedPlan(item: AiRankedPlan, plan: Plan, mustKeep: boolea
   const networkStatus: NetworkStatus =
     item.providerGaps.length > 0 ? "gap" : mustKeep ? "keeps" : "in";
 
+  // Comparable feature matrix for the side-by-side top-3 ("includes / does not
+  // include"). Values are verbatim from the plan file; null supplemental = not offered.
+  const sup = plan.supplemental;
+  const ben = plan.benefits;
+  const feat = (label: string, value: string | null) => ({ label, value: value ?? null, included: value != null });
+  const features = [
+    { label: "Monthly premium", value: ben.monthlyPremium === 0 ? "$0" : `$${ben.monthlyPremium}`, included: true },
+    { label: "Out-of-pocket max", value: `$${ben.annualOOPMax.toLocaleString()}`, included: true },
+    {
+      label: "Your medications covered",
+      value: `${Math.round(item.medsCoveredRate * 100)}% covered`,
+      included: item.medsCoveredRate >= 0.999,
+    },
+    feat("Dental", sup.dental),
+    feat("Vision", sup.vision),
+    feat("Hearing", sup.hearing),
+    feat("OTC / flex allowance", sup.otc ?? sup.flexAllowance),
+    feat("Transportation", sup.transportation),
+    feat("Fitness", sup.fitness),
+  ];
+
   return {
     planId: item.planId,
     plan: planMeta(plan),
     total: item.fitScore,
+    topThreeVotes: item.topThreeVotes,
+    features,
     expectedFit: Math.round(expectedFit * 10) / 10,
     downsideRisk: Math.round(breakdown.catastrophicDownside.value * 10) / 10,
     confidence: confidenceNum(item.confidence),

@@ -11,6 +11,7 @@ import type {
 } from "@/lib/domain";
 import { CONDITION_OPTIONS } from "@/lib/intake/options";
 import { profileToValues } from "@/lib/intake/toValues";
+import { clientRef } from "@/lib/session/ref";
 import type { IntakeReference } from "@/lib/intake/types";
 import type { AiMarker, AiOutcome, ClinicalRead } from "@/lib/ai/clinicalRead";
 import type { BrokerSession as Session } from "@/lib/session/store";
@@ -182,7 +183,7 @@ export default function BrokerSession({
     return (
       <div data-fade className="mx-auto max-w-[880px]">
         <div className="mb-2 flex items-center gap-2.5">
-          <span className="num text-xs text-slate-400">{session.id}</span>
+          <span className="num text-xs font-semibold text-slate-600" title={session.id}>{clientRef(session.id)}</span>
           <StatusPill status="captured" />
         </div>
         <h1 className="mb-1 text-2xl font-semibold tracking-[-.01em] text-ink">Clinical read</h1>

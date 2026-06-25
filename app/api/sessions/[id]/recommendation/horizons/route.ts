@@ -8,6 +8,7 @@ import { DATA_VERSION } from "@/lib/version";
 import { getSessionStore } from "@/lib/session/store";
 import { getBrokerContext } from "@/lib/supabase/auth";
 import { getInputImportance, guidanceFromConfig } from "@/lib/config/orgSettings";
+import { factsSignature, recCacheKey } from "@/lib/engine/factsSignature";
 
 export const dynamic = "force-dynamic";
 // One grounded Claude call projects the member's future + recommends per horizon.
@@ -32,7 +33,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const config = await getInputImportance(ctx?.orgId);
   const cfgSig = Object.values(config).map((v) => (v === "high" ? "H" : "L")).join("");
 
-  const cacheKey = `aihorizon:${id}:${profile.capturedAt}:${SIM_MODEL}:${DATA_VERSION}:${cfgSig}`;
+  const cacheKey = `aihorizon:${id}:${factsSignature(profile)}:${SIM_MODEL}:${DATA_VERSION}:${cfgSig}`;
   const cached = await getHorizonPayload(cacheKey);
   if (cached) return NextResponse.json(cached);
 
@@ -51,9 +52,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
     // Today's top pick (for the "changes vs today" flag), read from the cached
     // Today recommendation when available — avoids recomputing it here.
-    const todayCache = (await getHorizonPayload(
-      `airec:${id}:${profile.capturedAt}:${SIM_MODEL}:${DATA_VERSION}`,
-    )) as { topPlanId?: string | null } | null;
+    const todayCache = (await getHorizonPayload(recCacheKey(id, profile))) as { topPlanId?: string | null } | null;
     const todayTopPlanId = todayCache?.topPlanId ?? null;
 
     const rec = await recommendHorizons(profile, db, todayTopPlanId, guidanceFromConfig(config));
