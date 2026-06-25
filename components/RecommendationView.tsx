@@ -199,8 +199,22 @@ export default function RecommendationView({ sessionId }: { sessionId: string })
         </div>
       )}
 
-      {/* Top plans — side-by-side comparison */}
-      {!noneEligible && <TopThreeComparison items={top} ensembleRuns={data.ensembleRuns} />}
+      {/* Top plans — full-width stacked cards (readable; comparison reads down the page) */}
+      {!noneEligible && (
+        <div className="mb-7">
+          {typeof data.ensembleRuns === "number" && data.ensembleRuns > 0 && (
+            <p className="mb-3 text-[12.5px] leading-[1.45] text-slate-500">
+              We ran the analysis <span className="num">{data.ensembleRuns}</span> times and show the plans that came
+              out on top most often. These are planning aids, not medical advice.
+            </p>
+          )}
+          <div className="flex flex-col gap-3.5">
+            {top.map((item, i) => (
+              <TopCard key={item.planId} item={item} rank={i + 1} highlight={i === 0} ensembleRuns={data.ensembleRuns} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Other eligible */}
       {rest.length > 0 && (
@@ -318,146 +332,6 @@ function StressTests({ data }: { data: ScenarioData }) {
   );
 }
 
-// ── Comparative top-3 ───────────────────────────────────────────────────────
-// Three plans shown as side-by-side columns (a product-comparison layout). The
-// lead pick (column #1) gets a subtle accent border. Each column header carries
-// the fit score + an optional ensemble-confidence line; below the headers a
-// shared feature matrix is aligned across the columns, and the full per-plan
-// analysis (reasons, fit breakdown, cost) lives in a "Full analysis" drill-down.
-// This is a broker planning aid, not a medical recommendation.
-
-function TopThreeComparison({ items, ensembleRuns }: { items: RankedItem[]; ensembleRuns?: number }) {
-  const hasEnsemble = typeof ensembleRuns === "number" && ensembleRuns > 0;
-  // Same feature set per plan — use plan #1's labels as the canonical row order.
-  const featureLabels = items[0]?.features?.map((f) => f.label) ?? [];
-
-  return (
-    <div className="mb-7">
-      {hasEnsemble && (
-        <p className="mb-3 text-[12.5px] leading-[1.45] text-slate-500">
-          We ran the analysis <span className="num">{ensembleRuns}</span> times and show the plans that
-          came out on top most often. These are planning aids, not medical advice.
-        </p>
-      )}
-      <div className="grid gap-3.5 md:grid-cols-3">
-        {items.map((item, i) => (
-          <CompareColumn
-            key={item.planId}
-            item={item}
-            rank={i + 1}
-            highlight={i === 0}
-            ensembleRuns={ensembleRuns}
-            featureLabels={featureLabels}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function CompareColumn({
-  item,
-  rank,
-  highlight,
-  ensembleRuns,
-  featureLabels,
-}: {
-  item: RankedItem;
-  rank: number;
-  highlight: boolean;
-  ensembleRuns?: number;
-  featureLabels: string[];
-}) {
-  const hasEnsemble = typeof ensembleRuns === "number" && ensembleRuns > 0 && typeof item.topThreeVotes === "number";
-  // Map this plan's features by label so rows align across all three columns.
-  const byLabel = new Map((item.features ?? []).map((f) => [f.label, f] as const));
-
-  return (
-    <div
-      className="flex flex-col rounded-[13px] border bg-white p-[18px]"
-      style={{
-        borderColor: highlight ? "#0d6e6e" : "#e2e8f0",
-        boxShadow: highlight ? "0 8px 24px -12px rgba(13,110,110,.35)" : "none",
-      }}
-    >
-      {/* Header */}
-      <div className="flex items-start gap-2.5">
-        <div
-          className="num flex h-[30px] w-[30px] flex-none items-center justify-center rounded-[8px] text-[14px] font-bold text-white"
-          style={{ background: highlight ? "#0d6e6e" : "#0f172a" }}
-        >
-          {rank}
-        </div>
-        <div className="min-w-0 flex-1">
-          <h3 className="text-[15.5px] font-semibold leading-tight">{item.plan.name}</h3>
-          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            <PlanKind snpType={item.plan.snpType} />
-            <PlanChips plan={item.plan} />
-          </div>
-        </div>
-      </div>
-      {highlight && (
-        <div className="mt-2 self-start rounded-md bg-[#f0fdf9] px-2 py-0.5 text-[10.5px] font-semibold text-accent">
-          Lead pick
-        </div>
-      )}
-      <div className="mt-2 text-[12px] text-slate-500">
-        {item.plan.carrier} · {item.plan.planType}
-      </div>
-
-      <div className="mt-3 flex items-end gap-2">
-        <div className="num text-[32px] font-bold leading-none text-accent">{item.total}</div>
-        <div className="pb-0.5 text-[10.5px] uppercase tracking-[.03em] text-slate-400">fit score</div>
-      </div>
-      {hasEnsemble && (
-        <div className="mt-1.5 text-[11.5px] leading-[1.4] text-slate-500">
-          Appeared in top 3 in <span className="num font-semibold text-slate-700">{item.topThreeVotes}</span> of{" "}
-          <span className="num">{ensembleRuns}</span> runs
-        </div>
-      )}
-
-      {item.providerGaps && item.providerGaps.length > 0 && (
-        <div className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-[11.5px] leading-[1.4] text-rose-700">
-          ✗ Drops required provider: <strong>{item.providerGaps.join(", ")}</strong>
-        </div>
-      )}
-
-      {/* Shared feature comparison matrix */}
-      <div className="mt-4 border-t border-slate-100 pt-3">
-        <div className="mb-2 text-[10.5px] font-bold uppercase tracking-[.03em] text-slate-400">What it includes</div>
-        <div className="flex flex-col">
-          {featureLabels.map((label) => {
-            const f = byLabel.get(label);
-            return (
-              <div key={label} className="flex items-baseline justify-between gap-2 border-b border-slate-50 py-[5px] last:border-b-0">
-                <span className="flex-none text-[11.5px] text-slate-500">{label}</span>
-                {f && f.included ? (
-                  <span className="flex items-baseline gap-1 text-right text-[12px] font-semibold text-ink">
-                    <span className="text-emerald-600">✓</span>
-                    <span className="num">{f.value}</span>
-                  </span>
-                ) : (
-                  <span className="text-right text-[11.5px] text-slate-300">
-                    {f ? "Not included" : "—"}
-                  </span>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Drill-down: the full existing analysis */}
-      <details className="mt-3 border-t border-slate-100 pt-3">
-        <summary className="cursor-pointer list-none text-[12px] font-medium text-accent">▸ Full analysis</summary>
-        <div className="mt-3">
-          <FullAnalysis item={item} />
-        </div>
-      </details>
-    </div>
-  );
-}
-
 // Full per-plan analysis — the original detailed card body (reason bullets with
 // citations, the fit-score breakdown, and the predicted-cost breakdown). Kept
 // intact and reused inside both the stacked near-miss cards and the top-3
@@ -526,10 +400,11 @@ function FullAnalysis({ item }: { item: RankedItem }) {
   );
 }
 
-// Stacked detailed card — header + full analysis inline. Used for the near-miss
-// ("closest plans") fallback when no plan meets every hard requirement, keeping
-// that path's presentation exactly as before.
-function TopCard({ item, rank, highlight }: { item: RankedItem; rank: number; highlight: boolean }) {
+// Stacked detailed card — full width so nothing is squished. Header + an
+// "includes" grid + the full analysis inline. Used for the top-3 recommendation
+// and the near-miss ("closest plans") fallback.
+function TopCard({ item, rank, highlight, ensembleRuns }: { item: RankedItem; rank: number; highlight: boolean; ensembleRuns?: number }) {
+  const hasEnsemble = typeof ensembleRuns === "number" && ensembleRuns > 0 && typeof item.topThreeVotes === "number";
   return (
     <div
       className="relative rounded-[13px] border bg-white p-[22px]"
@@ -550,6 +425,9 @@ function TopCard({ item, rank, highlight }: { item: RankedItem; rank: number; hi
             <h3 className="text-[17px] font-semibold">{item.plan.name}</h3>
             <PlanKind snpType={item.plan.snpType} />
             <PlanChips plan={item.plan} />
+            {highlight && (
+              <span className="rounded-md bg-[#f0fdf9] px-2 py-0.5 text-[10.5px] font-semibold text-accent">Lead pick</span>
+            )}
           </div>
           <div className="text-[12.5px] text-slate-500">
             {item.plan.carrier} · {item.plan.planType} ·{" "}
@@ -560,12 +438,38 @@ function TopCard({ item, rank, highlight }: { item: RankedItem; rank: number; hi
         <div className="flex-none text-right">
           <div className="num text-[34px] font-bold leading-none text-accent">{item.total}</div>
           <div className="text-[10.5px] uppercase tracking-[.03em] text-slate-400">fit score</div>
+          {hasEnsemble && (
+            <div className="mt-1 text-[11px] leading-[1.35] text-slate-400">
+              top 3 in <span className="num font-semibold text-slate-600">{item.topThreeVotes}</span>/
+              <span className="num">{ensembleRuns}</span> runs
+            </div>
+          )}
         </div>
       </div>
 
       {item.providerGaps && item.providerGaps.length > 0 && (
         <div className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-[12.5px] text-rose-700">
           ✗ Drops required provider: <strong>{item.providerGaps.join(", ")}</strong>
+        </div>
+      )}
+
+      {item.features && item.features.length > 0 && (
+        <div className="mt-4 border-t border-slate-100 pt-3.5">
+          <div className="mb-2 text-[10.5px] font-bold uppercase tracking-[.03em] text-slate-400">What it includes</div>
+          <div className="grid grid-cols-1 gap-x-8 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
+            {item.features.map((f) => (
+              <div key={f.label} className="flex items-baseline justify-between gap-3 border-b border-slate-50 py-[5px]">
+                <span className="text-[12px] text-slate-500">{f.label}</span>
+                {f.included ? (
+                  <span className="flex items-baseline gap-1 text-right text-[12.5px] font-semibold text-ink">
+                    <span className="text-emerald-600">✓</span> <span className="num">{f.value}</span>
+                  </span>
+                ) : (
+                  <span className="text-right text-[12px] text-slate-300">Not included</span>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
