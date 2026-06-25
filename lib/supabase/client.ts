@@ -38,9 +38,13 @@ export function serviceClient(): SupabaseClient {
   });
 }
 
+/** A broker's access role: own clients only; org-wide oversight; read-only monitor. */
+export type BrokerRole = "broker" | "org_admin" | "security";
+
 /** Identity a broker-scoped store needs (resolved from auth + the brokers table). */
 export interface BrokerContext {
   client: SupabaseClient;
   brokerId: string;
   orgId: string;
+  role: BrokerRole;
 }

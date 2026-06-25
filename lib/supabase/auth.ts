@@ -12,7 +12,7 @@
  */
 import "server-only";
 import { cache } from "react";
-import type { BrokerContext } from "./client";
+import type { BrokerContext, BrokerRole } from "./client";
 import { serviceClient } from "./client";
 import { stateStore, supabaseConfigured } from "./env";
 import { getServerSupabase } from "./server";
@@ -20,7 +20,11 @@ import { getServerSupabase } from "./server";
 interface BrokerRow {
   id: string;
   org_id: string;
+  role: BrokerRole;
 }
+
+const asRole = (r: unknown): BrokerRole =>
+  r === "org_admin" || r === "security" ? r : "broker";
 
 /**
  * Resolve the signed-in broker. Wrapped in React `cache()` so it runs at most
@@ -40,7 +44,7 @@ export const getBrokerContext = cache(async (): Promise<BrokerContext | null> =>
     name: (user.user_metadata?.full_name as string | undefined)?.trim() || undefined,
     agency: (user.user_metadata?.agency as string | undefined)?.trim() || undefined,
   });
-  return { client, brokerId: broker.id, orgId: broker.org_id };
+  return { client, brokerId: broker.id, orgId: broker.org_id, role: broker.role };
 });
 
 /**
@@ -53,13 +57,26 @@ export const getBrokerContext = cache(async (): Promise<BrokerContext | null> =>
  * with no agency (hand-seeded admins) fall back to SMG_ORG_ID / the sole org.
  * Writes go through the service-role client (RLS-bypass, server-only).
  */
-function adminEmails(): Set<string> {
+function emailSet(envVar: string): Set<string> {
   return new Set(
-    (process.env.ORG_ADMIN_EMAILS ?? "")
+    (process.env[envVar] ?? "")
       .split(",")
       .map((s) => s.trim().toLowerCase())
       .filter(Boolean),
   );
+}
+
+/**
+ * Role for a first-login email (added by hand, never browser-set):
+ *   ORG_ADMIN_EMAILS → org_admin (agency-wide oversight + config write)
+ *   SECURITY_EMAILS  → security  (org-wide audit READ for cyber/security monitoring)
+ *   otherwise        → broker
+ */
+function roleForEmail(email: string): BrokerRole {
+  const e = email.toLowerCase();
+  if (emailSet("ORG_ADMIN_EMAILS").has(e)) return "org_admin";
+  if (emailSet("SECURITY_EMAILS").has(e)) return "security";
+  return "broker";
 }
 
 /** Fallback org when no agency is given (hand-seeded admins). */
@@ -104,27 +121,27 @@ async function resolveBroker(
 
   const { data: existing } = await svc
     .from("brokers")
-    .select("id,org_id")
+    .select("id,org_id,role")
     .eq("id", userId)
     .maybeSingle();
-  if (existing) return existing as BrokerRow;
+  if (existing) return { ...(existing as { id: string; org_id: string }), role: asRole((existing as { role?: unknown }).role) };
 
-  // First login → join the broker's agency org. Admin only if allowlisted by hand.
+  // First login → join the broker's agency org. Elevated roles only if allowlisted by hand.
   const orgId = await resolveOrgId(svc, signup.agency);
-  const role = adminEmails().has(email.toLowerCase()) ? "org_admin" : "broker";
+  const role = roleForEmail(email);
 
   const { data: broker, error: brokerErr } = await svc
     .from("brokers")
     .insert({ id: userId, org_id: orgId, email, role, name: signup.name ?? null })
-    .select("id,org_id")
+    .select("id,org_id,role")
     .single();
   if (brokerErr || !broker) {
     // Two concurrent first-logins can both pass the existence check above; the
     // loser's insert conflicts on the PK. Re-fetch before failing.
-    const { data: raced } = await svc.from("brokers").select("id,org_id").eq("id", userId).maybeSingle();
-    if (raced) return raced as BrokerRow;
+    const { data: raced } = await svc.from("brokers").select("id,org_id,role").eq("id", userId).maybeSingle();
+    if (raced) return { ...(raced as { id: string; org_id: string }), role: asRole((raced as { role?: unknown }).role) };
     throw brokerErr ?? new Error("broker provisioning failed");
   }
 
-  return broker as BrokerRow;
+  return { ...(broker as { id: string; org_id: string }), role: asRole((broker as { role?: unknown }).role) };
 }

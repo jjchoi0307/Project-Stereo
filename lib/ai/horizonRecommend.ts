@@ -98,12 +98,12 @@ function packForPrompt(candidates: PlanFacts[]) {
   }));
 }
 
-function userMessage(patient: RecommendationPatientFacts, candidates: PlanFacts[]): string {
+function userMessage(patient: RecommendationPatientFacts, candidates: PlanFacts[], guidanceText?: string): string {
   return [
     "MEMBER CURRENT FACTS (de-identified):",
     JSON.stringify(patient, null, 2),
     "",
-    `For the HEALTH PROJECTION part: ${importanceGuidance()}`,
+    `For the HEALTH PROJECTION part: ${guidanceText ?? importanceGuidance()}`,
     "",
     "ELIGIBLE PLAN FACTS — the ONLY plans you may recommend and the ONLY figures you may cite:",
     JSON.stringify(packForPrompt(candidates), null, 2),
@@ -270,6 +270,7 @@ export async function recommendHorizons(
   profile: ClientProfileInput,
   db: DataStore,
   todayTopPlanId: string | null,
+  guidanceText?: string,
 ): Promise<AiHorizonRecommendation> {
   const pack = await buildPlanFactsPack(profile, db);
   if (pack.candidates.length === 0) {
@@ -312,7 +313,7 @@ export async function recommendHorizons(
     temperature: 0,
     output_config: { effort: "low", format: { type: "json_schema", schema: OUTPUT_SCHEMA } },
     system: SYSTEM,
-    messages: [{ role: "user", content: userMessage(pack.patient, shortlist) }],
+    messages: [{ role: "user", content: userMessage(pack.patient, shortlist, guidanceText) }],
   });
   const response = await stream.finalMessage();
   if (response.stop_reason === "refusal") {
