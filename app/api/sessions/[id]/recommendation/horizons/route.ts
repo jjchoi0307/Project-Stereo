@@ -12,8 +12,9 @@ import { factsSignature, recCacheKey } from "@/lib/engine/factsSignature";
 import { HORIZON_REC } from "@/lib/engine/config";
 
 export const dynamic = "force-dynamic";
-// One grounded Claude call projects the member's future + recommends per horizon.
-export const maxDuration = 120;
+// Parallel per-horizon RLM leaves (each hard-capped ~90s); 300 leaves headroom for a
+// cold start + a retry so a legit compute is never killed mid-stream.
+export const maxDuration = 300;
 
 /**
  * AI-powered across-horizon recommendation (5y / 10y). One grounded Claude call

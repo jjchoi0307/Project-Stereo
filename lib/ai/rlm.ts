@@ -53,28 +53,43 @@ export interface RlmLeafOptions {
   schema: Record<string, unknown>;
   maxTokens?: number;
   effort?: "low" | "medium";
+  /** Hard wall-clock cap for this sub-call; aborts a stalled stream. Default 90s. */
+  timeoutMs?: number;
 }
+
+// A grounded sub-call should finish in ~10–40s. A stalled Anthropic stream (network
+// blip, provider overload, rate-limit backoff) would otherwise hang finalMessage()
+// indefinitely → the UI spins forever. This hard cap converts a hang into a fast,
+// caught failure so the route can degrade gracefully instead of loading for minutes.
+const DEFAULT_LEAF_TIMEOUT_MS = 90_000;
 
 /**
  * A single grounded sub-LM call — the RLM completion primitive ("leaf"). Structured
- * JSON output, no extended thinking, temperature 0. Throws on refusal / truncation /
- * empty / invalid JSON; the caller's synthesize step enforces grounding. Records a
- * step on the trajectory either way.
+ * JSON output, no extended thinking, temperature 0, hard timeout. Throws on
+ * refusal / truncation / empty / invalid JSON / timeout; the caller's synthesize
+ * step enforces grounding. Records a step on the trajectory either way.
  */
 export async function rlmLeaf<T>(traj: RlmTrajectory, opts: RlmLeafOptions): Promise<T> {
   const start = Date.now();
   let ok = false;
   let model = SIM_MODEL;
+  const controller = new AbortController();
+  const timeoutMs = opts.timeoutMs ?? DEFAULT_LEAF_TIMEOUT_MS;
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const client = getAnthropic();
-    const stream = client.messages.stream({
-      model: SIM_MODEL,
-      max_tokens: opts.maxTokens ?? 16000,
-      temperature: 0,
-      output_config: { effort: opts.effort ?? "low", format: { type: "json_schema", schema: opts.schema } },
-      system: opts.system,
-      messages: [{ role: "user", content: opts.user }],
-    });
+    const stream = client.messages.stream(
+      {
+        model: SIM_MODEL,
+        max_tokens: opts.maxTokens ?? 16000,
+        temperature: 0,
+        output_config: { effort: opts.effort ?? "low", format: { type: "json_schema", schema: opts.schema } },
+        system: opts.system,
+        messages: [{ role: "user", content: opts.user }],
+      },
+      // Bound the request (and its retries) so a stalled stream can't hang forever.
+      { signal: controller.signal, timeout: timeoutMs, maxRetries: 1 },
+    );
     const res = await stream.finalMessage();
     model = res.model;
     if (res.stop_reason === "refusal") {
@@ -95,6 +110,7 @@ export async function rlmLeaf<T>(traj: RlmTrajectory, opts: RlmLeafOptions): Pro
     ok = true;
     return parsed;
   } finally {
+    clearTimeout(timer);
     traj.steps.push({ label: opts.label, kind: "leaf", model, ms: Date.now() - start, ok });
   }
 }
