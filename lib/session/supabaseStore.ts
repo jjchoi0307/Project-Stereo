@@ -60,12 +60,26 @@ export class SupabaseSessionStore implements SessionStore {
 
   async list(): Promise<BrokerSession[]> {
     // RLS already scopes to this broker; ordering mirrors the in-memory store.
+    // Soft-deleted sessions are hidden from the broker's list (audit trail kept).
     const { data } = await this.ctx.client
       .from("sessions")
       .select("id,status,client_label,created_at")
+      .is("deleted_at", null)
       .order("created_at", { ascending: false });
     logAccess({ actor: this.ctx.brokerId, action: "session.list" });
     return ((data as SessionRow[]) ?? []).map((r) => this.toSession(r));
+  }
+
+  async remove(id: string): Promise<void> {
+    // Soft-delete: the audit_records → sessions FK is no-cascade and the audit
+    // trail must persist, so we mark the session deleted (owner UPDATE policy)
+    // rather than hard-deleting. It drops out of list() but its audit stays.
+    const { error } = await this.ctx.client
+      .from("sessions")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) throw error;
+    logAccess({ actor: this.ctx.brokerId, action: "session.delete", sessionId: id });
   }
 
   async setProfile(id: string, profile: ClientProfileInput): Promise<BrokerSession | null> {
