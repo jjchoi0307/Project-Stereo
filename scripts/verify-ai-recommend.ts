@@ -43,7 +43,7 @@ async function main() {
 
   for (const r of rec.ranked.slice(0, 5)) {
     const f = factsById.get(r.planId)!;
-    console.log(`#${rec.ranked.indexOf(r) + 1}  ${f.name}  [${f.kind}]  fit=${r.fitScore}  conf=${r.confidence}  meds=${(r.medsCoveredRate * 100).toFixed(0)}%  estCost=$${r.estAnnualCost}  MOOP=$${r.annualOOPMax}`);
+    console.log(`#${rec.ranked.indexOf(r) + 1}  ${f.name}  [${f.kind}]  fit=${r.fitScore}  conf=${r.confidence}  deep=${r.deepWritten}  meds=${(r.medsCoveredRate * 100).toFixed(0)}%  estCost=$${r.estAnnualCost}  MOOP=$${r.annualOOPMax}`);
     for (const reason of r.reasons) {
       const tag = reason.positive ? "✓" : "⚑";
       const cite = reason.citation;
@@ -57,6 +57,14 @@ async function main() {
         }
       }
       console.log(`   ${tag} ${reason.text}${cite ? `  [${cite.sourceFile} p.${cite.sourcePage}: "${cite.quote}"]` : "  (no citation)"}${mark}`);
+    }
+    if (r.subScoreWhy) {
+      console.log(`   WHY → coverage: ${r.subScoreWhy.coverageFit}`);
+      console.log(`   WHY → medication: ${r.subScoreWhy.medicationFit}`);
+    }
+    if (r.costBreakdown) {
+      console.log(`   COST BREAKDOWN (total $${r.costBreakdown.estimatedAnnualTotal}/yr):`);
+      for (const ci of r.costBreakdown.items) console.log(`      • ${ci.label}: $${ci.annualEstimate} — ${ci.basis}`);
     }
     console.log("");
   }

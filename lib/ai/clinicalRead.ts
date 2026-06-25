@@ -144,13 +144,13 @@ export async function aiClinicalRead(profile: ClientProfileInput): Promise<Clini
   const facts = deidentifyForSim(profile);
   const client = getAnthropic();
 
-  // Stream + a generous cap so adaptive thinking (which counts against
-  // max_tokens) plus the structured output never truncates. effort:"low" keeps
-  // latency down — this is a single-pass read, not a deep simulation interpretation.
+  // No extended thinking — it was the main latency cost; this is a single-pass
+  // grounded read, not a deep simulation interpretation. temperature 0 keeps the
+  // markers/futures stable for the same facts.
   const stream = client.messages.stream({
     model: SIM_MODEL,
     max_tokens: 16000,
-    thinking: { type: "adaptive" },
+    temperature: 0,
     output_config: {
       effort: "low",
       format: { type: "json_schema", schema: OUTPUT_SCHEMA },
