@@ -62,6 +62,76 @@ export async function buildRulesContext(db: DataStore): Promise<RulesContext> {
   };
 }
 
+/**
+ * Map a plan's printed C-SNP qualifying-condition phrases to the controlled
+ * ConditionFlag vocab the intake captures. A member qualifies for a C-SNP only if
+ * they have at least one mapped condition. Keyword-based so it tolerates the
+ * varied wording across carrier documents ("Diabetes Mellitus", "CHF", etc.).
+ */
+const CSNP_KEYWORD_FLAGS: { kw: string; flags: string[] }[] = [
+  { kw: "diabet", flags: ["diabetes"] },
+  { kw: "heart failure", flags: ["chf"] },
+  { kw: "chf", flags: ["chf"] },
+  { kw: "cardiovascular", flags: ["cad", "chf"] },
+  { kw: "cardiac", flags: ["cad"] },
+  { kw: "coronary", flags: ["cad"] },
+  { kw: "kidney", flags: ["ckd"] },
+  { kw: "renal", flags: ["ckd"] },
+  { kw: "ckd", flags: ["ckd"] },
+  { kw: "lung", flags: ["copd"] },
+  { kw: "pulmonary", flags: ["copd"] },
+  { kw: "copd", flags: ["copd"] },
+  { kw: "asthma", flags: ["copd"] },
+  { kw: "bronchitis", flags: ["copd"] },
+  { kw: "emphysema", flags: ["copd"] },
+];
+
+/** Qualifying ConditionFlags for a plan's C-SNP conditions (deduped). */
+function csnpQualifyingFlags(snpConditions: string[]): Set<string> {
+  const flags = new Set<string>();
+  for (const c of snpConditions) {
+    const lc = c.toLowerCase();
+    for (const { kw, flags: fs } of CSNP_KEYWORD_FLAGS) {
+      if (lc.includes(kw)) fs.forEach((f) => flags.add(f));
+    }
+  }
+  return flags;
+}
+
+/**
+ * Special-needs-plan eligibility (decisive, like region):
+ *  - D-SNP: dual Medicare + Medi-Cal eligibility required → exclude unless the
+ *    member is marked dual-eligible (a dual-only plan can't go to a non-dual member).
+ *  - C-SNP: a qualifying chronic condition required → exclude unless the member
+ *    has one of the plan's qualifying conditions.
+ * Returns the exclusion entry, or null if the plan is SNP-eligible (or not a SNP).
+ */
+function snpExclusion(plan: Plan, profile: ClientProfileInput): ExclusionLogEntry | null {
+  if (plan.snpType === "D-SNP") {
+    if (profile.dualEligible === true) return null;
+    return {
+      planId: plan.id,
+      reason: "snp_ineligible",
+      severity: "exclude",
+      detail: "D-SNP requires Medicare + Medi-Cal dual eligibility (member not marked dual-eligible)",
+    };
+  }
+  if (plan.snpType === "C-SNP") {
+    const conds = plan.snpConditions ?? [];
+    if (conds.length === 0) return null; // can't verify → don't over-exclude
+    const qualifying = csnpQualifyingFlags(conds);
+    const memberHas = profile.conditions.some((c) => qualifying.has(c));
+    if (memberHas) return null;
+    return {
+      planId: plan.id,
+      reason: "snp_ineligible",
+      severity: "exclude",
+      detail: `C-SNP requires a qualifying condition (${conds.join(", ")}); member has none on file`,
+    };
+  }
+  return null;
+}
+
 /** Hard "must-keep" provider/system names a plan drops (not in its network). */
 export function providerGapsFor(
   plan: Plan,
@@ -101,6 +171,14 @@ export function applyRules(
         severity: "exclude",
         detail: `not offered in ${regionName}`,
       });
+      excludedPlanIds.push(plan.id);
+      continue;
+    }
+
+    // 1b. SNP eligibility — decisive (D-SNP dual status / C-SNP qualifying condition).
+    const snp = snpExclusion(plan, profile);
+    if (snp) {
+      log.push(snp);
       excludedPlanIds.push(plan.id);
       continue;
     }

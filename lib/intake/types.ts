@@ -28,6 +28,8 @@ export interface IntakeFormValues {
   acupunctureVisits12mo: string;
   specialistVisits12mo: string;
   priorYearInpatientEvents: string;
+  /** Medicare + Medi-Cal dual eligibility (gates D-SNP plans). */
+  dualEligible: boolean;
 }
 
 export function emptyIntakeValues(): IntakeFormValues {
@@ -47,6 +49,7 @@ export function emptyIntakeValues(): IntakeFormValues {
     acupunctureVisits12mo: "",
     specialistVisits12mo: "",
     priorYearInpatientEvents: "",
+    dualEligible: false,
   };
 }
 

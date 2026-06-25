@@ -18,7 +18,7 @@ const intOrUndef = (s: string): number | undefined => {
 const PROVENANCE_FIELDS: (keyof ClientProfileInput)[] = [
   "age", "gender", "marketRegion", "zip", "county", "medications", "conditions",
   "conditionsFreeText", "heightCm", "weightKg", "bmi", "familyHistory",
-  "providerConstraints", "utilization",
+  "providerConstraints", "utilization", "dualEligible",
 ];
 
 export function toProfileInput(
@@ -75,6 +75,7 @@ export function toProfileInput(
     familyHistory: values.familyHistory,
     providerConstraints: constraints,
     utilization: hasUtilization ? utilization : undefined,
+    dualEligible: values.dualEligible || undefined,
   };
 
   // Provenance: every populated field is attributed to whoever submitted it.

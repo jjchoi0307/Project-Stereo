@@ -24,5 +24,6 @@ export function profileToValues(profile: ClientProfileInput): IntakeFormValues {
     acupunctureVisits12mo: profile.utilization?.acupunctureVisits12mo?.toString() ?? "",
     specialistVisits12mo: profile.utilization?.specialistVisits12mo?.toString() ?? "",
     priorYearInpatientEvents: profile.utilization?.priorYearInpatientEvents?.toString() ?? "",
+    dualEligible: profile.dualEligible ?? false,
   };
 }

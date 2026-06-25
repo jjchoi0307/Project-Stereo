@@ -250,6 +250,13 @@ export interface ClientProfileInput {
   providerConstraints: ProviderConstraint[];
   utilization?: UtilizationFacts;
 
+  /**
+   * Dual eligibility (Medicare + Medi-Cal/Medicaid). Required for a D-SNP — when
+   * not true, D-SNP plans are excluded by the rules gate (a dual-only plan can't
+   * be recommended to a member not known to be dual-eligible).
+   */
+  dualEligible?: boolean;
+
   /** Per-field provenance so we can later compare patient- vs broker-entered accuracy. */
   fieldProvenance?: Partial<Record<keyof ClientProfileInput, CaptureSource>>;
 }
@@ -281,7 +288,8 @@ export interface NormalizedProfile {
 export type ExclusionReason =
   | "provider_out_of_network"
   | "medication_off_formulary"
-  | "region_unavailable";
+  | "region_unavailable"
+  | "snp_ineligible";
 
 export interface ExclusionLogEntry {
   planId: PlanId;

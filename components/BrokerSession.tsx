@@ -376,6 +376,7 @@ function CapturedFacts({ profile, reference }: { profile: ClientProfileInput; re
         : "—",
       field: "utilization",
     },
+    { label: "Dual-eligible (Medi-Cal)", value: profile.dualEligible ? "Yes" : "No", field: "dualEligible" },
   ];
 
   return (

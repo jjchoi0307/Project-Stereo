@@ -23,6 +23,7 @@ const RULE_LABEL: Record<ExclusionReason, string> = {
   provider_out_of_network: "NETWORK_REQUIRED",
   medication_off_formulary: "DRUG_FORMULARY",
   region_unavailable: "REGION_UNAVAILABLE",
+  snp_ineligible: "SNP_INELIGIBLE",
 };
 
 const MARKER_LABEL: Record<keyof Omit<NormalizedProfile, "profileId">, string> = {
