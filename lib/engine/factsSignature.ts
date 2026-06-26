@@ -12,7 +12,7 @@
  */
 import type { ClientProfileInput } from "@/lib/domain";
 import { SIM_MODEL } from "@/lib/sim/env";
-import { DATA_VERSION } from "@/lib/version";
+import { DATA_VERSION, AI_VERSION } from "@/lib/version";
 import { ENSEMBLE } from "@/lib/engine/config";
 
 /**
@@ -22,7 +22,7 @@ import { ENSEMBLE } from "@/lib/engine/config";
  * regenerates.
  */
 export function recCacheKey(id: string, p: ClientProfileInput): string {
-  return `airec:${id}:${factsSignature(p)}:${SIM_MODEL}:${DATA_VERSION}:e${ENSEMBLE.runs}`;
+  return `airec:${id}:${factsSignature(p)}:${SIM_MODEL}:${DATA_VERSION}:${AI_VERSION}:e${ENSEMBLE.runs}`;
 }
 
 export function factsSignature(p: ClientProfileInput): string {

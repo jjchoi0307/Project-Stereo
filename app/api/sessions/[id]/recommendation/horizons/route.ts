@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { getDataStore } from "@/lib/data";
 import { recommendHorizons } from "@/lib/ai/horizonRecommend";
+import { loadClinicalRead } from "@/lib/ai/clinicalReadCache";
 import { shapeRankedPlan } from "@/lib/ai/toResponse";
 import { getHorizonPayload, setHorizonPayload } from "@/lib/engine/horizonCacheStore";
 import { simConfigured, SIM_MODEL } from "@/lib/sim/env";
-import { DATA_VERSION } from "@/lib/version";
+import { DATA_VERSION, AI_VERSION } from "@/lib/version";
 import { getSessionStore } from "@/lib/session/store";
 import { getBrokerContext } from "@/lib/supabase/auth";
-import { getInputImportance, guidanceFromConfig } from "@/lib/config/orgSettings";
+import { getInputImportance } from "@/lib/config/orgSettings";
 import { factsSignature, recCacheKey } from "@/lib/engine/factsSignature";
 import { HORIZON_REC } from "@/lib/engine/config";
 
@@ -35,7 +36,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const config = await getInputImportance(ctx?.orgId);
   const cfgSig = Object.values(config).map((v) => (v === "high" ? "H" : "L")).join("");
 
-  const cacheKey = `aihorizon:${id}:${factsSignature(profile)}:${SIM_MODEL}:${DATA_VERSION}:${cfgSig}:h${HORIZON_REC.horizonsYears.join("-")}`;
+  const cacheKey = `aihorizon:${id}:${factsSignature(profile)}:${SIM_MODEL}:${DATA_VERSION}:${AI_VERSION}:${cfgSig}:h${HORIZON_REC.horizonsYears.join("-")}`;
   const cached = await getHorizonPayload(cacheKey);
   if (cached) return NextResponse.json(cached);
 
@@ -57,7 +58,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const todayCache = (await getHorizonPayload(recCacheKey(id, profile))) as { topPlanId?: string | null } | null;
     const todayTopPlanId = todayCache?.topPlanId ?? null;
 
-    const rec = await recommendHorizons(profile, db, todayTopPlanId, guidanceFromConfig(config));
+    // Reuse the SAME clinical read as the Health Futures card so the horizon's
+    // projection narrative matches it (shared loader → one read per facts-version).
+    const clinicalRead = await loadClinicalRead(id, profile, config);
+
+    const rec = await recommendHorizons(profile, db, todayTopPlanId, clinicalRead);
 
     const horizons = rec.horizons.map((h) => {
       // Full-detail top-3 cards, shaped exactly like the Today recommendation.

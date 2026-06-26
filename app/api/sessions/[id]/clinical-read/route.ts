@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
 import { getSessionStore } from "@/lib/session/store";
-import { simConfigured, SIM_MODEL } from "@/lib/sim/env";
-import { aiClinicalRead } from "@/lib/ai/clinicalRead";
-import { getHorizonPayload, setHorizonPayload } from "@/lib/engine/horizonCacheStore";
+import { simConfigured } from "@/lib/sim/env";
+import { loadClinicalRead } from "@/lib/ai/clinicalReadCache";
 import { getBrokerContext } from "@/lib/supabase/auth";
-import { getInputImportance, guidanceFromConfig } from "@/lib/config/orgSettings";
-import { factsSignature } from "@/lib/engine/factsSignature";
+import { getInputImportance } from "@/lib/config/orgSettings";
 
 export const dynamic = "force-dynamic";
 // Adaptive thinking over the clinical read can take 30-50s.
@@ -26,17 +24,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (!session) return NextResponse.json({ error: "session not found" }, { status: 404 });
   if (!session.profile) return NextResponse.json({ error: "no profile yet" }, { status: 409 });
 
-  // Admin-configurable input importance feeds the projection — load it and fold a
-  // compact signature into the cache key so changing the weights regenerates.
+  // Admin-configurable input importance feeds the projection.
   const ctx = await getBrokerContext();
   const config = await getInputImportance(ctx?.orgId);
-  const cfgSig = Object.values(config).map((v) => (v === "high" ? "H" : "L")).join("");
-
-  // Cache keyed by facts-version + model + config: it auto-runs when the clinical
-  // read opens, so without this every page view would be a ~30-50s Claude call + cost.
-  const cacheKey = `clinicalread:${id}:${factsSignature(session.profile)}:${SIM_MODEL}:${cfgSig}:h3-5`;
-  const cached = await getHorizonPayload(cacheKey);
-  if (cached) return NextResponse.json(cached);
 
   if (!simConfigured()) {
     return NextResponse.json(
@@ -48,14 +38,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     );
   }
 
-  try {
-    const result = await aiClinicalRead(session.profile, guidanceFromConfig(config));
-    await setHorizonPayload(cacheKey, result);
-    return NextResponse.json(result);
-  } catch (e) {
-    // PHI-free: log the error name/message only, never the profile.
-    const err = e as Error;
-    console.error("clinical read failed:", err?.name, err?.message);
-    return NextResponse.json({ error: "clinical read failed" }, { status: 502 });
-  }
+  // Shared loader (cache get/set + compute) — the SAME read the horizon
+  // recommendation reuses, so the Health Futures card and the recommendation's
+  // projection are always built from one clinical read and agree.
+  const result = await loadClinicalRead(id, session.profile, config);
+  if (!result) return NextResponse.json({ error: "clinical read failed" }, { status: 502 });
+  return NextResponse.json(result);
 }

@@ -26,6 +26,7 @@ import { HORIZON_REC } from "@/lib/engine/config";
 import { CONDITION_OPTIONS } from "@/lib/intake/options";
 import { projectExpectedProfile } from "@/lib/engine/horizonRecommendation";
 import { recommendPlans, type AiRankedPlan } from "./recommend";
+import type { ClinicalRead } from "./clinicalRead";
 
 const HORIZONS = HORIZON_REC.horizonsYears; // [3, 5]
 
@@ -65,9 +66,18 @@ const EMPTY_PROJECTION: HorizonProjection = { headline: "", summary: "", conditi
 function buildProjectionDisplay(
   added: { conditions: { flag: ConditionFlag; incidence: number }[]; medications: { name: string; incidence: number }[] },
   years: number,
+  narrative?: { headline: string; summary: string } | null,
 ): HorizonProjection {
   const conditions = added.conditions.map((c) => ({ label: condLabel(c.flag), likelihood: likelihoodOf(c.incidence) }));
   const medications = added.medications.map((m) => ({ name: m.name, likelihood: likelihoodOf(m.incidence) }));
+
+  // Prefer the Health Futures (clinical read) narrative for THIS horizon, so the
+  // recommendation's projection and the Health Futures card read identically (they
+  // share the same underlying deterministic projection). Fall back to a plain
+  // template if the clinical read isn't available.
+  if (narrative?.headline && narrative?.summary) {
+    return { headline: narrative.headline, summary: narrative.summary, conditions, medications };
+  }
   if (conditions.length === 0 && medications.length === 0) {
     return {
       headline: `Stable outlook at ${years} years`,
@@ -95,31 +105,34 @@ export async function recommendHorizons(
   profile: ClientProfileInput,
   db: DataStore,
   todayTopPlanId: string | null,
-  _guidanceText?: string,
+  clinicalRead?: ClinicalRead | null,
 ): Promise<AiHorizonRecommendation> {
   const horizons = await Promise.all(
     HORIZONS.map(async (years): Promise<AiHorizon> => {
       try {
-        // 1) Deterministic expected future profile (instant, seeded, grounded).
+        // 1) Deterministic expected future profile (instant, seeded, grounded) — the
+        // SAME projection the Health Futures card narrates.
         const projected = await projectExpectedProfile(profile, db, years);
+        const narrative = clinicalRead?.futures?.horizons?.find((h) => h.years === years) ?? null;
         const projection = buildProjectionDisplay(
           { conditions: projected.addedConditions, medications: projected.addedMedications },
           years,
+          narrative,
         );
 
         // 2) Today's EXACT recommendation pipeline on the projected member.
         const rec = await recommendPlans(projected.profile, db);
-        // Show the full-detail top picks (the deep-written cards), exactly like Today.
-        const ranked = rec.ranked.filter((r) => r.deepWritten);
-        const cards = ranked.length > 0 ? ranked : rec.ranked.slice(0, 3);
-        const recommended = cards[0] ?? null;
+        // Full ranked list (top-3 deep-written cards + the heuristic tail), exactly
+        // like Today — the UI shows the top 3 as cards and the rest as a table.
+        const ranked = rec.ranked;
+        const recommended = ranked.find((r) => r.deepWritten) ?? ranked[0] ?? null;
 
         return {
           years,
           changedVsToday: Boolean(recommended && todayTopPlanId && recommended.planId !== todayTopPlanId),
           projection,
           recommended,
-          ranked: cards,
+          ranked,
         };
       } catch (e) {
         console.error(`horizon ${years}yr failed:`, (e as Error).message);
