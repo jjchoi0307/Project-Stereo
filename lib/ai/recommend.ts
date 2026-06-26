@@ -27,7 +27,7 @@
 import "server-only";
 import type { ClientProfileInput } from "@/lib/domain";
 import type { DataStore } from "@/lib/data";
-import { SCORING, ENSEMBLE, TIEBREAK_RULE, TOP3_DIVERSITY } from "@/lib/engine/config";
+import { SCORING, ENSEMBLE, TIEBREAK_RULE } from "@/lib/engine/config";
 import { SIM_MODEL } from "@/lib/sim/env";
 import { newTrajectory, rlmLeaf, rlmParallel, logTrajectory, type RlmTrajectory } from "./rlm";
 import {
@@ -555,29 +555,11 @@ export async function recommendPlans(
     })
     .map((c) => c.planId);
 
-  // Carrier diversity (TOP3_DIVERSITY, carrier-agnostic): walk the vote-ranked list
-  // and fill the 3 shown slots, allowing at most maxPerCarrier from any one carrier
-  // SO LONG AS a different-carrier plan remains — so the member always sees an
-  // alternative. The #1 pick is never displaced (it's added first). If the cap can't
-  // fill 3 (only one carrier is eligible), it's relaxed and we backfill — a genuinely
-  // all-one-carrier top-3 still shows. Applies equally to every carrier; no bias.
-  const carrierOf = (id: string) => factsById.get(id)?.carrier ?? id;
-  const perCarrier = new Map<string, number>();
-  const topIds: string[] = [];
-  for (const id of orderedIds) {
-    if (topIds.length >= DEEP_COUNT) break;
-    const c = carrierOf(id);
-    if ((perCarrier.get(c) ?? 0) >= TOP3_DIVERSITY.maxPerCarrier) continue;
-    perCarrier.set(c, (perCarrier.get(c) ?? 0) + 1);
-    topIds.push(id);
-  }
-  if (topIds.length < DEEP_COUNT) {
-    // Cap left slots unfilled (no other-carrier plan available) → backfill in rank order.
-    for (const id of orderedIds) {
-      if (topIds.length >= DEEP_COUNT) break;
-      if (!topIds.includes(id)) topIds.push(id);
-    }
-  }
+  // The 3 shown plans are the top 3 on PURE MERIT — vote frequency + the neutral
+  // member-benefit tiebreak above. No carrier cap: if one carrier genuinely earns
+  // all 3 slots, it keeps them. Artificially demoting a plan that ranked into the
+  // top 3 because of its carrier is itself a bias, so we don't do it.
+  const topIds = orderedIds.slice(0, DEEP_COUNT);
 
   // 2. DEEP — parallel detailed write-ups for the voted winners (delegate step).
   const deepResults = await rlmParallel(traj, "deep-writeups", topIds, Math.max(1, topIds.length), async (id) => {

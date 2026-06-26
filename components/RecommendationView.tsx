@@ -401,7 +401,7 @@ export function TopCard({ item, rank, highlight, ensembleRuns }: { item: RankedI
                 <span className="num">{ensembleRuns}</span> runs
               </div>
             ) : (
-              <div className="mt-1 text-[11px] leading-[1.35] text-slate-400">alternative carrier · shown for choice</div>
+              <div className="mt-1 text-[11px] leading-[1.35] text-slate-400">rounds out the top 3</div>
             ))}
         </div>
       </div>

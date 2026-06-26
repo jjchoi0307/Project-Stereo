@@ -39,18 +39,13 @@ export const TIEBREAK_RULE = {
 } as const;
 
 /**
- * Top-3 carrier diversity (named, auditable, CARRIER-AGNOSTIC — applies to every
- * carrier equally, not SCAN). At most `maxPerCarrier` of the shown top-3 may be
- * from one carrier, so the member always sees an alternative when one exists. The
- * #1 best-fit pick is never displaced — only the 3rd same-carrier slot is swapped
- * for the next-best plan from a DIFFERENT carrier. Fallback: if no other-carrier
- * plan is eligible, the cap is relaxed and all 3 may be the same carrier (we never
- * fabricate or block — a genuinely all-SCAN top-3 still shows).
+ * REMOVED — top-3 carrier diversity cap. We previously swapped the 3rd same-carrier
+ * slot for a different carrier's plan to "show an alternative." That is itself a
+ * bias: it demotes a plan that genuinely earned a top-3 spot purely because of its
+ * carrier. The top 3 are now selected on PURE MERIT (vote frequency + the neutral
+ * member-benefit tiebreak in TIEBREAK_RULE). If one carrier earns all 3, it keeps
+ * all 3. No carrier cap is applied anywhere.
  */
-export const TOP3_DIVERSITY = {
-  name: "carrier_diversity_v1",
-  maxPerCarrier: Math.max(1, Number(process.env.TOP3_MAX_PER_CARRIER) || 2),
-} as const;
 
 /**
  * Relative importance of each intake input to the recommendation/projection.
