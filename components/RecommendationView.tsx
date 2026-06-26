@@ -211,10 +211,8 @@ export default function RecommendationView({
         <span className="rounded-md bg-[#f6fdfb] px-2.5 py-1 text-[12px] font-medium text-accent ring-1 ring-[#ccebe6]">
           AI-ranked on fit — grounded in the 2026 plan files, no carrier preference
         </span>
-        {data.model && (
-          <span className="num ml-auto text-[11px] text-slate-400">
-            AI-powered · {data.model}
-          </span>
+        {data.aiPowered && (
+          <span className="num ml-auto text-[11px] text-slate-400">AI-powered</span>
         )}
       </div>
 

@@ -24,7 +24,13 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
 
   const supabase = await getServerSupabase();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) return { error: error.message };
+  // Uniform message for EVERY failure (bad password, unknown email, unconfirmed) so
+  // the response can't be used to enumerate which accounts exist. Detail is logged
+  // server-side only.
+  if (error) {
+    console.error("sign-in failed:", error.message);
+    return { error: "Invalid email or password." };
+  }
 
   redirect(await safeNext(formData.get("next")));
 }
@@ -51,7 +57,12 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
     password,
     options: { data: { full_name: fullName, agency } },
   });
-  if (error) return { error: error.message };
+  // One generic message for ALL sign-up errors so "User already registered" can't
+  // be distinguished from other failures (account enumeration). Logged server-side.
+  if (error) {
+    console.error("sign-up failed:", error.message);
+    return { error: "We couldn't complete sign-up. Check your details, or ask your administrator to create your account." };
+  }
 
   // If email confirmation is enabled in Supabase, there's no session yet.
   if (!data.session) {

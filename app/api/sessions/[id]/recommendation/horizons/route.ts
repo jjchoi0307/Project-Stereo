@@ -84,7 +84,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     });
 
     const payload = {
-      model: rec.model,
+      // model id omitted from the client payload (stealth) — kept in the audit record.
       aiPowered: true,
       todayTopPlanId: rec.todayTopPlanId,
       todayTopPlanName: rec.todayTopPlanId ? planById.get(rec.todayTopPlanId)?.name ?? null : null,
@@ -95,6 +95,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   } catch (e) {
     const err = e as Error;
     console.error("AI horizon recommendation failed:", err?.name, err?.message);
-    return NextResponse.json({ error: "horizon recommendation failed", detail: err?.message }, { status: 502 });
+    // Generic client message only — internals stay in the server log (stealth).
+    return NextResponse.json({ error: "horizon recommendation failed" }, { status: 502 });
   }
 }
