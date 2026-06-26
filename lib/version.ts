@@ -32,5 +32,8 @@ export const ENGINE_VERSION = "engine-1.2.0";
  * 2.1.0: catastrophic-downside sub-score anchored to actual OOP-max dollars (a
  *        lower-OOP plan now provably scores better on worst-case exposure); plus
  *        the audit-batch changes (de-identified rec prompt, citation grounding).
+ * 2.2.0: carrier-blind model input — the ranking/write-up prompts identify plans
+ *        only by opaque tokens (no carrier/brand/name/source), so the model cannot
+ *        favor a carrier (proven by scripts/test-neutrality.ts).
  */
-export const AI_VERSION = "ai-2.1.0";
+export const AI_VERSION = "ai-2.2.0";

@@ -1,17 +1,19 @@
 /**
  * Layer 5 — scoring & aggregation. Turns the simulation summaries into a ranked
- * recommendation. Implements the brief's PlanScore formula (weights in config):
+ * recommendation. Implements the PlanScore formula (weights in config):
  *
  *   expectedFit  = coverageFit + networkFit + medicationFit − mismatchPenalty
  *   downsideRisk = catastrophicDownside
- *   total        = expectedFit − downsideRisk + preferenceContribution
+ *   total        = expectedFit − downsideRisk
  *
- * `preferenceContribution` is a small, bounded, LOGGED tiebreaker for
- * SMG-supported / SCAN plans. It is capped at `SCORING.preference.max`, so it can
- * only reorder plans whose fit is already within that many points — it can never
- * lift a clearly worse-fit plan above a clearly better one. We also rank by pure
- * fit (preference off) and report whether preference changed the top pick, so a
- * reviewer can see both side by side.
+ * NO CARRIER PREFERENCE. The total is 100% pure fit — there is no SMG/SCAN/carrier
+ * tiebreaker or boost of any kind. `preferenceContribution` is hardwired to 0 and
+ * `preferenceWeightingEnabled` to false (the `preferenceWeighting` input is a
+ * retained no-op for signature stability; it changes nothing). Every component
+ * above is computed only from the member's facts and the plan's own benefits —
+ * the plan's carrier/brand never enters the score. A carrier-invariance test
+ * (scripts/test-neutrality.ts) proves relabeling carriers leaves the ranking
+ * byte-identical.
  */
 
 import type {

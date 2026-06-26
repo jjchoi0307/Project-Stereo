@@ -16,7 +16,8 @@
     "test:health": "tsx scripts/test-health.ts",
     "test:horizon": "tsx scripts/test-horizon.ts",
     "test:deidentify": "tsx scripts/test-deidentify.ts",
-    "test": "npm run validate:fixtures && npm run test:normalize && npm run test:rules && npm run test:sim && npm run test:score && npm run test:audit && npm run test:health && npm run test:horizon && npm run test:deidentify"
+    "test:neutrality": "tsx -r ./scripts/_allow-server-only.cjs scripts/test-neutrality.ts",
+    "test": "npm run validate:fixtures && npm run test:normalize && npm run test:rules && npm run test:sim && npm run test:score && npm run test:audit && npm run test:health && npm run test:horizon && npm run test:deidentify && npm run test:neutrality"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.105.0",
