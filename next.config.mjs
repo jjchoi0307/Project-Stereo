@@ -31,11 +31,23 @@ const securityHeaders = [
   },
 ];
 
+// PHI must never be cached by the browser, a CDN, or Vercel's edge. Every /api
+// response carries patient/session data or is otherwise per-request, so mark the
+// whole API surface no-store (HIPAA §164.312 + stealth: no PHI left in caches).
+const noStoreHeaders = [
+  { key: "Cache-Control", value: "no-store, no-cache, must-revalidate" },
+  { key: "Pragma", value: "no-cache" },
+];
+
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false, // don't advertise the framework
+  productionBrowserSourceMaps: false, // don't ship source maps that expose internals
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      { source: "/api/:path*", headers: noStoreHeaders },
+    ];
   },
 };
 

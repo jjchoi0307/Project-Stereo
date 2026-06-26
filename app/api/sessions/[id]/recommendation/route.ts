@@ -95,7 +95,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const payload = {
       seed: 0,
       scenarioCount: 0,
-      model: rec.model,
+      // model id intentionally omitted from the client payload (stealth — don't
+      // expose the exact provider model); it stays in the immutable audit record.
       aiPowered: true,
       ensembleRuns: rec.ensembleRuns,
       preferenceWeightingEnabled: false,
@@ -127,6 +128,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       metadata: { error: err?.message ?? "unknown" },
       outcome: "error",
     });
-    return NextResponse.json({ error: "recommendation failed", detail: err?.message }, { status: 502 });
+    // Generic client message only — the internal detail is already in the
+    // server log + audit event above (stealth: never echo internals to clients).
+    return NextResponse.json({ error: "recommendation failed" }, { status: 502 });
   }
 }
