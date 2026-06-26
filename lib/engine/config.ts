@@ -118,8 +118,8 @@ export const SIM_CONFIG = {
 /**
  * Health-futures simulation (profile replication + clinical trajectories).
  * Counts/horizon here; the per-year clinical transition rates live in
- * `healthSim.ts` (synthetic, plausible placeholders — calibrate against real
- * actuarial/clinical data later, like the dollar figures above).
+ * `healthSim.ts` (CLINICAL_PROGRESSION — literature-anchored annual estimates for a
+ * 65+ cohort, each cited; validate with a clinician/actuary before clinical use).
  */
 export const HEALTH_SIM = {
   defaultReplicas: 250,
