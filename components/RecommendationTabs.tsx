@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import RecommendationView, { TopCard, type RankedItem } from "./RecommendationView";
+import RecommendationView, { TopCard, RecommendationLoading, type RankedItem } from "./RecommendationView";
 import { HORIZON_REC, SCORING } from "@/lib/engine/config";
-import Spinner from "@/components/ui/Spinner";
 
 // ── Shapes returned by the AI horizon route ──────────────────────────────────
 interface PlanMeta {
@@ -101,12 +100,19 @@ export default function RecommendationTabs({ sessionId }: { sessionId: string })
       {typeof tab === "number" && (
         <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} tabIndex={0}>
           {hStatus !== "error" && !horizons && (
-            <div className="flex items-center gap-2.5 text-sm text-slate-500">
-              <Spinner />{" "}
-              {today
-                ? "Re-running today's recommendation on the member's projected health… first load can take ~60s, then it's instant."
-                : "Finishing today's recommendation first, then projecting the horizons…"}
-            </div>
+            <RecommendationLoading
+              title={today ? `Generating the ${tab}-year recommendation…` : "Finishing today's recommendation first…"}
+              subtitle={
+                today
+                  ? "Projecting the member's health, then re-running today's recommendation on that future profile. First load ~30–45s, then instant."
+                  : "The horizon re-runs today's recommendation on the member's projected health — it starts as soon as today is ready."
+              }
+              steps={
+                today
+                  ? ["Projecting the member's future health", "Screening & scoring plans for that profile", "Writing the details & citations"]
+                  : ["Waiting for today's recommendation", "Projecting the member's future health", "Re-ranking plans for that profile"]
+              }
+            />
           )}
           {hStatus === "error" && (
             <div className="flex items-center gap-3 text-sm text-rose-600">
