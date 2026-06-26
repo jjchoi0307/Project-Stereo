@@ -126,7 +126,8 @@ export default function RecommendationTabs({ sessionId }: { sessionId: string })
                 // Lineup-aware comparison vs Today, computed client-side (the
                 // horizon loads in parallel with Today, so no ordering dependency).
                 status={lineupStatus(activeHorizon, today)}
-                todayName={today?.topPlanName ?? horizons.todayTopPlanName}
+                today={today}
+                todayNameFallback={horizons.todayTopPlanName}
               />
             ) : (
               <p className="text-sm text-slate-500">No data for this horizon.</p>
@@ -180,13 +181,31 @@ function lineupStatus(h: HorizonRec, today: { topPlanId: string | null; topIds: 
   return sameSet ? "same" : "reordered";
 }
 
-function HorizonPanel({ horizon: h, status, todayName }: { horizon: HorizonRec; status: LineupStatus; todayName: string | null }) {
+function HorizonPanel({
+  horizon: h,
+  status,
+  today,
+  todayNameFallback,
+}: {
+  horizon: HorizonRec;
+  status: LineupStatus;
+  today: { topPlanId: string | null; topPlanName: string | null } | null;
+  todayNameFallback: string | null;
+}) {
   const rec = h.recommended;
   const ranked = h.ranked ?? [];
   const top = ranked.slice(0, 3);
   const rest = ranked.slice(3);
   const [showChanges, setShowChanges] = useState(false);
   const hasAssumptions = h.projection.conditions.length > 0 || h.projection.medications.length > 0;
+
+  const todayName = today?.topPlanName ?? todayNameFallback;
+  // Where today's pick now sits in this horizon's full ranking, and the concrete
+  // reason the new leader wins — so a rank change is specific, not vague.
+  const oldIdx = today?.topPlanId ? ranked.findIndex((r) => r.planId === today.topPlanId) : -1;
+  const oldRank = oldIdx >= 0 ? oldIdx + 1 : null;
+  const oldFit = oldIdx >= 0 ? ranked[oldIdx].total : null;
+  const leadReason = rec?.reasons?.find((r) => r.positive)?.text ?? rec?.reasons?.[0]?.text ?? null;
 
   return (
     <div>
@@ -235,21 +254,30 @@ function HorizonPanel({ horizon: h, status, todayName }: { horizon: HorizonRec; 
         )}
       </section>
 
-      {/* Changes-vs-today banner — accurate to the whole top-3 lineup, not just #1. */}
+      {/* Changes-vs-today banner — accurate to the whole top-3 lineup, not just #1,
+          and SPECIFIC about what changed and why. */}
       {status === "changed" ? (
         <div className="mb-[18px] rounded-[10px] border border-amber-200 bg-amber-50 px-4 py-3">
           <div className="mb-0.5 text-[13px] font-bold text-amber-800">⚑ Best fit changes at {h.years} years</div>
           <div className="text-[12.5px] leading-[1.5] text-amber-700">
-            As the member&apos;s health evolves, today&apos;s pick{todayName ? ` (${todayName})` : ""} is no longer the
-            best fit. {rec ? `${rec.plan.name} fits the projected member better.` : ""}
+            {rec && (
+              <>
+                <strong>{rec.plan.name}</strong> now leads
+                {typeof rec.total === "number" ? ` (fit ${rec.total}${oldFit != null ? ` vs ${oldFit}` : ""})` : ""}.{" "}
+                Today&apos;s pick{todayName ? ` (${todayName})` : ""}{" "}
+                {oldRank ? `now ranks #${oldRank} for the projected member` : "is no longer among the eligible picks at this horizon"}.
+                {leadReason ? <> Why it now wins: {leadReason}</> : null}
+              </>
+            )}
           </div>
         </div>
       ) : status === "reordered" ? (
         <div className="mb-[18px] rounded-[10px] border border-sky-200 bg-sky-50 px-4 py-3">
           <div className="mb-0.5 text-[13px] font-bold text-sky-800">↻ Same lead plan, different runner-ups</div>
           <div className="text-[12.5px] leading-[1.5] text-sky-700">
-            {todayName ? `${todayName} ` : "Today's pick "}is still the best fit at {h.years} years, but the other
-            plans in the top 3 shift as the member&apos;s projected needs change.
+            <strong>{todayName ?? "Today's pick"}</strong> still fits best at {h.years} years, but the supporting plans
+            shift as the member&apos;s projected needs change — the top 3 are now{" "}
+            {top.map((t) => t.plan.name).join(", ")}.
           </div>
         </div>
       ) : (
