@@ -6,8 +6,13 @@ import { runEngine } from "@/lib/engine/pipeline";
 import { getHorizonPayload } from "@/lib/engine/horizonCacheStore";
 import { getSessionStore } from "@/lib/session/store";
 import { SIM_MODEL } from "@/lib/sim/env";
+import { simConfigured } from "@/lib/sim/env";
+import { recommendPlans } from "@/lib/ai/recommend";
 import { recCacheKey } from "@/lib/engine/factsSignature";
 import type { AuditAiRecommendation } from "@/lib/domain";
+
+// The cache-miss fallback below may recompute the AI recommendation (ensemble).
+export const maxDuration = 300;
 
 /** Shape of the cached AI recommendation payload (app/api/.../recommendation/route.ts). */
 interface CachedAiRec {
@@ -51,6 +56,39 @@ function toAuditAi(cached: CachedAiRec): AuditAiRecommendation {
 }
 
 /**
+ * Cache-miss fallback: build the audit snapshot directly from a fresh AI
+ * recommendation. The record is append-only (saved ONCE), so the snapshot must be
+ * present at save time — there is no later UPDATE path. This recomputes only when
+ * the warm cache is unexpectedly missing, so the single save is never persisted
+ * with a null AI recommendation.
+ */
+function aiFromRecommendation(
+  rec: Awaited<ReturnType<typeof recommendPlans>>,
+  planById: Map<string, { name: string }>,
+): AuditAiRecommendation {
+  const ranked = rec.ranked.map((r) => ({
+    planId: r.planId,
+    planName: planById.get(r.planId)?.name ?? r.planId,
+    fitScore: r.fitScore,
+    reasons: r.reasons.map((reason) => ({
+      text: reason.text,
+      positive: reason.positive,
+      citation: reason.citation
+        ? { sourceFile: reason.citation.sourceFile, sourcePage: reason.citation.sourcePage ?? null, quote: reason.citation.quote }
+        : null,
+    })),
+  }));
+  return {
+    model: rec.model,
+    generatedAt: new Date().toISOString(),
+    topPlanId: rec.topPlanId ?? null,
+    ranked,
+    excluded: rec.excluded.map((e) => ({ planId: e.planId, planName: e.name, reasons: e.reasons })),
+    groundingPlanIds: ranked.map((r) => r.planId),
+  };
+}
+
+/**
  * Create (upsert) the canonical audit record for this session's recommendation.
  *
  * The delivered recommendation is now AI-powered, so the audit preserves it
@@ -66,13 +104,27 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   if (!session.profile) return NextResponse.json({ error: "no profile yet" }, { status: 409 });
 
   // Pull the AI recommendation the member was shown from the server cache (the
-  // recommendation route warms it). Audit is POSTed after the recommendation
-  // loads, so it's normally present; if not, the record still saves with the
-  // deterministic backbone and the AI snapshot fills in on a later view.
+  // recommendation route warms it before the client POSTs here). The record is
+  // append-only — saved ONCE with no later UPDATE path — so the AI snapshot MUST
+  // be captured now. If the warm cache is unexpectedly missing (e.g. a transient
+  // cache-write failure), recompute it rather than persisting a permanently
+  // incomplete audit record.
+  const db = getDataStore();
   const cachedAi = (await getHorizonPayload(recCacheKey(id, session.profile))) as CachedAiRec | null;
-  const ai = cachedAi?.ranked?.length ? toAuditAi(cachedAi) : null;
+  let ai = cachedAi?.ranked?.length ? toAuditAi(cachedAi) : null;
+  if (!ai && simConfigured()) {
+    try {
+      const plans = await db.listPlans();
+      const planById = new Map(plans.map((p) => [p.id, p] as const));
+      const rec = await recommendPlans(session.profile, db);
+      if (rec.ranked.length) ai = aiFromRecommendation(rec, planById);
+    } catch (e) {
+      // Best-effort: a deterministic-backbone-only record is still saved below.
+      console.error("audit AI-snapshot recompute failed:", (e as Error)?.message);
+    }
+  }
 
-  const run = await runEngine(session.profile, getDataStore(), { preferenceWeighting: false });
+  const run = await runEngine(session.profile, db, { preferenceWeighting: false });
   const record = buildAuditRecord(session.profile, run, ai);
   await (await getAuditStore()).save(record);
   return NextResponse.json({ auditId: record.id }, { status: 201 });
