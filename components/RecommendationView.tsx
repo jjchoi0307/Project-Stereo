@@ -50,6 +50,31 @@ const premiumLabel = (n: number) => (n === 0 ? "$0" : "$" + n);
 const pct = (n: number) => Math.round(n * 100) + "%";
 const confLabel = (c: number) => (c >= 66 ? "High" : c >= 33 ? "Moderate" : "Low");
 
+/** Shared AI loading card (centered spinner + pulsing step dots). Used by Today
+ *  and by the 3yr/5yr horizon tab so the loading experience is identical. */
+export function RecommendationLoading({ title, subtitle, steps }: { title: string; subtitle: string; steps: string[] }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-4 rounded-[13px] border border-slate-200 bg-white px-6 py-12 text-center">
+      <Spinner size={26} />
+      <div>
+        <div className="text-[14px] font-semibold text-ink">{title}</div>
+        <div className="mt-1 text-[12.5px] text-slate-500">{subtitle}</div>
+      </div>
+      <div className="flex flex-col gap-2.5 pt-1">
+        {steps.map((step, i) => (
+          <div key={step} className="flex items-center gap-2.5 text-[12px] text-slate-400">
+            <span
+              className="h-1.5 w-1.5 rounded-full bg-accent"
+              style={{ animation: "pulseDot 1.4s ease-in-out infinite", animationDelay: `${i * 0.25}s` }}
+            />
+            {step}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function PlanChips({ plan }: { plan: PlanMeta }) {
   const chips: string[] = [];
   if (plan.isScan) chips.push("SCAN");
@@ -115,26 +140,11 @@ export default function RecommendationView({
 
   if (loading && !data)
     return (
-      <div className="flex flex-col items-center justify-center gap-4 rounded-[13px] border border-slate-200 bg-white px-6 py-12 text-center">
-        <Spinner size={26} />
-        <div>
-          <div className="text-[14px] font-semibold text-ink">Generating the AI recommendation…</div>
-          <div className="mt-1 text-[12.5px] text-slate-500">
-            Reasoning over the 2026 plan files to rank plans, score fit, and cite every figure. (~30–45s)
-          </div>
-        </div>
-        <div className="flex flex-col gap-2.5 pt-1">
-          {["Screening eligible plans", "Scoring fit & writing reasons", "Citing the source pages"].map((step, i) => (
-            <div key={step} className="flex items-center gap-2.5 text-[12px] text-slate-400">
-              <span
-                className="h-1.5 w-1.5 rounded-full bg-accent"
-                style={{ animation: "pulseDot 1.4s ease-in-out infinite", animationDelay: `${i * 0.25}s` }}
-              />
-              {step}
-            </div>
-          ))}
-        </div>
-      </div>
+      <RecommendationLoading
+        title="Generating the AI recommendation…"
+        subtitle="Reasoning over the 2026 plan files to rank plans, score fit, and cite every figure. (~30–45s)"
+        steps={["Screening eligible plans", "Scoring fit & writing reasons", "Citing the source pages"]}
+      />
     );
   if (loadError && !data)
     return loadError.notConfigured ? (
