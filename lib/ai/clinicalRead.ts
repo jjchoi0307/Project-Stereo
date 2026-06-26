@@ -14,7 +14,9 @@ import type { ClientProfileInput } from "@/lib/domain";
 import { deidentifyForSim, type DeidentifiedFacts } from "@/lib/sim/deidentify";
 import { getDataStore } from "@/lib/data";
 import { SIM_MODEL } from "@/lib/sim/env";
-import { importanceGuidance } from "@/lib/engine/config";
+import { importanceGuidance, HORIZON_REC } from "@/lib/engine/config";
+import { CONDITION_OPTIONS } from "@/lib/intake/options";
+import { projectExpectedProfile } from "@/lib/engine/horizonRecommendation";
 import { newTrajectory, rlmLeaf, logTrajectory } from "./rlm";
 
 export interface AiMarker {
@@ -74,17 +76,42 @@ Hard rules:
 - Also set an integer "score" 0..100 used only for internal ordering, consistent with the band (low 0-24, moderate 25-49, high 50-74, very_high 75-100). Brokers see the BAND and the "why", not the number, so the band and the "why" must be self-explanatory on their own.
 - The "why" must (a) name the specific grounding fact and (b) explain in one plain sentence WHY that fact lands the marker in its band. For network sensitivity, say plainly that keeping the required provider in network is what raises it (e.g. "Because they want to keep Seoul Medical Group, only plans where that group stays in network fit — which narrows the choices.").
 - FUTURES: give exactly two horizons (years 3 and 5). "headline" is a short phrase; "summary" is 1-3 plain sentences about where this person's health is most likely headed; "outlook" reflects overall trajectory (stable / watch / elevated). "outcomes" are ~3-5 specific clinically-grounded possibilities with a calibrated likelihood (unlikely / possible / likely) and a "why" tied to the facts. "caveat" must state this is an educational projection, not medical advice.
+- The user message includes a PROJECTED CHANGES block — the specific conditions/medications the member is most likely to ADD by each horizon. This SAME projection is what drives the plan recommendation, so your futures MUST be consistent with it: build the summaries and outcomes around those projected changes (you explain the clinical "why" and likelihood; you must NOT contradict them or introduce a different set). If a horizon projects no new conditions, say the outlook is stable.
 - Calibrate likelihood and band to how strongly the facts support them (sparse facts => lower scores / "unlikely"/"possible", stable outlook).`;
 
-function buildUserMessage(facts: DeidentifiedFacts, guidanceText?: string): string {
+function buildUserMessage(facts: DeidentifiedFacts, projectionBlock: string, guidanceText?: string): string {
   return [
     "DE-IDENTIFIED CLINICAL FACTS:",
     JSON.stringify(facts, null, 2),
     "",
+    projectionBlock,
+    "",
     guidanceText ?? importanceGuidance(),
     "",
-    "Produce the risk markers and the 3- and 5-year health-futures read, grounded in the above facts.",
+    "Produce the risk markers and the 3- and 5-year health-futures read. The futures MUST be consistent with the PROJECTED CHANGES block above.",
   ].join("\n");
+}
+
+const CONDITION_LABEL = new Map(CONDITION_OPTIONS.map((o) => [o.value, o.label] as const));
+
+/**
+ * The SAME deterministic projection the plan recommendation uses, rendered as text
+ * for the clinical-read prompt — so the Health Futures narrative and the 3/5-year
+ * plan recommendation are built on ONE projection and always agree.
+ */
+async function buildProjectionBlock(profile: ClientProfileInput): Promise<string> {
+  const db = getDataStore();
+  const lines = ["PROJECTED CHANGES (the member's likely added conditions/medications — the plan recommendation uses this SAME projection):"];
+  for (const years of HORIZON_REC.horizonsYears) {
+    const { addedConditions, addedMedications } = await projectExpectedProfile(profile, db, years);
+    const conds = addedConditions.map((c) => CONDITION_LABEL.get(c.flag) ?? c.flag);
+    const meds = addedMedications.map((m) => m.name);
+    const parts: string[] = [];
+    if (conds.length) parts.push(`likely to develop ${conds.join(", ")}`);
+    if (meds.length) parts.push(`may start ${meds.join(", ")}`);
+    lines.push(`- By year ${years}: ${parts.length ? parts.join("; ") : "no major new conditions projected (stable)"}.`);
+  }
+  return lines.join("\n");
 }
 
 /** JSON Schema for the structured output (all props required, no min/max length). */
@@ -160,6 +187,10 @@ export async function aiClinicalRead(profile: ClientProfileInput, guidanceText?:
   const systemNames = new Map(systems.map((s) => [s.id, s.name]));
   const facts = deidentifyForSim(profile, systemNames);
 
+  // The SAME projection the plan recommendation uses — so the Health Futures read
+  // and the 3/5-year plan recommendation are built on one projection and agree.
+  const projectionBlock = await buildProjectionBlock(profile);
+
   // RLM leaf: the clinical read is a single grounded sub-call (small, bounded
   // context — no decomposition needed), run through the shared orchestrator so it
   // shares the same config + trajectory logging as the other AI systems.
@@ -167,7 +198,7 @@ export async function aiClinicalRead(profile: ClientProfileInput, guidanceText?:
   const parsed = await rlmLeaf<unknown>(traj, {
     label: "clinical-read",
     system: SYSTEM_PROMPT,
-    user: buildUserMessage(facts, guidanceText),
+    user: buildUserMessage(facts, projectionBlock, guidanceText),
     schema: OUTPUT_SCHEMA,
   });
   logTrajectory(traj);
