@@ -88,13 +88,15 @@ export interface PlanFacts {
 /** Patient facts the recommendation model may reason over (no direct identifiers). */
 export interface RecommendationPatientFacts {
   age: number;
-  gender?: string;
+  // gender and the resolved county/region NAME are intentionally NOT sent to the
+  // LLM: county is a HIPAA Safe Harbor identifier and age+gender+county is a
+  // re-identification triad. Region eligibility is enforced deterministically in
+  // lib/engine/rules.ts before the model runs, so the LLM never needs either.
   conditions: string[];
   conditionsCount: number;
-  medications: string[]; // normalized names only
+  medications: string[]; // normalized names/drugIds only — never raw patient-typed text
   /** Hard provider/system requirements, as human names (facts that drive fit). */
   mustKeepProviders: string[];
-  marketRegionName: string;
   familyHistory: { condition: string; status: string; affectedRelativesCount?: number }[];
   utilization?: {
     acupunctureVisits12mo?: number;
@@ -129,7 +131,10 @@ function planToFacts(plan: Plan, profile: ClientProfileInput, ctx: RulesContext)
   const covered: { name: string; tier?: DrugTier }[] = [];
   const notCovered: string[] = [];
   for (const med of profile.medications) {
-    const name = med.name ?? med.raw;
+    // Never the raw patient-typed string (it can carry dosing notes / identifiers,
+    // and unsanitized free-text into a prompt is a prompt-injection vector). Fall
+    // back to the normalized id, then a neutral placeholder.
+    const name = med.name ?? med.drugId ?? "unspecified medication";
     if (!med.drugId) {
       // Can't verify an unnormalized med against the formulary — report as unknown
       // (treated as not-confirmed-covered so the model never claims coverage it
@@ -188,12 +193,11 @@ function patientFacts(profile: ClientProfileInput, ctx: RulesContext): Recommend
     .map((c) => (c.systemId ? ctx.systemsById.get(c.systemId)?.name ?? c.label : c.label));
   return {
     age: profile.age,
-    gender: profile.gender,
     conditions: [...profile.conditions].sort(),
     conditionsCount: profile.conditions.length,
-    medications: profile.medications.map((m) => m.name ?? m.raw).filter(Boolean),
+    // Normalized name or id only — never m.raw (de-identify + injection boundary).
+    medications: profile.medications.map((m) => m.name ?? m.drugId).filter(Boolean) as string[],
     mustKeepProviders,
-    marketRegionName: ctx.regionsById.get(profile.marketRegion)?.name ?? profile.marketRegion,
     familyHistory: profile.familyHistory.map((f) => ({
       condition: f.condition,
       status: f.status,
