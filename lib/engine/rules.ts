@@ -84,6 +84,13 @@ const CSNP_KEYWORD_FLAGS: { kw: string; flags: string[] }[] = [
   { kw: "asthma", flags: ["copd"] },
   { kw: "bronchitis", flags: ["copd"] },
   { kw: "emphysema", flags: ["copd"] },
+  // Several 2026 C-SNP plans list Dementia and Stroke as qualifying conditions;
+  // without these a member who qualifies ONLY via dementia or stroke was wrongly
+  // excluded as snp_ineligible.
+  { kw: "dement", flags: ["dementia"] },
+  { kw: "alzheimer", flags: ["dementia"] },
+  { kw: "stroke", flags: ["stroke"] },
+  { kw: "cerebrovascular", flags: ["stroke"] },
 ];
 
 /** Qualifying ConditionFlags for a plan's C-SNP conditions (deduped). */

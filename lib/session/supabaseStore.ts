@@ -7,6 +7,7 @@
  * BrokerContext (see lib/supabase/client.ts) and STATE_STORE=supabase.
  */
 import type { ClientProfileInput } from "@/lib/domain";
+import { parseProfileRow } from "./parseProfileRow";
 import { logAccess } from "@/lib/security/accessLog";
 import type { BrokerContext } from "@/lib/supabase/client";
 import type { BrokerSession, SessionStore } from "./store";
@@ -55,7 +56,7 @@ export class SupabaseSessionStore implements SessionStore {
       .eq("session_id", id)
       .maybeSingle();
     logAccess({ actor: this.ctx.brokerId, action: "session.read", sessionId: id });
-    return this.toSession(s as SessionRow, (p?.data as ClientProfileInput) ?? undefined);
+    return this.toSession(s as SessionRow, parseProfileRow(p?.data));
   }
 
   async list(): Promise<BrokerSession[]> {

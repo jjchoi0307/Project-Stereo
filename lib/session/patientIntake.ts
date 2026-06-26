@@ -23,6 +23,7 @@ import { mergeProvenance, toProfileInput } from "@/lib/intake/toProfile";
 import type { IntakeFormValues } from "@/lib/intake/types";
 import { validateIntake } from "@/lib/intake/validate";
 import type { ClientProfileInput } from "@/lib/domain";
+import { parseProfileRow } from "./parseProfileRow";
 import { logAccess } from "@/lib/security/accessLog";
 import { getSessionStore } from "./store";
 
@@ -110,7 +111,7 @@ async function fetchPriorProfile(sessionId: string): Promise<ClientProfileInput 
     const svc = serviceClient();
     const { data, error } = await svc.from("profiles").select("data").eq("session_id", sessionId).maybeSingle();
     if (error) console.error("patient intake prior-profile fetch failed:", error.code, error.message);
-    return (data?.data as ClientProfileInput) ?? undefined;
+    return parseProfileRow(data?.data);
   }
   const s = await (await getSessionStore()).get(sessionId);
   return s?.profile;

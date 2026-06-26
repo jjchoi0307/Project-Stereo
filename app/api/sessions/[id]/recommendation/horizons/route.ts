@@ -9,7 +9,7 @@ import { DATA_VERSION, AI_VERSION } from "@/lib/version";
 import { getSessionStore } from "@/lib/session/store";
 import { getBrokerContext } from "@/lib/supabase/auth";
 import { getInputImportance } from "@/lib/config/orgSettings";
-import { factsSignature, recCacheKey } from "@/lib/engine/factsSignature";
+import { factsSignature, recCacheKey, aiScoringSig } from "@/lib/engine/factsSignature";
 import { HORIZON_REC } from "@/lib/engine/config";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +36,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const config = await getInputImportance(ctx?.orgId);
   const cfgSig = Object.values(config).map((v) => (v === "high" ? "H" : "L")).join("");
 
-  const cacheKey = `aihorizon:${id}:${factsSignature(profile)}:${SIM_MODEL}:${DATA_VERSION}:${AI_VERSION}:${cfgSig}:h${HORIZON_REC.horizonsYears.join("-")}`;
+  const cacheKey = `aihorizon:${id}:${factsSignature(profile)}:${SIM_MODEL}:${DATA_VERSION}:${AI_VERSION}:${aiScoringSig()}:${cfgSig}:h${HORIZON_REC.horizonsYears.join("-")}`;
   const cached = await getHorizonPayload(cacheKey);
   if (cached) return NextResponse.json(cached);
 
