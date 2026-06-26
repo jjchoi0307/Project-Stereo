@@ -9,7 +9,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (!session) return NextResponse.json({ error: "session not found" }, { status: 404 });
   if (!session.profile) return NextResponse.json({ error: "no profile yet" }, { status: 409 });
 
-  const drugs = await getDataStore().listDrugs();
-  const normalized = normalizeProfile(session.profile, drugs);
-  return NextResponse.json({ normalized });
+  try {
+    const drugs = await getDataStore().listDrugs();
+    const normalized = normalizeProfile(session.profile, drugs);
+    return NextResponse.json({ normalized });
+  } catch (e) {
+    console.error("normalized failed:", (e as Error)?.name, (e as Error)?.message);
+    return NextResponse.json({ error: "normalized failed" }, { status: 500 });
+  }
 }

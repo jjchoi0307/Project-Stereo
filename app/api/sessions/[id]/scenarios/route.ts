@@ -18,6 +18,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const url = new URL(req.url);
   const preferenceWeighting = url.searchParams.get("preference") !== "off";
   const count = Number(url.searchParams.get("count")) || undefined;
+
+  try {
   const db = getDataStore();
 
   const baseRun = await runEngine(session.profile, db, { preferenceWeighting, count });
@@ -54,4 +56,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     baseline: { topPlanId: baseTopId, topPlanName: nameOf(baseTopId), topTotal: baseRun.scoring.ranked[0]?.total ?? null },
     scenarios,
   });
+  } catch (e) {
+    console.error("scenarios failed:", (e as Error)?.name, (e as Error)?.message);
+    return NextResponse.json({ error: "scenarios failed" }, { status: 500 });
+  }
 }

@@ -3,6 +3,7 @@
  * browser, exactly like the Supabase service-role client (lib/supabase/client.ts).
  */
 
+import "server-only"; // build-time guard: fail the build if a client component ever imports this (matches lib/supabase/client.ts)
 import Anthropic from "@anthropic-ai/sdk";
 import { ANTHROPIC_API_KEY } from "./env";
 

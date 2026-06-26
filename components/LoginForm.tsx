@@ -93,9 +93,9 @@ export default function LoginForm({
       {allowSignup && (
         <p className="mt-[18px] text-center text-[12.5px] text-slate-500">
           {isSignup ? "Already have an account?" : "New to SMG Recommender?"}{" "}
-          <span onClick={() => setMode(isSignup ? "signin" : "signup")} className="lk font-medium">
+          <button type="button" onClick={() => setMode(isSignup ? "signin" : "signup")} className="lk font-medium">
             {isSignup ? "Sign in" : "Create account"}
-          </span>
+          </button>
         </p>
       )}
 

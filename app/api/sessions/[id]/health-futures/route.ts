@@ -14,11 +14,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const replicas = Number(url.searchParams.get("replicas")) || undefined;
   const years = Number(url.searchParams.get("years")) || undefined;
 
-  const drugs = await getDataStore().listDrugs();
-  const normalized = normalizeProfile(session.profile, drugs);
-  const hf = simulateHealthFutures(session.profile, normalized, { replicas, years });
+  try {
+    const drugs = await getDataStore().listDrugs();
+    const normalized = normalizeProfile(session.profile, drugs);
+    const hf = simulateHealthFutures(session.profile, normalized, { replicas, years });
 
-  return NextResponse.json({
+    return NextResponse.json({
     seed: hf.seed,
     replicas: hf.replicas,
     horizonYears: hf.horizonYears,
@@ -44,4 +45,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       })),
     })),
   });
+  } catch (e) {
+    console.error("health-futures failed:", (e as Error)?.name, (e as Error)?.message);
+    return NextResponse.json({ error: "health-futures failed" }, { status: 500 });
+  }
 }

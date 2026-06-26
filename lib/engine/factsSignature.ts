@@ -13,16 +13,26 @@
 import type { ClientProfileInput } from "@/lib/domain";
 import { SIM_MODEL } from "@/lib/sim/env";
 import { DATA_VERSION, AI_VERSION } from "@/lib/version";
-import { ENSEMBLE } from "@/lib/engine/config";
+import { ENSEMBLE, TIEBREAK_RULE } from "@/lib/engine/config";
+
+/**
+ * Signature of the env-tunable knobs that change the RANKING output: the ensemble
+ * size and the tiebreak band. Any AI cache key that holds a ranking must include
+ * this, so changing ENSEMBLE_RUNS or TIE_BAND_VOTES at deploy time regenerates
+ * (without relying on a manual AI_VERSION bump). Shared by the Today and horizon
+ * keys so the two can never drift on these inputs.
+ */
+export function aiScoringSig(): string {
+  return `e${ENSEMBLE.runs}:t${TIEBREAK_RULE.tieBandVotes}`;
+}
 
 /**
  * Canonical cache key for the "today" AI recommendation. Shared by the
  * recommendation route (writes it) and the audit route (reads the delivered
- * result back), so they never drift. Includes the ensemble size so changing N
- * regenerates.
+ * result back), so they never drift.
  */
 export function recCacheKey(id: string, p: ClientProfileInput): string {
-  return `airec:${id}:${factsSignature(p)}:${SIM_MODEL}:${DATA_VERSION}:${AI_VERSION}:e${ENSEMBLE.runs}`;
+  return `airec:${id}:${factsSignature(p)}:${SIM_MODEL}:${DATA_VERSION}:${AI_VERSION}:${aiScoringSig()}`;
 }
 
 export function factsSignature(p: ClientProfileInput): string {

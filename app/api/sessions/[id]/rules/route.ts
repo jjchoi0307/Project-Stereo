@@ -20,22 +20,27 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (!session) return NextResponse.json({ error: "session not found" }, { status: 404 });
   if (!session.profile) return NextResponse.json({ error: "no profile yet" }, { status: 409 });
 
-  const db = getDataStore();
-  const [plans, ctx] = await Promise.all([db.listPlans(), buildRulesContext(db)]);
-  const result = applyRules(session.profile, plans, ctx);
+  try {
+    const db = getDataStore();
+    const [plans, ctx] = await Promise.all([db.listPlans(), buildRulesContext(db)]);
+    const result = applyRules(session.profile, plans, ctx);
 
-  const byId = new Map(plans.map((p) => [p.id, p]));
-  const entriesFor = (planId: string, severity: ExclusionLogEntry["severity"]) =>
-    result.log.filter((e) => e.planId === planId && e.severity === severity);
+    const byId = new Map(plans.map((p) => [p.id, p]));
+    const entriesFor = (planId: string, severity: ExclusionLogEntry["severity"]) =>
+      result.log.filter((e) => e.planId === planId && e.severity === severity);
 
-  const surviving = result.survivingPlanIds.map((pid) => ({
-    plan: trim(byId.get(pid)!),
-    flags: entriesFor(pid, "flag"),
-  }));
-  const excluded = result.excludedPlanIds.map((pid) => ({
-    plan: trim(byId.get(pid)!),
-    reasons: entriesFor(pid, "exclude"),
-  }));
+    const surviving = result.survivingPlanIds.map((pid) => ({
+      plan: trim(byId.get(pid)!),
+      flags: entriesFor(pid, "flag"),
+    }));
+    const excluded = result.excludedPlanIds.map((pid) => ({
+      plan: trim(byId.get(pid)!),
+      reasons: entriesFor(pid, "exclude"),
+    }));
 
-  return NextResponse.json({ total: plans.length, surviving, excluded });
+    return NextResponse.json({ total: plans.length, surviving, excluded });
+  } catch (e) {
+    console.error("rules failed:", (e as Error)?.name, (e as Error)?.message);
+    return NextResponse.json({ error: "rules failed" }, { status: 500 });
+  }
 }
