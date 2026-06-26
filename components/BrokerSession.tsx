@@ -463,9 +463,11 @@ function MarkersCard({ clinical }: { clinical: ClinicalRead }) {
           const isOpen = !!open[m.key];
           return (
             <div key={m.key}>
-              <div
+              <button
+                type="button"
                 onClick={() => setOpen((o) => ({ ...o, [m.key]: !o[m.key] }))}
-                className="flex cursor-pointer items-center gap-3"
+                aria-expanded={isOpen}
+                className="flex w-full cursor-pointer items-center gap-3 text-left"
               >
                 <div className="flex flex-[0_0_168px] items-center gap-1.5 text-[13px] font-medium text-slate-700">
                   <span className="text-[10px] text-slate-400">{isOpen ? "▾" : "▸"}</span>
@@ -480,7 +482,7 @@ function MarkersCard({ clinical }: { clinical: ClinicalRead }) {
                 >
                   {st.label}
                 </span>
-              </div>
+              </button>
               {isOpen && (
                 <div className="ml-[180px] mt-2.5 rounded-r-lg border-l-2 border-slate-300 bg-slate-50 px-3.5 py-[11px] text-[12.5px] leading-[1.55] text-slate-600">
                   {m.why}
@@ -512,9 +514,11 @@ function MarkersCardDeterministic({ normalized }: { normalized: NormalizedProfil
           const isOpen = !!open[m.key];
           return (
             <div key={m.key}>
-              <div
+              <button
+                type="button"
                 onClick={() => setOpen((o) => ({ ...o, [m.key]: !o[m.key] }))}
-                className="flex cursor-pointer items-center gap-3"
+                aria-expanded={isOpen}
+                className="flex w-full cursor-pointer items-center gap-3 text-left"
               >
                 <div className="flex flex-[0_0_168px] items-center gap-1.5 text-[13px] font-medium text-slate-700">
                   <span className="text-[10px] text-slate-400">{isOpen ? "▾" : "▸"}</span>
@@ -529,7 +533,7 @@ function MarkersCardDeterministic({ normalized }: { normalized: NormalizedProfil
                 >
                   {st.label}
                 </span>
-              </div>
+              </button>
               {isOpen && (
                 <div className="ml-[180px] mt-2.5 rounded-r-lg border-l-2 border-slate-300 bg-slate-50 px-3.5 py-[11px] text-[12.5px] leading-[1.55] text-slate-600">
                   {marker.trace.map((t, i) => (
@@ -705,9 +709,14 @@ function HealthFuturesCardDeterministic({ health }: { health: HealthView }) {
 
       {health.sampleTrajectories.length > 0 && (
         <>
-          <div onClick={() => setOpen((x) => !x)} className="cursor-pointer text-[12.5px] font-medium text-accent">
+          <button
+            type="button"
+            onClick={() => setOpen((x) => !x)}
+            aria-expanded={open}
+            className="cursor-pointer text-[12.5px] font-medium text-accent"
+          >
             {open ? "▾" : "▸"} See example futures
-          </div>
+          </button>
           {open && (
             <div className="mt-3 flex flex-col gap-2">
               {health.sampleTrajectories.map((r) => (

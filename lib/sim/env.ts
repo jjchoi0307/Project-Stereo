@@ -6,6 +6,8 @@
  * engine + audit never depend on anything here; the app runs fully without a key.
  */
 
+import "server-only"; // build-time guard: this module reads the Anthropic key; never import it from a client component
+
 /** Server-only. Never referenced from a client component. */
 export const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY ?? "";
 

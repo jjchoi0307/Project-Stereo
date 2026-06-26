@@ -13,6 +13,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
   const count = Number(new URL(req.url).searchParams.get("count")) || undefined;
 
+  try {
   const db = getDataStore();
   const [plans, ctx] = await Promise.all([db.listPlans(), buildRulesContext(db)]);
   const drugs = [...ctx.drugsById.values()];
@@ -52,4 +53,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     journeyTypeDistribution: sim.journeyTypeDistribution,
     perPlan,
   });
+  } catch (e) {
+    console.error("simulation failed:", (e as Error)?.name, (e as Error)?.message);
+    return NextResponse.json({ error: "simulation failed" }, { status: 500 });
+  }
 }

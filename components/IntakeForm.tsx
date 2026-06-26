@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { computeBmi, type CaptureSource, type ConditionFlag, type Gender, type YesNoUnknown } from "@/lib/domain";
 import { emptyIntakeValues, type IntakeFormValues, type IntakeReference } from "@/lib/intake/types";
 import { validateIntake, type IntakeValidation } from "@/lib/intake/validate";
@@ -55,11 +55,27 @@ export default function IntakeForm({
     return h > 0 && w > 0 ? computeBmi(h, w) : null;
   }, [v.heightCm, v.weightKg]);
 
+  // Stable per-row keys: medications is a string[] (rows can be empty/duplicate),
+  // so keying by array index would carry transient DOM state (focus, the datalist
+  // popup, IME composition) to the wrong row when a non-last row is removed. We
+  // keep a parallel id list mutated in lockstep with the array in add/remove, and
+  // backfill it if the parent ever replaces the array wholesale (e.g. prior-profile load).
+  const medKeys = useRef<number[]>(v.medications.map((_, i) => i));
+  const medSeq = useRef(v.medications.length);
+  if (medKeys.current.length !== v.medications.length) {
+    medKeys.current = v.medications.map((_, i) => medKeys.current[i] ?? medSeq.current++);
+  }
+
   const setMed = (i: number, val: string) =>
     update({ medications: v.medications.map((m, idx) => (idx === i ? val : m)) });
-  const addMed = () => update({ medications: [...v.medications, ""] });
-  const removeMed = (i: number) =>
+  const addMed = () => {
+    medKeys.current = [...medKeys.current, medSeq.current++];
+    update({ medications: [...v.medications, ""] });
+  };
+  const removeMed = (i: number) => {
+    medKeys.current = medKeys.current.filter((_, idx) => idx !== i);
     update({ medications: v.medications.filter((_, idx) => idx !== i) });
+  };
 
   const toggleCondition = (c: ConditionFlag) =>
     update({
@@ -179,7 +195,7 @@ export default function IntakeForm({
       </datalist>
       <div className="mb-2.5 flex flex-col gap-2">
         {v.medications.map((m, i) => (
-          <div key={i} className="flex items-center gap-2">
+          <div key={medKeys.current[i] ?? i} className="flex items-center gap-2">
             <input className={`${inputCls} flex-1`} list="drug-suggestions" placeholder="e.g. Metformin 1000mg"
               value={m} onChange={(e) => setMed(i, e.target.value)} />
             <button type="button" onClick={() => removeMed(i)} disabled={v.medications.length <= 1}
