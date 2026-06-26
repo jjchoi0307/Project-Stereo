@@ -50,6 +50,46 @@ const premiumLabel = (n: number) => (n === 0 ? "$0" : "$" + n);
 const pct = (n: number) => Math.round(n * 100) + "%";
 const confLabel = (c: number) => (c >= 66 ? "High" : c >= 33 ? "Moderate" : "Low");
 
+/** The "Other eligible plans" table (ranked tail below the top-3 cards). Exported
+ *  so the 3yr/5yr horizon tab shows the same ranked tail as Today. */
+export function OtherEligibleTable({ rest }: { rest: RankedItem[] }) {
+  return (
+    <>
+      <div className="mb-2.5 text-xs font-bold uppercase tracking-[.04em] text-slate-500">Other eligible plans</div>
+      <div className="mb-7 overflow-hidden rounded-[11px] border border-slate-200 bg-white">
+        <table className="w-full border-collapse text-[12.5px]">
+          <thead>
+            <tr className="bg-slate-50 text-left text-[11px] uppercase tracking-[.03em] text-slate-500">
+              <th className="px-3.5 py-2.5 font-semibold">Plan</th>
+              <th className="px-3.5 py-2.5 text-right font-semibold">Premium</th>
+              <th className="px-3.5 py-2.5 text-right font-semibold">OOP max</th>
+              <th className="px-3.5 py-2.5 text-right font-semibold">Fit</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rest.map((item) => (
+              <tr key={item.planId} className="border-t border-slate-100">
+                <td className="px-3.5 py-[11px]">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold">{item.plan.name}</span>
+                    <PlanKind snpType={item.plan.snpType} />
+                  </div>
+                  <div className="text-[11.5px] text-slate-400">
+                    {item.plan.carrier} · {item.plan.planType}
+                  </div>
+                </td>
+                <td className="num px-3.5 py-[11px] text-right">{premiumLabel(item.plan.monthlyPremium)}</td>
+                <td className="num px-3.5 py-[11px] text-right text-slate-600">{usd(item.plan.annualOOPMax)}</td>
+                <td className="num px-3.5 py-[11px] text-right font-semibold text-accent">{item.total}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
 /** Shared AI loading card (centered spinner + pulsing step dots). Used by Today
  *  and by the 3yr/5yr horizon tab so the loading experience is identical. */
 export function RecommendationLoading({ title, subtitle, steps }: { title: string; subtitle: string; steps: string[] }) {
@@ -95,7 +135,7 @@ export default function RecommendationView({
   onLoaded,
 }: {
   sessionId: string;
-  onLoaded?: (today: { topPlanId: string | null; topPlanName: string | null }) => void;
+  onLoaded?: (today: { topPlanId: string | null; topPlanName: string | null; topIds: string[] }) => void;
 }) {
   const [data, setData] = useState<RecData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -120,8 +160,12 @@ export default function RecommendationView({
           // on the horizon tabs without the horizon route having to wait for /
           // read today's cache (the two now load in parallel).
           const topId: string | null = d?.topPlanId ?? null;
-          const topName = d?.ranked?.find((x: RankedItem) => x.planId === topId)?.plan?.name ?? null;
-          onLoaded?.({ topPlanId: topId, topPlanName: topName });
+          const ranked: RankedItem[] = Array.isArray(d?.ranked) ? d.ranked : [];
+          const topName = ranked.find((x) => x.planId === topId)?.plan?.name ?? null;
+          // Top-3 lineup ids — the parent uses these to label the horizon banner
+          // accurately ("same lineup" vs "lead unchanged, runners-up shift" vs "changed").
+          const topIds = ranked.slice(0, 3).map((x) => x.planId);
+          onLoaded?.({ topPlanId: topId, topPlanName: topName, topIds });
           // Now that the AI recommendation is warm in the server cache, snapshot it.
           fetch(`/api/sessions/${sessionId}/audit`, { method: "POST" })
             .then((res) => (res.ok ? res.json() : null))
@@ -215,41 +259,7 @@ export default function RecommendationView({
       )}
 
       {/* Other eligible */}
-      {rest.length > 0 && (
-        <>
-          <div className="mb-2.5 text-xs font-bold uppercase tracking-[.04em] text-slate-500">Other eligible plans</div>
-          <div className="mb-7 overflow-hidden rounded-[11px] border border-slate-200 bg-white">
-            <table className="w-full border-collapse text-[12.5px]">
-              <thead>
-                <tr className="bg-slate-50 text-left text-[11px] uppercase tracking-[.03em] text-slate-500">
-                  <th className="px-3.5 py-2.5 font-semibold">Plan</th>
-                  <th className="px-3.5 py-2.5 text-right font-semibold">Premium</th>
-                  <th className="px-3.5 py-2.5 text-right font-semibold">OOP max</th>
-                  <th className="px-3.5 py-2.5 text-right font-semibold">Fit</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rest.map((item) => (
-                  <tr key={item.planId} className="border-t border-slate-100">
-                    <td className="px-3.5 py-[11px]">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold">{item.plan.name}</span>
-                        <PlanKind snpType={item.plan.snpType} />
-                      </div>
-                      <div className="text-[11.5px] text-slate-400">
-                        {item.plan.carrier} · {item.plan.planType}
-                      </div>
-                    </td>
-                    <td className="num px-3.5 py-[11px] text-right">{premiumLabel(item.plan.monthlyPremium)}</td>
-                    <td className="num px-3.5 py-[11px] text-right text-slate-600">{usd(item.plan.annualOOPMax)}</td>
-                    <td className="num px-3.5 py-[11px] text-right font-semibold text-accent">{item.total}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
+      {rest.length > 0 && <OtherEligibleTable rest={rest} />}
 
       {/* Not recommended */}
       {data.excluded.length > 0 && (
