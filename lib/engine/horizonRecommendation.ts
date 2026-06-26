@@ -93,6 +93,67 @@ function projectProfile(
   };
 }
 
+export interface ExpectedProjection {
+  /** The member's facts advanced to the horizon (age + likely-acquired conditions/meds). */
+  profile: ClientProfileInput;
+  /** What was added, for display (each with the share of futures it appeared in). */
+  addedConditions: { flag: ConditionFlag; incidence: number }[];
+  addedMedications: { name: string; drugId: DrugId; incidence: number }[];
+}
+
+/**
+ * Build the single EXPECTED projected profile for a horizon: the member's current
+ * facts plus every condition/medication that appears in ≥ `assumptionIncidence` of
+ * the seeded synthetic futures (drug ids preserved, so formulary matching still
+ * works downstream). Deterministic (seeded off the de-identified facts), so it's
+ * stable per facts-version.
+ *
+ * The AI horizon path runs Today's EXACT recommendation pipeline (`recommendPlans`)
+ * on this profile — so "3-year / 5-year" is just Today's recommendation applied to
+ * the member's likely future, no bespoke scoring path.
+ */
+export async function projectExpectedProfile(
+  profile: ClientProfileInput,
+  db: DataStore,
+  years: number,
+): Promise<ExpectedProjection> {
+  const catalog = await buildEngineCatalog(db);
+  const drugsById = catalog.ctx.drugsById;
+  const normalized = normalizeProfile(profile, [...drugsById.values()]);
+  const { replicas } = simulateReplicas(profile, normalized, { years, replicas: HORIZON_REC.replicas });
+  const total = replicas.length || 1;
+
+  const condCount = new Map<ConditionFlag, number>();
+  const drugCount = new Map<DrugId, number>();
+  for (const rep of replicas) {
+    rep.acquiredConditions.forEach((c) => condCount.set(c, (condCount.get(c) ?? 0) + 1));
+    rep.acquiredDrugIds.forEach((id) => drugCount.set(id, (drugCount.get(id) ?? 0) + 1));
+  }
+  const over = (n: number) => n / total >= HORIZON_REC.assumptionIncidence;
+  const haveCond = new Set(profile.conditions);
+  const haveDrug = new Set(profile.medications.map((m) => m.drugId).filter(Boolean));
+
+  const addedConditions = [...condCount.entries()]
+    .filter(([flag, c]) => over(c) && !haveCond.has(flag))
+    .map(([flag, c]) => ({ flag, incidence: c / total }))
+    .sort((a, b) => b.incidence - a.incidence);
+  const addedMedications = [...drugCount.entries()]
+    .filter(([id, c]) => over(c) && !haveDrug.has(id))
+    .map(([id, c]) => ({ name: drugsById.get(id)?.name ?? id, drugId: id, incidence: c / total }))
+    .sort((a, b) => b.incidence - a.incidence);
+
+  const projected: ClientProfileInput = {
+    ...profile,
+    age: profile.age + years,
+    conditions: [...new Set([...profile.conditions, ...addedConditions.map((c) => c.flag)])],
+    medications: [
+      ...profile.medications,
+      ...addedMedications.map((m) => ({ raw: m.name, name: m.name, drugId: m.drugId })),
+    ],
+  };
+  return { profile: projected, addedConditions, addedMedications };
+}
+
 async function recommendOneHorizon(
   profile: ClientProfileInput,
   db: DataStore,

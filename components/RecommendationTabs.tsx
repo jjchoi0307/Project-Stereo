@@ -38,13 +38,16 @@ export default function RecommendationTabs({ sessionId }: { sessionId: string })
   const [today, setToday] = useState<{ topPlanId: string | null; topPlanName: string | null } | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
-  // Prefetch the across-horizon projection IN PARALLEL with Today (on mount).
-  // Measured: running both concurrently does not slow Today (it still completes in
-  // ~20s), and the horizon finishes ~the same time instead of stacking 20s + 30s
-  // serially after Today. The horizon route no longer needs Today's cached top pick
-  // (we label "changes vs today" client-side from the Today result below), so there
-  // is no ordering dependency. Cached server-side → at most one call per facts-version.
+  // Load the across-horizon recommendation ONLY AFTER Today has finished. Each
+  // horizon re-runs Today's full pipeline (ensemble + deep write-ups) on the
+  // member's projected profile; firing that alongside Today doubles the concurrent
+  // Anthropic calls and trips per-minute rate limits, which made the request hang.
+  // Gating on Today (and running the horizons sequentially server-side) keeps the
+  // concurrency at what a single Today run already proves works. While the broker
+  // reads Today, the projection computes in the background; cached after first run.
   useEffect(() => {
+    if (horizons || hStatus === "loading") return;
+    if (!today) return; // wait for Today to complete
     let active = true;
     setHStatus("loading");
     fetch(`/api/sessions/${sessionId}/recommendation/horizons`, { cache: "no-store" })
@@ -52,7 +55,7 @@ export default function RecommendationTabs({ sessionId }: { sessionId: string })
       .then((d) => active && (setHorizons(d), setHStatus("idle")))
       .catch(() => active && setHStatus("error"));
     return () => { active = false; };
-  }, [sessionId, reloadKey]);
+  }, [sessionId, reloadKey, today, horizons, hStatus]);
 
   const years = horizons?.horizons.map((h) => h.years) ?? [...HORIZON_REC.horizonsYears];
   const activeHorizon =
@@ -97,9 +100,12 @@ export default function RecommendationTabs({ sessionId }: { sessionId: string })
 
       {typeof tab === "number" && (
         <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} tabIndex={0}>
-          {hStatus === "loading" && !horizons && (
+          {hStatus !== "error" && !horizons && (
             <div className="flex items-center gap-2.5 text-sm text-slate-500">
-              <Spinner /> Projecting the member&apos;s future and re-ranking the plans with AI… (~40s)
+              <Spinner />{" "}
+              {today
+                ? "Re-running today's recommendation on the member's projected health… first load can take ~60s, then it's instant."
+                : "Finishing today's recommendation first, then projecting the horizons…"}
             </div>
           )}
           {hStatus === "error" && (
