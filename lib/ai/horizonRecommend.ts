@@ -10,10 +10,10 @@
  *      projected profile — same ensemble screen, same carrier-diversity cap, same
  *      parallel deep write-ups, same grounding/citation guardrails.
  *
- * The horizons run SEQUENTIALLY (and the client only starts them after Today has
- * finished) so the total number of concurrent Anthropic calls never exceeds what a
- * single Today run — which is proven to work — already uses. Firing them alongside
- * Today tripped per-minute rate limits and made the request appear to hang.
+ * The two horizons run concurrently with each other; the client starts the whole
+ * horizon request only after Today has finished, so Today and the horizons never
+ * overlap (firing them alongside Today tripped per-minute rate limits and made the
+ * request appear to hang).
  *
  * Cached per facts-version by the route.
  */
@@ -97,36 +97,36 @@ export async function recommendHorizons(
   todayTopPlanId: string | null,
   _guidanceText?: string,
 ): Promise<AiHorizonRecommendation> {
-  const horizons: AiHorizon[] = [];
+  const horizons = await Promise.all(
+    HORIZONS.map(async (years): Promise<AiHorizon> => {
+      try {
+        // 1) Deterministic expected future profile (instant, seeded, grounded).
+        const projected = await projectExpectedProfile(profile, db, years);
+        const projection = buildProjectionDisplay(
+          { conditions: projected.addedConditions, medications: projected.addedMedications },
+          years,
+        );
 
-  for (const years of HORIZONS) {
-    try {
-      // 1) Deterministic expected future profile (instant, seeded, grounded).
-      const projected = await projectExpectedProfile(profile, db, years);
-      const projection = buildProjectionDisplay(
-        { conditions: projected.addedConditions, medications: projected.addedMedications },
-        years,
-      );
+        // 2) Today's EXACT recommendation pipeline on the projected member.
+        const rec = await recommendPlans(projected.profile, db);
+        // Show the full-detail top picks (the deep-written cards), exactly like Today.
+        const ranked = rec.ranked.filter((r) => r.deepWritten);
+        const cards = ranked.length > 0 ? ranked : rec.ranked.slice(0, 3);
+        const recommended = cards[0] ?? null;
 
-      // 2) Today's EXACT recommendation pipeline on the projected member.
-      const rec = await recommendPlans(projected.profile, db);
-      // Show the full-detail top picks (the deep-written cards), exactly like Today.
-      const ranked = rec.ranked.filter((r) => r.deepWritten);
-      const cards = ranked.length > 0 ? ranked : rec.ranked.slice(0, 3);
-      const recommended = cards[0] ?? null;
-
-      horizons.push({
-        years,
-        changedVsToday: Boolean(recommended && todayTopPlanId && recommended.planId !== todayTopPlanId),
-        projection,
-        recommended,
-        ranked: cards,
-      });
-    } catch (e) {
-      console.error(`horizon ${years}yr failed:`, (e as Error).message);
-      horizons.push({ years, changedVsToday: false, projection: EMPTY_PROJECTION, recommended: null, ranked: [] });
-    }
-  }
+        return {
+          years,
+          changedVsToday: Boolean(recommended && todayTopPlanId && recommended.planId !== todayTopPlanId),
+          projection,
+          recommended,
+          ranked: cards,
+        };
+      } catch (e) {
+        console.error(`horizon ${years}yr failed:`, (e as Error).message);
+        return { years, changedVsToday: false, projection: EMPTY_PROJECTION, recommended: null, ranked: [] };
+      }
+    }),
+  );
 
   return { model: SIM_MODEL, todayTopPlanId, horizons };
 }
