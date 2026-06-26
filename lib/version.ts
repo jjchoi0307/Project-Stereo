@@ -29,5 +29,8 @@ export const ENGINE_VERSION = "engine-1.2.0";
  * 2.0.0: horizons run Today's pipeline on a projected profile; deterministic
  *        projection shared with Health Futures; carrier-cap removed; full ranked
  *        tail at each horizon; lineup-aware "changes vs today".
+ * 2.1.0: catastrophic-downside sub-score anchored to actual OOP-max dollars (a
+ *        lower-OOP plan now provably scores better on worst-case exposure); plus
+ *        the audit-batch changes (de-identified rec prompt, citation grounding).
  */
-export const AI_VERSION = "ai-2.0.0";
+export const AI_VERSION = "ai-2.1.0";

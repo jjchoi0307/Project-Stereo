@@ -173,6 +173,16 @@ export const HORIZON_REC = {
  * place. Ranking is 100% pure fit — there is NO carrier/plan preference: every
  * plan is scored purely on how it fits the client's facts, with no SMG/SCAN bias.
  */
+/**
+ * Reference ceiling for anchoring the catastrophic-downside sub-score to a plan's
+ * ACTUAL annual out-of-pocket maximum. The model used to score "worst-case
+ * exposure" as a 0–1 judgment, which rated a $199-OOP and a $990-OOP plan as
+ * roughly-equally "well protected" and let the real OOP advantage barely count.
+ * Anchoring to dollars (annualOOPMax / this) makes a lower-OOP plan provably score
+ * better on downside. ~the 2026 Medicare-Advantage in-network MOOP regulatory cap.
+ */
+export const CATASTROPHIC_OOP_REFERENCE = 9000;
+
 export const SCORING = {
   weights: {
     coverageFit: 25, // non-drug benefit alignment (acupuncture, mental health, specialist cost, OOP)

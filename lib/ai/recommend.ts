@@ -27,7 +27,7 @@
 import "server-only";
 import type { ClientProfileInput } from "@/lib/domain";
 import type { DataStore } from "@/lib/data";
-import { SCORING, ENSEMBLE, TIEBREAK_RULE } from "@/lib/engine/config";
+import { SCORING, ENSEMBLE, TIEBREAK_RULE, CATASTROPHIC_OOP_REFERENCE } from "@/lib/engine/config";
 import { SIM_MODEL } from "@/lib/sim/env";
 import { newTrajectory, rlmLeaf, rlmParallel, logTrajectory, type RlmTrajectory } from "./rlm";
 import {
@@ -463,13 +463,23 @@ export function deepToRanked(facts: PlanFacts, d: DeepResult, topThreeVotes: num
         : null,
     };
   });
+  // Anchor catastrophic downside to the plan's ACTUAL OOP-max dollars (vs the
+  // regulatory MA cap), blended (max) with the model's judgment: a genuine OOP
+  // advantage now counts faithfully on the highest-weighted component, while any
+  // uncovered-drug catastrophic risk the model flagged is still respected.
+  const oopDownside = clamp01(facts.annualOOPMax / CATASTROPHIC_OOP_REFERENCE);
+  const subScores: AiSubScores = {
+    ...d.subScores,
+    catastrophicDownside: Math.max(oopDownside, clamp01(d.subScores.catastrophicDownside)),
+  };
+
   const cost = d.costBreakdown;
   const total = cost ? Math.max(0, Math.round(Number(cost.estimatedAnnualTotal) || 0)) : 0;
   return {
     planId: facts.planId,
-    subScores: d.subScores,
+    subScores,
     subScoreWhy: d.subScoreWhy ?? null,
-    fitScore: fitFromSubScores(d.subScores),
+    fitScore: fitFromSubScores(subScores),
     confidence: d.confidence ?? "moderate",
     reasons,
     costBreakdown: cost
