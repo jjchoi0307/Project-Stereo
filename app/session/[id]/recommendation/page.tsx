@@ -25,10 +25,21 @@ export default async function RecommendationPage({ params }: { params: Promise<{
         <Link href={`/session/${id}`} className="lk mb-3 inline-block text-[13px]">
           ← Back to session
         </Link>
-        <h1 className="mb-1 text-[25px] font-semibold tracking-[-.01em] text-ink">Recommendation</h1>
-        <p className="mb-5 text-[13.5px] text-slate-500">
-          {client}. The ranking and every number below are deterministic and auditable.
-        </p>
+        <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="mb-1 text-[25px] font-semibold tracking-[-.01em] text-ink">Recommendation</h1>
+            <p className="text-[13.5px] text-slate-500">
+              {client}. The ranking and every number below are deterministic and auditable.
+            </p>
+          </div>
+          {/* Clean, plain-language client-facing summary the broker can show or print. */}
+          <Link
+            href={`/session/${id}/recommendation/present`}
+            className="flex-none rounded-lg border border-accent bg-white px-4 py-2 text-[13px] font-semibold text-accent hover:bg-[#f6fdfb]"
+          >
+            Present to member →
+          </Link>
+        </div>
 
         {/* Key on the facts version so horizon + narrative state resets if the
             client's facts are corrected, rather than showing a stale projection. */}
