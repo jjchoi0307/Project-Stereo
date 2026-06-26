@@ -165,20 +165,24 @@ const LIKELIHOOD_STYLE: Record<Likelihood, string> = {
 type LineupStatus = "same" | "reordered" | "changed";
 
 /**
- * Compare the horizon's top-3 plan lineup to Today's, so the banner is ACCURATE:
- *  - "changed"   — a different plan is the #1 best fit at this horizon
- *  - "reordered" — same #1, but the rest of the top-3 shifts as health evolves
- *  - "same"      — the same three plans, in the same lead
- * Falls back to a lead-only comparison until Today's lineup has loaded.
+ * Compare the horizon's top-3 plan lineup to Today's. The comparison is on the SET
+ * of plans (order-independent), applied IDENTICALLY to every horizon — so the
+ * result is consistent and not noise-sensitive:
+ *  - "same"      — the same three plans still fit best (internal order can differ;
+ *                  among near-tied plans the #1 flips by ensemble noise, which is
+ *                  NOT a real change, so we don't flag it)
+ *  - "reordered" — the set changed but Today's top pick is still #1 here
+ *  - "changed"   — the set changed AND a different plan now leads
+ * Falls back to a lead-only comparison only until Today's lineup has loaded.
  */
 function lineupStatus(h: HorizonRec, today: { topPlanId: string | null; topIds: string[] } | null): LineupStatus {
-  const lead = h.recommended?.planId ?? null;
   if (!today) return h.changedVsToday ? "changed" : "same";
-  if (lead && today.topPlanId && lead !== today.topPlanId) return "changed";
   const hIds = h.ranked.slice(0, 3).map((r) => r.planId);
   const tIds = today.topIds ?? [];
   const sameSet = tIds.length > 0 && hIds.length === tIds.length && tIds.every((id) => hIds.includes(id));
-  return sameSet ? "same" : "reordered";
+  if (sameSet) return "same";
+  const leadHeld = !!hIds[0] && hIds[0] === today.topPlanId;
+  return leadHeld ? "reordered" : "changed";
 }
 
 function HorizonPanel({
