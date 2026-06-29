@@ -4,12 +4,12 @@
 // (HIPAA §164.312(e) transmission security + general hardening). HSTS forces
 // HTTPS; frame-ancestors/X-Frame-Options block clickjacking; nosniff blocks MIME
 // confusion; Referrer-Policy avoids leaking URLs; Permissions-Policy disables
-// device APIs we never use. The CSP is pragmatic (allows inline for Next's
-// bootstrap) — a nonce-based strict CSP is the documented next step (SECURITY.md).
-// Next's dev Fast Refresh runtime evaluates code via eval(), which a strict CSP
-// forbids. Allow 'unsafe-eval' in development ONLY; production stays strict.
-const isDev = process.env.NODE_ENV !== "production";
-
+// device APIs we never use.
+//
+// NOTE: the Content-Security-Policy is set in middleware.ts (not here) so it can
+// be scoped per-route — the strict policy applies everywhere except the public
+// auth pages, which additionally allow the YouTube embed for the "Our Heroes"
+// showcase. Keeping the other (uniform) headers here.
 const securityHeaders = [
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
   { key: "X-Frame-Options", value: "DENY" },
@@ -17,23 +17,6 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "no-referrer" },
   { key: "X-DNS-Prefetch-Control", value: "off" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), interest-cohort=()" },
-  {
-    key: "Content-Security-Policy",
-    value: [
-      "default-src 'self'",
-      // Next injects a small inline bootstrap; 'unsafe-inline' keeps it working.
-      // 'unsafe-eval' is added in dev only (Fast Refresh); never in production.
-      `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data:",
-      "font-src 'self'",
-      "connect-src 'self'", // the browser only talks to same-origin /api
-      "object-src 'none'",
-      "base-uri 'self'",
-      "form-action 'self'",
-      "frame-ancestors 'none'",
-    ].join("; "),
-  },
 ];
 
 // PHI must never be cached by the browser, a CDN, or Vercel's edge. Every /api
