@@ -1,19 +1,16 @@
-"use client";
-
 import type { Episode } from "@/lib/youtube";
 
 /**
  * "Our Heroes / 우리동네 영웅들" showcase for the public login page.
  *
- * Branded thumbnails that open the episode on YouTube in a new tab. This avoids
- * inline-embed fragility entirely (per-video "allow embedding" + Content-ID claims
- * can each block an iframe) and works everywhere, including localhost. Thumbnails
- * come from i.ytimg.com (allowed by the CSP on the auth pages). If we confirm
- * inline embedding is unrestricted later, this can swap back to a player.
+ * Branded thumbnails that open the episode on YouTube in a new tab — avoids
+ * inline-embed fragility entirely and works everywhere. Uses hqdefault.jpg, which
+ * YouTube always generates for every video (unlike maxresdefault, which 404s on
+ * non-HD uploads and caused a broken image until refresh). Plain server component
+ * so the thumbnail is in the initial HTML and renders immediately, no hydration.
  */
 const watch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
-const thumb = (id: string) => `https://i.ytimg.com/vi/${id}/maxresdefault.jpg`;
-const thumbFallback = (id: string) => `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+const thumb = (id: string) => `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
 
 function PlayBadge({ size = 54 }: { size?: number }) {
   return (
@@ -22,8 +19,18 @@ function PlayBadge({ size = 54 }: { size?: number }) {
       style={{ width: size, height: size }}
     >
       <span
-        className="border-y-transparent border-l-accent"
-        style={{ marginLeft: size * 0.08, width: 0, height: 0, borderTopWidth: size * 0.18, borderBottomWidth: size * 0.18, borderLeftWidth: size * 0.3, borderStyle: "solid" }}
+        style={{
+          marginLeft: size * 0.08,
+          width: 0,
+          height: 0,
+          borderTopWidth: size * 0.18,
+          borderBottomWidth: size * 0.18,
+          borderLeftWidth: size * 0.3,
+          borderStyle: "solid",
+          borderTopColor: "transparent",
+          borderBottomColor: "transparent",
+          borderLeftColor: "#047a32",
+        }}
       />
     </span>
   );
@@ -53,15 +60,7 @@ export default function HeroVideos({ episodes }: { episodes: Episode[] }) {
         className="group relative block aspect-video w-full overflow-hidden rounded-xl border border-line bg-ink shadow-card"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={thumb(featured.id)}
-          onError={(e) => {
-            const img = e.currentTarget;
-            if (!img.src.includes("hqdefault")) img.src = thumbFallback(featured.id);
-          }}
-          alt=""
-          className="h-full w-full object-cover"
-        />
+        <img src={thumb(featured.id)} alt="" className="h-full w-full object-cover" />
         <span className="absolute inset-0 bg-ink/20 transition-colors group-hover:bg-ink/30" />
         <span className="absolute inset-0 grid place-items-center">
           <PlayBadge />
@@ -89,7 +88,7 @@ export default function HeroVideos({ episodes }: { episodes: Episode[] }) {
               <span className="relative block aspect-video w-full overflow-hidden bg-ink/5">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={`https://i.ytimg.com/vi/${ep.id}/hqdefault.jpg`}
+                  src={thumb(ep.id)}
                   alt=""
                   className="h-full w-full object-cover transition-transform group-hover:scale-[1.03]"
                   loading="lazy"
