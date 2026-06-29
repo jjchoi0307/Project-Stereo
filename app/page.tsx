@@ -7,6 +7,7 @@
  */
 
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import Header from "@/components/ui/Header";
 import StartSessionButton from "@/components/StartSessionButton";
 import SessionRow from "@/components/SessionRow";
@@ -14,6 +15,7 @@ import { getSessionStore } from "@/lib/session/store";
 import { getAuditStore } from "@/lib/audit/store";
 import { getDataStore } from "@/lib/data";
 import { getBrokerContext } from "@/lib/supabase/auth";
+import { stateStore } from "@/lib/supabase/env";
 import { clientRef } from "@/lib/session/ref";
 
 export const dynamic = "force-dynamic"; // per-request; in-memory or RLS-scoped Supabase
@@ -118,6 +120,10 @@ export default async function Home({
   const { filter } = await searchParams; // "awaiting" | "ready" | undefined — filters the session list
   // Resolve the broker once (null in memory mode) and reuse it for the store.
   const ctx = await getBrokerContext();
+
+  // Logged-out visitors (Supabase mode) get the public landing, not the workspace.
+  // Memory/dev mode has no auth, so it always renders the workspace here.
+  if (!ctx && stateStore() === "supabase") redirect("/home");
 
   // Personalize the workspace heading with the broker's first name (from their
   // signup full name, else the email's local part). Null in memory/dev mode.
