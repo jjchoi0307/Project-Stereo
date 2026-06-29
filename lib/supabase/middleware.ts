@@ -3,15 +3,17 @@
  * request and gates the broker surfaces. A NO-OP in memory mode / when Supabase
  * isn't configured, so local dev without auth is unaffected.
  *
- * Public surfaces (never gated): /login, /intake/[token] (anonymous patient
- * self-entry), /plans, static assets. Everything else under the broker app
- * requires a session.
+ * Public surfaces (never gated): / (public landing), /home, /login,
+ * /intake/[token] (anonymous patient self-entry), /plans, static assets. The
+ * broker workspace at / redirects logged-out visitors to /home itself (so the
+ * landing renders rather than bouncing to /login). Everything else requires a
+ * session.
  */
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_ANON_KEY, SUPABASE_URL, stateStore, supabaseConfigured } from "./env";
 
-const PROTECTED_PAGES = ["/", "/session", "/audit"];
+const PROTECTED_PAGES = ["/session", "/audit"];
 const PROTECTED_APIS = ["/api/sessions", "/api/audit"];
 
 const matches = (path: string, prefixes: string[]) =>
