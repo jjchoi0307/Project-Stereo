@@ -1,6 +1,6 @@
 /**
- * Session status pill. `awaiting` = amber with a pulsing dot (live-waiting);
- * `captured` = emerald (facts in).
+ * Session status pill. `awaiting` = SMG blue with a pulsing dot (pending —
+ * waiting on the member's facts); `captured` = green (facts in).
  */
 export default function StatusPill({
   status,
@@ -11,16 +11,17 @@ export default function StatusPill({
 }) {
   const captured = status === "captured";
   const label = captured ? "Facts captured" : "Awaiting facts";
-  const fg = captured ? "#059669" : "#d97706";
-  const bg = captured ? "#ecfdf5" : "#fffbeb";
+  const tag = captured
+    ? "border-pos/30 bg-pos/10 text-pos"
+    : "border-blue/30 bg-blue/10 text-blue";
+  const dot = captured ? "bg-pos" : "bg-blue";
   return (
     <span
-      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold"
-      style={{ background: bg, color: fg }}
+      className={`eyebrow inline-flex items-center gap-1.5 rounded-sm border px-2 py-0.5 text-[11px] ${tag}`}
     >
       <span
-        className="h-1.5 w-1.5 rounded-full"
-        style={{ background: fg, animation: pulse && !captured ? "pulseDot 1.4s ease-in-out infinite" : undefined }}
+        className={`h-1.5 w-1.5 rounded-full ${dot}`}
+        style={{ animation: pulse && !captured ? "pulseDot 1.4s ease-in-out infinite" : undefined }}
       />
       {label}
     </span>

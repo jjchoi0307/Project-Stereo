@@ -11,26 +11,55 @@
 }
 
 body {
-  @apply bg-slate-50 text-ink antialiased;
-  font-family: "Poppins", system-ui, sans-serif;
+  @apply antialiased;
+  background-color: #f5f8fc; /* clean app ground — faint cool blue, not grey */
+  color: #142433; /* ink */
+  font-family: var(--font-sans), system-ui, sans-serif;
 }
 
-/* Tabular monospace for IDs, money, and percentages. */
-.num {
-  font-family: "IBM Plex Mono", ui-monospace, monospace;
-  font-variant-numeric: tabular-nums;
-}
+/* Component-layer helpers: defined inside @layer so any call-site utility
+   (text-accent, tracking-*, font-*) overrides them — no specificity footguns. */
+@layer components {
+  /* Display headings — the friendly SMG sans, set heavy and tight. Confident
+     and warm, not a serif "editorial" voice. */
+  .display {
+    font-family: var(--font-sans), system-ui, sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
 
-/* Brand link affordance. */
-.lk {
-  @apply cursor-pointer text-accent no-underline;
-}
-.lk:hover {
-  @apply underline;
+  /* Tabular monospace for IDs, money, and percentages — the traceable ledger. */
+  .num {
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Eyebrow / kicker — small structural label. Color is set per use. */
+  .eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[.08em];
+  }
+
+  /* The certificate-of-record surface — a clean white card with soft elevation
+     (not a hard hairline frame). */
+  .record {
+    @apply rounded-xl border border-line bg-surface shadow-card;
+  }
+  /* A soft section divider. */
+  .hr {
+    @apply border-0 border-t border-line;
+  }
+
+  /* Brand link affordance. */
+  .lk {
+    @apply cursor-pointer text-accent no-underline;
+  }
+  .lk:hover {
+    @apply underline;
+  }
 }
 
 ::selection {
-  background: #0d6e6e22;
+  background: #00a84022;
 }
 
 /* Consistent, on-brand focus ring across all interactive elements. */
@@ -40,8 +69,79 @@ textarea:focus-visible,
 button:focus-visible,
 [tabindex]:focus-visible,
 a:focus-visible {
-  outline: 2px solid #0d6e6e;
+  outline: 2px solid #047a32;
   outline-offset: 2px;
+}
+
+/* ── Verification seal — the signature mark ──────────────────────────────────
+   A notary-style concentric ring carrying the reproducibility metadata. The
+   engraved, official feel is the embodiment of the product's thesis: this
+   recommendation is signed, sealed, and re-verifiable. */
+.seal {
+  --seal-ink: #007a30;
+  position: relative;
+  display: grid;
+  place-items: center;
+  border-radius: 9999px;
+  color: var(--seal-ink);
+  background:
+    radial-gradient(circle at center, #ffffff 0 62%, transparent 63%),
+    repeating-conic-gradient(var(--seal-ink) 0deg 3deg, transparent 3deg 6deg);
+  box-shadow:
+    inset 0 0 0 1.5px var(--seal-ink),
+    inset 0 0 0 7px #ffffff,
+    inset 0 0 0 8.5px color-mix(in srgb, var(--seal-ink) 35%, transparent);
+}
+.seal--pending {
+  --seal-ink: #5b6b7a; /* ink2 — on-system muted, not off-palette grey */
+}
+.seal--broken {
+  --seal-ink: #c23b3b;
+}
+
+/* SMG loader — a loading sweep that travels down the real logo mark (blue at the
+   top → green at the bottom) over a dim track copy, looping like a spinner. */
+.smg-sweep {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(0, 0, 0, 0.15) 22%,
+    #000 40%,
+    #000 48%,
+    rgba(0, 0, 0, 0.15) 66%,
+    transparent 88%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(0, 0, 0, 0.15) 22%,
+    #000 40%,
+    #000 48%,
+    rgba(0, 0, 0, 0.15) 66%,
+    transparent 88%
+  );
+  -webkit-mask-size: 100% 220%;
+  mask-size: 100% 220%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  animation: smgSweep 1.5s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+}
+@keyframes smgSweep {
+  0% {
+    -webkit-mask-position: 50% 140%;
+    mask-position: 50% 140%;
+  }
+  100% {
+    -webkit-mask-position: 50% -40%;
+    mask-position: 50% -40%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .smg-sweep {
+    animation: none;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
 }
 
 @keyframes pulseDot {
@@ -73,4 +173,14 @@ a:focus-visible {
 
 [data-fade] {
   animation: fadeUp 0.35s ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-fade] {
+    animation: none;
+  }
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }

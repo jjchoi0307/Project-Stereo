@@ -6,6 +6,10 @@
 // confusion; Referrer-Policy avoids leaking URLs; Permissions-Policy disables
 // device APIs we never use. The CSP is pragmatic (allows inline for Next's
 // bootstrap) — a nonce-based strict CSP is the documented next step (SECURITY.md).
+// Next's dev Fast Refresh runtime evaluates code via eval(), which a strict CSP
+// forbids. Allow 'unsafe-eval' in development ONLY; production stays strict.
+const isDev = process.env.NODE_ENV !== "production";
+
 const securityHeaders = [
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
   { key: "X-Frame-Options", value: "DENY" },
@@ -18,7 +22,8 @@ const securityHeaders = [
     value: [
       "default-src 'self'",
       // Next injects a small inline bootstrap; 'unsafe-inline' keeps it working.
-      "script-src 'self' 'unsafe-inline'",
+      // 'unsafe-eval' is added in dev only (Fast Refresh); never in production.
+      `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data:",
       "font-src 'self'",

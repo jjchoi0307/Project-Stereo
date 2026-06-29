@@ -36,51 +36,51 @@ function PlanBlock({ item, lead }: { item: RankedItem; lead: boolean }) {
 
   return (
     <section
-      className={`rounded-[14px] border bg-white p-6 ${lead ? "border-accent shadow-[0_8px_24px_-12px_rgba(13,110,110,.35)]" : "border-slate-200"}`}
+      className={`border bg-surface p-6 ${lead ? "border-accent border-t-[3px]" : "border-line"}`}
     >
       {lead && (
-        <div className="mb-2 text-[11px] font-bold uppercase tracking-[.06em] text-accent">Your best-fit plan</div>
+        <div className="eyebrow mb-2 text-accent">Your best-fit plan</div>
       )}
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h2 className={`m-0 font-semibold text-ink ${lead ? "text-[24px]" : "text-[18px]"}`}>{item.plan.name}</h2>
+        <h2 className={`display m-0 font-semibold text-ink ${lead ? "text-[24px]" : "text-[18px]"}`}>{item.plan.name}</h2>
         <PlanKind snpType={item.plan.snpType} />
       </div>
-      <div className="mt-1 text-[14px] text-slate-500">{item.plan.carrier}</div>
+      <div className="mt-1 text-[14px] text-ink2">{item.plan.carrier}</div>
 
       <div className="mt-4 flex flex-wrap gap-x-8 gap-y-3">
         <div>
-          <div className="text-[12px] uppercase tracking-[.03em] text-slate-400">Premium</div>
+          <div className="text-[12px] uppercase tracking-[.03em] text-ink2">Premium</div>
           <div className="num text-[18px] font-semibold text-ink">{premium(item.plan.monthlyPremium)}</div>
         </div>
         <div>
-          <div className="text-[12px] uppercase tracking-[.03em] text-slate-400">Most you'd pay in a year</div>
+          <div className="text-[12px] uppercase tracking-[.03em] text-ink2">Most you'd pay in a year</div>
           <div className="num text-[18px] font-semibold text-ink">{usd(item.plan.annualOOPMax)}</div>
         </div>
       </div>
 
       <ul className="mt-4 flex flex-col gap-2">
         {keepsDoctors && (
-          <li className="flex items-start gap-2 text-[14px] leading-[1.5] text-slate-700">
-            <span className="mt-0.5 text-emerald-600">✓</span> Keeps your current doctors in network
+          <li className="flex items-start gap-2 text-[14px] leading-[1.5] text-ink">
+            <span className="mt-0.5 text-pos">✓</span> Keeps your current doctors in network
           </li>
         )}
-        <li className="flex items-start gap-2 text-[14px] leading-[1.5] text-slate-700">
-          <span className="mt-0.5 text-emerald-600">✓</span>
+        <li className="flex items-start gap-2 text-[14px] leading-[1.5] text-ink">
+          <span className="mt-0.5 text-pos">✓</span>
           {allMeds ? "All of your medications are covered" : `${Math.round(medRate * 100)}% of your medications are covered`}
         </li>
         {extras.length > 0 && (
-          <li className="flex items-start gap-2 text-[14px] leading-[1.5] text-slate-700">
-            <span className="mt-0.5 text-emerald-600">✓</span> Includes {extras.map((e) => e.label.replace(" / flex allowance", "")).join(", ").toLowerCase()}
+          <li className="flex items-start gap-2 text-[14px] leading-[1.5] text-ink">
+            <span className="mt-0.5 text-pos">✓</span> Includes {extras.map((e) => e.label.replace(" / flex allowance", "")).join(", ").toLowerCase()}
           </li>
         )}
       </ul>
 
       {positives.length > 0 && (
-        <div className="mt-4 border-t border-slate-100 pt-4">
-          {lead && <div className="mb-2 text-[13px] font-semibold text-slate-600">Why this fits you</div>}
+        <div className="mt-4 border-t border-line pt-4">
+          {lead && <div className="mb-2 text-[13px] font-semibold text-ink">Why this fits you</div>}
           <ul className="flex flex-col gap-1.5">
             {positives.map((r) => (
-              <li key={r.code} className="text-[13.5px] leading-[1.55] text-slate-600">
+              <li key={r.code} className="text-[13.5px] leading-[1.55] text-ink2">
                 · {r.text}
               </li>
             ))}
@@ -127,7 +127,7 @@ export default function MemberSummaryView({ sessionId, clientRef }: { sessionId:
           <button
             type="button"
             onClick={() => window.print()}
-            className="rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:opacity-90"
+            className="border border-accent bg-surface px-4 py-2 text-[13px] font-semibold text-accent hover:bg-accent hover:text-surface"
           >
             Print / Save as PDF
           </button>
@@ -135,30 +135,30 @@ export default function MemberSummaryView({ sessionId, clientRef }: { sessionId:
       </div>
 
       {/* Branded header */}
-      <div className="mb-6 flex items-center justify-between border-b border-slate-200 pb-4">
+      <div className="mb-6 flex items-center justify-between border-b border-line pb-4">
         <div>
-          <div className="text-[13px] font-bold uppercase tracking-[.06em] text-accent">Seoul Medical Group</div>
-          <h1 className="m-0 mt-1 text-[22px] font-semibold text-ink">Your plan recommendation</h1>
+          <div className="eyebrow text-accent">Seoul Medical Group</div>
+          <h1 className="display m-0 mt-1 text-[22px] font-semibold text-ink">Your plan recommendation</h1>
         </div>
-        <div className="text-right text-[12px] text-slate-400">
-          <div>{today}</div>
+        <div className="text-right text-[12px] text-ink2">
+          <div className="num">{today}</div>
           <div className="num">Ref {clientRef}</div>
         </div>
       </div>
 
       {status === "loading" && (
-        <div className="flex items-center gap-2.5 py-12 text-sm text-slate-500">
+        <div className="flex items-center gap-2.5 py-12 text-sm text-ink2">
           <Spinner /> Preparing the summary…
         </div>
       )}
       {status === "error" && (
-        <p className="py-12 text-sm text-slate-500">
+        <p className="py-12 text-sm text-ink2">
           The recommendation isn&apos;t ready yet. Open it on the recommendation page first, then come back.
         </p>
       )}
 
       {status === "ready" && !lead && (
-        <p className="py-12 text-sm text-slate-600">No eligible plan was found for this member&apos;s requirements.</p>
+        <p className="py-12 text-sm text-ink">No eligible plan was found for this member&apos;s requirements.</p>
       )}
 
       {status === "ready" && lead && (
@@ -166,7 +166,7 @@ export default function MemberSummaryView({ sessionId, clientRef }: { sessionId:
           <PlanBlock item={lead} lead />
           {alternatives.length > 0 && (
             <>
-              <div className="mt-2 text-[13px] font-semibold uppercase tracking-[.04em] text-slate-500">
+              <div className="eyebrow mt-2 text-ink2">
                 Other strong options
               </div>
               {alternatives.map((a) => (
@@ -174,7 +174,7 @@ export default function MemberSummaryView({ sessionId, clientRef }: { sessionId:
               ))}
             </>
           )}
-          <p className="mt-3 text-[12px] leading-[1.6] text-slate-400">
+          <p className="mt-3 text-[12px] leading-[1.6] text-ink2">
             Prepared by your Seoul Medical Group broker on {today}. This summary is to help you compare and choose a
             Medicare Advantage plan — enrolling is your decision. It is not medical or financial advice. Plan benefits
             are drawn from the carriers&apos; 2026 plan documents.

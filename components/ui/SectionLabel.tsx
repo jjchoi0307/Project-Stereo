@@ -5,8 +5,8 @@
  */
 export function StepLabel({ step, children }: { step: number | string; children: React.ReactNode }) {
   return (
-    <div className="mb-3.5 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[.05em] text-accent">
-      <span className="inline-flex h-[18px] w-[18px] items-center justify-center rounded-full bg-accent text-[11px] text-white">
+    <div className="eyebrow mb-3.5 flex items-center gap-2 text-accent">
+      <span className="num inline-flex h-[18px] w-[18px] items-center justify-center rounded-sm bg-accent text-[11px] text-surface">
         {step}
       </span>
       {children}
@@ -15,7 +15,5 @@ export function StepLabel({ step, children }: { step: number | string; children:
 }
 
 export function ReadLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="text-[11px] font-bold uppercase tracking-[.05em] text-slate-500">{children}</div>
-  );
+  return <div className="eyebrow text-ink2">{children}</div>;
 }

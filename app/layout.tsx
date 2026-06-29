@@ -1,5 +1,24 @@
 import type { Metadata } from "next";
+import { Plus_Jakarta_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
+
+// SMG identity (see DESIGN.md): a friendly, professional humanist sans for all
+// headings + UI — warm and accessible for the Korean-American senior members SMG
+// serves, deliberately NOT Inter/Roboto. A ledger mono for figures/ids keeps the
+// "every number is traceable" promise. Self-hosted via next/font (no Google
+// beacon; satisfies the PHI app's strict font-src 'self' CSP).
+const sans = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-sans",
+  display: "swap",
+});
+const mono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-mono",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "SMG Broker Engagement Tool",
@@ -13,17 +32,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <head>
-        {/* IBM Plex (brand type) loaded at runtime — degrades gracefully to the
-            system stack if the network is unavailable. */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
-          rel="stylesheet"
-        />
-      </head>
+    <html lang="en" className={`${sans.variable} ${mono.variable}`}>
       <body>{children}</body>
     </html>
   );

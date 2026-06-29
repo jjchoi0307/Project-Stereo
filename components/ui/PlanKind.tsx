@@ -8,12 +8,15 @@ export default function PlanKind({ snpType }: { snpType?: string }) {
   const csnp = snpType === "C-SNP";
   const label = dsnp ? "Medi-Medi (D-SNP)" : csnp ? "C-SNP" : "MA";
   const cls = dsnp
-    ? "bg-indigo-50 text-indigo-700"
+    ? "border-ai/30 bg-ai/10 text-ai"
     : csnp
-      ? "bg-amber-50 text-amber-700"
-      : "bg-sky-50 text-sky-700"; // MA (Medicare Advantage)
+      ? "border-warn/30 bg-warn/10 text-warn"
+      : "border-prov/30 bg-prov/10 text-prov"; // MA (Medicare Advantage)
   return (
-    <span className={`rounded-md px-2 py-0.5 text-[10.5px] font-semibold ${cls}`} title={dsnp ? "Dual-eligible: Medicare + Medi-Cal" : csnp ? "Chronic-condition special-needs plan" : "Medicare Advantage"}>
+    <span
+      className={`eyebrow inline-flex items-center rounded-sm border px-1.5 py-0.5 text-[10px] ${cls}`}
+      title={dsnp ? "Dual-eligible: Medicare + Medi-Cal" : csnp ? "Chronic-condition special-needs plan" : "Medicare Advantage"}
+    >
       {label}
     </span>
   );

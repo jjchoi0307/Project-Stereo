@@ -35,32 +35,32 @@ function sourceHref(c: Citation): string | null {
 /** Superscript footnote reference, like a book citation. */
 export function Ref({ n }: { n: number | null }) {
   if (!n) return null;
-  return <sup className="ml-0.5 text-[9px] font-bold text-accent">{n}</sup>;
+  return <sup className="num ml-0.5 text-[9px] font-bold text-accent">{n}</sup>;
 }
 
 /** Per-plan footnote list: each bullet's source PDF (+ page) and the exact figure. */
 export function Sources({ cited }: { cited: CitedReason[] }) {
   return (
-    <div className="mb-1 mt-1 rounded-lg border border-slate-100 bg-slate-50 px-3.5 py-2.5">
-      <div className="mb-1.5 text-[10.5px] font-bold uppercase tracking-[.04em] text-slate-500">Sources</div>
+    <div className="mb-1 mt-1 rounded-sm border border-line bg-paper px-3.5 py-2.5">
+      <div className="eyebrow mb-1.5 text-ink2">Sources</div>
       <ol className="space-y-1">
         {cited.map((r, i) => {
           const c = r.citation!;
           const href = sourceHref(c);
           const fileLabel = c.page ? `${c.sourceFile} · p.${c.page}` : c.sourceFile;
           return (
-            <li key={r.code} className="flex gap-2 text-[11px] leading-[1.45] text-slate-500">
+            <li key={r.code} className="flex gap-2 text-[11px] leading-[1.45] text-ink2">
               <span className="num flex-none font-bold text-accent">{i + 1}.</span>
               <span>
                 {href ? (
-                  <a href={href} target="_blank" rel="noopener noreferrer" className="num lk text-slate-600">
+                  <a href={href} target="_blank" rel="noopener noreferrer" className="num lk text-ink2">
                     {fileLabel}
                   </a>
                 ) : (
-                  <span className="num text-slate-600">{fileLabel}</span>
+                  <span className="num text-ink2">{fileLabel}</span>
                 )}
                 {c.kind === "computed" && (
-                  <span className="ml-1 rounded bg-violet-50 px-1 py-px text-[9px] font-semibold uppercase text-violet-600">
+                  <span className="eyebrow ml-1 rounded-sm border border-ai/30 bg-ai/10 px-1 py-px text-[9px] text-ai">
                     computed
                   </span>
                 )}

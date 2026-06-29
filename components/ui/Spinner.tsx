@@ -12,8 +12,8 @@ export default function Spinner({
       style={{
         width: size,
         height: size,
-        border: `2px solid ${light ? "#ffffff66" : "#cbd5e1"}`,
-        borderTopColor: light ? "#fff" : "#0d6e6e",
+        border: `2px solid ${light ? "#fbfcfb66" : "#e4e9f0"}`,
+        borderTopColor: light ? "#fbfcfb" : "#047a32",
         animation: "spin .7s linear infinite",
       }}
       aria-hidden

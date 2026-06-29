@@ -16,7 +16,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
   if (process.env.ALLOW_SIGNUP !== "true") redirect(`/login${next ? `?next=${encodeURIComponent(next)}` : ""}`);
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-5 py-10">
+    <main className="flex min-h-screen items-center justify-center bg-paper px-5 py-10">
       <div className="w-full max-w-[400px]" data-fade>
         <div className="mb-7 text-center">
           <Image
@@ -27,7 +27,9 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
             priority
             className="mx-auto mb-4 h-[44px] w-auto"
           />
-          <p className="text-[13px] text-slate-500">Broker Plan Recommender · 2026</p>
+          <div className="eyebrow mb-2 text-accent">Seoul Medical Group</div>
+          <h1 className="display mb-1.5 text-[26px] font-semibold leading-[1.15] text-ink">Set up your workspace</h1>
+          <p className="num text-[12.5px] text-ink2">Broker Plan Recommender · 2026</p>
         </div>
         <LoginForm next={dest} allowSignup initialMode="signup" />
       </div>
