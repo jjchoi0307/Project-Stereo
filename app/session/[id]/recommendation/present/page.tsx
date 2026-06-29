@@ -18,7 +18,7 @@ export default async function PresentPage({ params }: { params: Promise<{ id: st
   if (!session.profile) redirect(`/session/${id}`); // need facts first
 
   return (
-    <div className="min-h-screen bg-white" data-fade>
+    <div className="min-h-screen bg-paper" data-fade>
       <MemberSummaryView sessionId={id} clientRef={clientRef(id)} />
     </div>
   );

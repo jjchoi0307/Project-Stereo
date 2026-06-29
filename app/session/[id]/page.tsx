@@ -16,7 +16,7 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
-      <main className="mx-auto w-full max-w-[1060px] px-6 pb-16 pt-8">
+      <main className="mx-auto w-full max-w-[1060px] px-6 pb-16 pt-8" data-fade>
         <BrokerSession initialSession={session} reference={reference} />
       </main>
     </div>

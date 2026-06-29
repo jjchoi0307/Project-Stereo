@@ -81,7 +81,7 @@ export default function RecommendationTabs({ sessionId }: { sessionId: string })
         role="tablist"
         aria-label="Recommendation horizon"
         onKeyDown={onTabKeyDown}
-        className="mb-6 inline-flex gap-0.5 rounded-[10px] bg-[#eef2f5] p-1"
+        className="mb-6 flex gap-7 border-b border-line"
       >
         {tabKeys.map((t) => (
           <TabButton key={String(t)} tabKey={t} active={tab === t} onSelect={() => setTab(t)}>
@@ -109,11 +109,11 @@ export default function RecommendationTabs({ sessionId }: { sessionId: string })
             />
           )}
           {hStatus === "error" && (
-            <div className="flex items-center gap-3 text-sm text-rose-600">
+            <div className="flex items-center gap-3 text-sm text-neg">
               <span>Could not load the projection.</span>
               <button
                 onClick={() => setReloadKey((k) => k + 1)}
-                className="rounded-[7px] border border-slate-300 bg-white px-3 py-1.5 text-[12.5px] font-medium text-slate-700 hover:bg-slate-50"
+                className="rounded-sm border border-line bg-surface px-3 py-1.5 text-[12.5px] font-medium text-ink hover:bg-paper"
               >
                 Retry
               </button>
@@ -130,7 +130,7 @@ export default function RecommendationTabs({ sessionId }: { sessionId: string })
                 todayNameFallback={horizons.todayTopPlanName}
               />
             ) : (
-              <p className="text-sm text-slate-500">No data for this horizon.</p>
+              <p className="text-sm text-ink2">No data for this horizon.</p>
             ))}
         </div>
       )}
@@ -148,8 +148,9 @@ function TabButton({ tabKey, active, onSelect, children }: { tabKey: Tab; active
       aria-controls={`panel-${tabKey}`}
       tabIndex={active ? 0 : -1}
       onClick={onSelect}
-      className="rounded-lg px-[18px] py-2 text-[13.5px] font-semibold"
-      style={{ background: active ? "#ffffff" : "transparent", color: active ? "#0d6e6e" : "#64748b" }}
+      className={`-mb-px border-b-2 px-1 pb-2.5 pt-1 text-[13.5px] font-semibold transition-colors ${
+        active ? "border-accent text-ink" : "border-transparent text-ink2 hover:text-ink"
+      }`}
     >
       {children}
     </button>
@@ -157,9 +158,9 @@ function TabButton({ tabKey, active, onSelect, children }: { tabKey: Tab; active
 }
 
 const LIKELIHOOD_STYLE: Record<Likelihood, string> = {
-  low: "text-slate-400",
-  moderate: "text-amber-500",
-  high: "text-orange-500",
+  low: "text-ink2",
+  moderate: "text-warn",
+  high: "text-warn",
 };
 
 type LineupStatus = "same" | "reordered" | "changed";
@@ -215,19 +216,19 @@ function HorizonPanel({
     <div>
       {/* AI future projection — simple on the surface (headline + summary); the
           specific projected conditions/medications live behind a toggle. */}
-      <section className="mb-6 rounded-[13px] border border-[#ddd6fe] bg-[#faf8ff] p-[22px]">
+      <section className="mb-6 border border-ai/30 border-l-2 border-l-ai bg-ai/[0.04] p-[22px]">
         <div className="mb-1.5 flex flex-wrap items-center gap-2.5">
-          <span className="inline-flex h-6 w-6 items-center justify-center rounded-[7px] bg-violet-600 text-[13px] text-white">✦</span>
-          <h3 className="m-0 text-[15px] font-semibold text-violet-900">{h.years}-year health projection</h3>
-          <span className="rounded-md bg-violet-100 px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-[.03em] text-violet-700">
-            AI · grounded in the member&apos;s facts
+          <span className="inline-flex h-5 w-5 items-center justify-center bg-ai text-[12px] text-white">✦</span>
+          <h3 className="display m-0 text-[16px] font-semibold text-ai">{h.years}-year health projection</h3>
+          <span className="border border-ai/30 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[.06em] text-ai">
+            AI · interpretive
           </span>
         </div>
         {h.projection.headline && (
-          <h4 className="m-0 mb-1.5 text-[15px] font-semibold leading-[1.35] text-[#1f1147]">{h.projection.headline}</h4>
+          <h4 className="m-0 mb-1.5 text-[15px] font-semibold leading-[1.35] text-ai">{h.projection.headline}</h4>
         )}
         {h.projection.summary && (
-          <p className="m-0 text-[13px] leading-[1.6] text-[#3f3357]">{h.projection.summary}</p>
+          <p className="m-0 text-[13px] leading-[1.6] text-ink2">{h.projection.summary}</p>
         )}
         {hasAssumptions && (
           <>
@@ -235,7 +236,7 @@ function HorizonPanel({
               type="button"
               onClick={() => setShowChanges((v) => !v)}
               aria-expanded={showChanges}
-              className="mt-3 flex items-center gap-1.5 text-[12.5px] font-semibold text-violet-700"
+              className="mt-3 flex items-center gap-1.5 text-[12.5px] font-semibold text-ai"
             >
               <span className="text-[10px]">{showChanges ? "▾" : "▸"}</span>
               {showChanges ? "Hide the projected changes" : "See the projected conditions & medications"}
@@ -243,12 +244,12 @@ function HorizonPanel({
             {showChanges && (
               <div className="mt-3 flex flex-wrap gap-2">
                 {h.projection.conditions.map((c) => (
-                  <span key={c.label} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600">
+                  <span key={c.label} className="rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink2">
                     {c.label} <span className={LIKELIHOOD_STYLE[c.likelihood]}>· {c.likelihood} likelihood</span>
                   </span>
                 ))}
                 {h.projection.medications.map((m) => (
-                  <span key={m.name} className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-medium text-sky-700">
+                  <span key={m.name} className="rounded-lg border border-prov/30 bg-prov/10 px-3 py-1.5 text-xs font-medium text-prov">
                     + {m.name} <span className={LIKELIHOOD_STYLE[m.likelihood]}>· {m.likelihood}</span>
                   </span>
                 ))}
@@ -261,9 +262,9 @@ function HorizonPanel({
       {/* Changes-vs-today banner — accurate to the whole top-3 lineup, not just #1,
           and SPECIFIC about what changed and why. */}
       {status === "changed" ? (
-        <div className="mb-[18px] rounded-[10px] border border-amber-200 bg-amber-50 px-4 py-3">
-          <div className="mb-0.5 text-[13px] font-bold text-amber-800">⚑ Best fit changes at {h.years} years</div>
-          <div className="text-[12.5px] leading-[1.5] text-amber-700">
+        <div className="mb-[18px] rounded-sm border border-warn/30 bg-warn/10 px-4 py-3">
+          <div className="mb-0.5 text-[13px] font-bold text-warn">⚑ Best fit changes at {h.years} years</div>
+          <div className="text-[12.5px] leading-[1.5] text-warn">
             {rec && (
               <>
                 <strong>{rec.plan.name}</strong> now leads
@@ -276,27 +277,27 @@ function HorizonPanel({
           </div>
         </div>
       ) : status === "reordered" ? (
-        <div className="mb-[18px] rounded-[10px] border border-sky-200 bg-sky-50 px-4 py-3">
-          <div className="mb-0.5 text-[13px] font-bold text-sky-800">↻ Same lead plan, different runner-ups</div>
-          <div className="text-[12.5px] leading-[1.5] text-sky-700">
+        <div className="mb-[18px] rounded-sm border border-prov/30 bg-prov/10 px-4 py-3">
+          <div className="mb-0.5 text-[13px] font-bold text-prov">↻ Same lead plan, different runner-ups</div>
+          <div className="text-[12.5px] leading-[1.5] text-prov">
             <strong>{todayName ?? "Today's pick"}</strong> still fits best at {h.years} years, but the supporting plans
             shift as the member&apos;s projected needs change — the top 3 are now{" "}
             {top.map((t) => t.plan.name).join(", ")}.
           </div>
         </div>
       ) : (
-        <div className="mb-[18px] rounded-[10px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-[13px] font-semibold text-emerald-900">
+        <div className="mb-[18px] rounded-sm border border-pos/30 bg-pos/10 px-4 py-3 text-[13px] font-semibold text-pos">
           ✓ Same as today — the same plans fit best at this horizon.
         </div>
       )}
 
       {!rec || top.length === 0 ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+        <div className="rounded-xl border border-neg/30 bg-neg/10 px-4 py-3 text-sm text-neg">
           No plan stays eligible for the projected member at {h.years} years.
         </div>
       ) : (
         <>
-          <div className="mb-3 text-xs font-bold uppercase tracking-[.04em] text-slate-500">
+          <div className="mb-3 text-xs font-bold uppercase tracking-[.04em] text-ink2">
             Best fit at {h.years} years — full detail for each pick
           </div>
           {/* Same full-detail cards as Today: fit-score breakdown, "includes",
@@ -331,39 +332,39 @@ const WEIGHT_DEFS: { key: keyof typeof SCORING.weights; label: string; def: stri
 function CriteriaPanel() {
   const W = SCORING.weights;
   return (
-    <details className="mb-6 rounded-xl border border-slate-200 bg-white p-[18px]">
+    <details className="mb-6 rounded-xl border border-line bg-surface p-[18px]">
       <summary className="flex cursor-pointer list-none items-center gap-2 text-[13px] font-semibold text-ink">
         <span className="text-accent">ⓘ</span> How plans are scored — AI-powered, grounded in the 2026 plan files &amp; cited
       </summary>
 
-      <div className="mt-3 space-y-4 text-[12.5px] leading-[1.55] text-slate-600">
+      <div className="mt-3 space-y-4 text-[12.5px] leading-[1.55] text-ink2">
         <div>
-          <div className="mb-1 text-[11px] font-bold uppercase tracking-[.04em] text-slate-500">1 · Eligibility (hard rules, run before any scoring)</div>
+          <div className="mb-1 text-[11px] font-bold uppercase tracking-[.04em] text-ink2">1 · Eligibility (hard rules, run before any scoring)</div>
           A plan is excluded — never ranked — if it fails any of: not sold in the member&apos;s region; doesn&apos;t
           keep a <strong>must-keep</strong> provider in network; or leaves a <strong>critical medication</strong>{" "}
           (insulin, oncology) off formulary. These are pass/fail facts read straight from the plan files.
         </div>
 
         <div>
-          <div className="mb-1.5 text-[11px] font-bold uppercase tracking-[.04em] text-slate-500">2 · Fit score (AI scores eligible plans on the member&apos;s facts)</div>
+          <div className="mb-1.5 text-[11px] font-bold uppercase tracking-[.04em] text-ink2">2 · Fit score (AI scores eligible plans on the member&apos;s facts)</div>
           <div className="flex flex-col gap-1">
             {WEIGHT_DEFS.map((w) => (
               <div key={w.key} className="flex items-baseline gap-2">
-                <span className="num flex-[0_0_44px] font-semibold" style={{ color: w.sign === "+" ? "#0d6e6e" : "#b45309" }}>
+                <span className="num flex-[0_0_44px] font-semibold" style={{ color: w.sign === "+" ? "#047a32" : "#b07514" }}>
                   {w.sign}{W[w.key]}
                 </span>
-                <span><strong className="text-slate-700">{w.label}</strong> — {w.def}</span>
+                <span><strong className="text-ink">{w.label}</strong> — {w.def}</span>
               </div>
             ))}
           </div>
-          <div className="mt-2 text-[12px] text-slate-500">
+          <div className="mt-2 text-[12px] text-ink2">
             <span className="num">Fit = Coverage + Network + Medication − Mismatch − Catastrophic downside</span>.
             The AI reasons strictly over the benefits in the 2026 plan files; every bullet cites the source PDF +
             page, and a programmatic check drops any figure not present in the plan&apos;s data.
           </div>
         </div>
 
-        <div className="rounded-lg border border-[#ccebe6] bg-[#f6fdfb] p-3 text-[12px] text-slate-600">
+        <div className="border border-accent/25 border-l-2 border-l-accent bg-accent/[0.04] p-3 text-[12px] text-ink2">
           <strong className="text-accent">No plan preference.</strong> Eligible plans are ranked purely on the fit
           score above. The tool applies <strong>no carrier or plan preference of any kind</strong> — the ranking is
           determined only by how each plan fits the member&apos;s captured facts, sourced from the plan files.

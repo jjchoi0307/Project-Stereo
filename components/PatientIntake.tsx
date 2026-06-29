@@ -16,21 +16,21 @@ export default function PatientIntake({
   if (done) {
     return (
       <div className="mx-auto max-w-[440px] text-center" data-fade>
-        <div className="mb-[18px] inline-flex h-14 w-14 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 text-[26px] text-emerald-600">
+        <div className="mb-[18px] inline-flex h-14 w-14 items-center justify-center rounded-full border border-pos/40 bg-pos/10 text-[26px] text-pos">
           ✓
         </div>
-        <h1 className="mb-2 text-[22px] font-semibold text-ink">Thank you — sent to your broker</h1>
-        <p className="text-sm leading-[1.55] text-slate-500">
+        <h1 className="display mb-2 text-[26px] font-semibold leading-[1.15] text-ink">Thank you — sent to your broker</h1>
+        <p className="text-sm leading-[1.55] text-ink2">
           Your facts are with your Seoul Medical Group broker. They&apos;ll review them and walk you through your
           plan options.
         </p>
-        <p className="mt-[18px] text-[12.5px] text-slate-400">You can close this window.</p>
+        <p className="mt-[18px] text-[12.5px] text-ink2">You can close this window.</p>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-[660px] rounded-xl border border-slate-200 bg-white p-[26px]">
+    <div className="mx-auto max-w-[660px] rounded-sm border border-line bg-surface p-[26px]">
       <IntakeForm
         submitUrl={`/api/intake/${token}`}
         capturedBy="patient"

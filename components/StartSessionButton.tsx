@@ -32,12 +32,12 @@ export default function StartSessionButton({ compact = false }: { compact?: bool
       <button
         onClick={start}
         disabled={busy}
-        className="flex items-center gap-2.5 whitespace-nowrap rounded-[9px] bg-accent px-[18px] py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+        className="flex items-center gap-2.5 whitespace-nowrap rounded-sm bg-accent px-[18px] py-2.5 text-sm font-semibold text-white hover:bg-accent-strong disabled:opacity-50"
       >
         {busy ? <Spinner light /> : <span className="-mt-px text-[17px] leading-none">+</span>}
         Start new client session
       </button>
-      {error && <p className="mt-2 text-sm text-rose-600">{error}</p>}
+      {error && <p className="mt-2 text-sm text-neg">{error}</p>}
     </div>
   );
 }

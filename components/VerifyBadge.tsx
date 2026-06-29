@@ -1,10 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import RecordSeal from "@/components/ui/RecordSeal";
 
 /**
  * Button-triggered reproducibility check for an audit record. Re-runs the engine
  * with the recorded seed + versions and confirms the ranking reproduces exactly.
+ * The verification seal (RecordSeal) is the trust centerpiece — teal ✓ when the
+ * re-run reproduces the ranking, rose ✗ on mismatch, slate · while verifying.
  */
 export default function VerifyBadge({ auditId }: { auditId: string }) {
   const [state, setState] = useState<"idle" | "running" | "ok" | "fail">("idle");
@@ -21,7 +24,7 @@ export default function VerifyBadge({ auditId }: { auditId: string }) {
     return (
       <button
         onClick={run}
-        className="flex-none rounded-[9px] bg-accent px-[22px] py-3 text-[13.5px] font-semibold text-white hover:opacity-90"
+        className="flex-none border border-accent bg-surface px-[22px] py-3 text-[13.5px] font-semibold text-accent hover:bg-accent hover:text-surface"
       >
         Verify now
       </button>
@@ -29,25 +32,29 @@ export default function VerifyBadge({ auditId }: { auditId: string }) {
   }
   if (state === "running") {
     return (
-      <div className="flex flex-none items-center gap-2.5 text-[13.5px] font-medium text-slate-300">
-        <span
-          className="inline-block h-[15px] w-[15px] rounded-full"
-          style={{ border: "2px solid #ffffff33", borderTopColor: "#fff", animation: "spin .7s linear infinite" }}
-        />
-        Re-running engine…
-      </div>
+      <RecordSeal
+        tone="pending"
+        center="SMG"
+        caption={<span className="block text-[12px] font-semibold text-ink">Re-running engine…</span>}
+      />
     );
   }
   if (state === "ok") {
     return (
-      <div className="flex flex-none items-center gap-2.5 rounded-[9px] border border-emerald-600 bg-emerald-950 px-[18px] py-[11px] text-[13.5px] font-semibold text-emerald-300">
-        ✓ Ranking reproduced exactly
-      </div>
+      <RecordSeal
+        tone="verified"
+        center="SMG"
+        caption={
+          <span className="block text-[12px] font-semibold text-pos">Ranking reproduced exactly</span>
+        }
+      />
     );
   }
   return (
-    <div className="flex flex-none items-center gap-2.5 rounded-[9px] border border-rose-500 bg-rose-950 px-[18px] py-[11px] text-[13.5px] font-semibold text-rose-300">
-      ✗ Did not reproduce
-    </div>
+    <RecordSeal
+      tone="broken"
+      center="SMG"
+      caption={<span className="block text-[12px] font-semibold text-neg">Did not reproduce</span>}
+    />
   );
 }

@@ -5,6 +5,9 @@ import Link from "next/link";
 import { Ref, Sources, type Citation } from "@/components/ui/Citation";
 import PlanKind from "@/components/ui/PlanKind";
 import Spinner from "@/components/ui/Spinner";
+import FitScore from "@/components/ui/FitScore";
+import RecordSeal from "@/components/ui/RecordSeal";
+import SmgLoader from "@/components/ui/SmgLoader";
 
 interface Reason { code: string; text: string; positive: boolean; citation?: Citation | null }
 interface PlanMeta {
@@ -55,11 +58,11 @@ const confLabel = (c: number) => (c >= 66 ? "High" : c >= 33 ? "Moderate" : "Low
 export function OtherEligibleTable({ rest }: { rest: RankedItem[] }) {
   return (
     <>
-      <div className="mb-2.5 text-xs font-bold uppercase tracking-[.04em] text-slate-500">Other eligible plans</div>
-      <div className="mb-7 overflow-hidden rounded-[11px] border border-slate-200 bg-white">
+      <div className="eyebrow mb-2.5 text-ink2">Other eligible plans</div>
+      <div className="mb-7 overflow-hidden rounded-xl border border-line bg-surface shadow-card">
         <table className="w-full border-collapse text-[12.5px]">
           <thead>
-            <tr className="bg-slate-50 text-left text-[11px] uppercase tracking-[.03em] text-slate-500">
+            <tr className="bg-paper text-left text-[11px] uppercase tracking-[.03em] text-ink2">
               <th className="px-3.5 py-2.5 font-semibold">Plan</th>
               <th className="px-3.5 py-2.5 text-right font-semibold">Premium</th>
               <th className="px-3.5 py-2.5 text-right font-semibold">OOP max</th>
@@ -68,18 +71,18 @@ export function OtherEligibleTable({ rest }: { rest: RankedItem[] }) {
           </thead>
           <tbody>
             {rest.map((item) => (
-              <tr key={item.planId} className="border-t border-slate-100">
+              <tr key={item.planId} className="border-t border-line">
                 <td className="px-3.5 py-[11px]">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold">{item.plan.name}</span>
                     <PlanKind snpType={item.plan.snpType} />
                   </div>
-                  <div className="text-[11.5px] text-slate-400">
+                  <div className="text-[11.5px] text-ink2">
                     {item.plan.carrier} · {item.plan.planType}
                   </div>
                 </td>
                 <td className="num px-3.5 py-[11px] text-right">{premiumLabel(item.plan.monthlyPremium)}</td>
-                <td className="num px-3.5 py-[11px] text-right text-slate-600">{usd(item.plan.annualOOPMax)}</td>
+                <td className="num px-3.5 py-[11px] text-right text-ink2">{usd(item.plan.annualOOPMax)}</td>
                 <td className="num px-3.5 py-[11px] text-right font-semibold text-accent">{item.total}</td>
               </tr>
             ))}
@@ -94,15 +97,15 @@ export function OtherEligibleTable({ rest }: { rest: RankedItem[] }) {
  *  and by the 3yr/5yr horizon tab so the loading experience is identical. */
 export function RecommendationLoading({ title, subtitle, steps }: { title: string; subtitle: string; steps: string[] }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-4 rounded-[13px] border border-slate-200 bg-white px-6 py-12 text-center">
-      <Spinner size={26} />
+    <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-line bg-surface shadow-card px-6 py-12 text-center">
+      <SmgLoader size={52} />
       <div>
-        <div className="text-[14px] font-semibold text-ink">{title}</div>
-        <div className="mt-1 text-[12.5px] text-slate-500">{subtitle}</div>
+        <div className="display text-[16px] font-semibold text-ink">{title}</div>
+        <div className="mt-1 text-[12.5px] text-ink2">{subtitle}</div>
       </div>
       <div className="flex flex-col gap-2.5 pt-1">
         {steps.map((step, i) => (
-          <div key={step} className="flex items-center gap-2.5 text-[12px] text-slate-400">
+          <div key={step} className="flex items-center gap-2.5 text-[12px] text-ink2">
             <span
               className="h-1.5 w-1.5 rounded-full bg-accent"
               style={{ animation: "pulseDot 1.4s ease-in-out infinite", animationDelay: `${i * 0.25}s` }}
@@ -122,7 +125,7 @@ function PlanChips({ plan }: { plan: PlanMeta }) {
   return (
     <>
       {chips.map((c) => (
-        <span key={c} className="rounded-md bg-[#f0fdf9] px-2 py-0.5 text-[10.5px] font-semibold text-accent">
+        <span key={c} className="border border-accent/30 bg-accent/10 px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-[.04em] text-accent">
           {c}
         </span>
       ))}
@@ -192,13 +195,13 @@ export default function RecommendationView({
     );
   if (loadError && !data)
     return loadError.notConfigured ? (
-      <div className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-900">
+      <div className="rounded-xl border border-ai bg-surface px-4 py-3 text-sm text-ai">
         The AI recommendation is not enabled for this account. {loadError.message}
       </div>
     ) : (
-      <p className="text-sm text-rose-600">{loadError.message}</p>
+      <p className="text-sm text-neg">{loadError.message}</p>
     );
-  if (!data || !data.ranked) return <p className="text-sm text-rose-600">Could not load a recommendation.</p>;
+  if (!data || !data.ranked) return <p className="text-sm text-neg">Could not load a recommendation.</p>;
 
   const noneEligible = data.ranked.length === 0;
   const top = data.ranked.slice(0, 3);
@@ -207,21 +210,22 @@ export default function RecommendationView({
 
   return (
     <div>
-      <div className="mb-[18px] flex flex-wrap items-center gap-3">
-        <span className="rounded-md bg-[#f6fdfb] px-2.5 py-1 text-[12px] font-medium text-accent ring-1 ring-[#ccebe6]">
-          AI-ranked on fit — grounded in the 2026 plan files, no carrier preference
+      <div className="mb-[18px] flex flex-wrap items-center gap-3 border-l-2 border-accent pl-3">
+        <span className="text-[12.5px] leading-[1.45] text-ink2">
+          Ranked on <span className="font-semibold text-ink">fit alone</span> — grounded in the 2026 plan files, with{" "}
+          <span className="font-semibold text-ink">no carrier preference</span>.
         </span>
         {data.aiPowered && (
-          <span className="num ml-auto text-[11px] text-slate-400">AI-powered</span>
+          <span className="eyebrow ml-auto !tracking-[.06em] text-ink2">AI-powered</span>
         )}
       </div>
 
       {/* No eligible plan — explain, then offer the closest near-misses. */}
       {noneEligible && (
         <div className="space-y-4">
-          <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
-            <h2 className="text-sm font-semibold text-rose-800">No plan matches every hard requirement</h2>
-            <p className="mt-1 text-sm leading-[1.5] text-rose-700">
+          <div className="rounded-xl border border-neg bg-surface px-4 py-3">
+            <h2 className="text-sm font-semibold text-neg">No plan matches every hard requirement</h2>
+            <p className="mt-1 text-sm leading-[1.5] text-neg">
               {nm
                 ? nm.requiredProviders.length > 1
                   ? `No single plan in ${nm.regionName} keeps all of these must-keep providers in network: ${nm.requiredProviders.join(", ")}. The closest plans are below — each shows which required provider it would drop.`
@@ -243,7 +247,7 @@ export default function RecommendationView({
       {!noneEligible && (
         <div className="mb-7">
           {typeof data.ensembleRuns === "number" && data.ensembleRuns > 0 && (
-            <p className="mb-3 text-[12.5px] leading-[1.45] text-slate-500">
+            <p className="mb-3 text-[12.5px] leading-[1.45] text-ink2">
               We ran the analysis <span className="num">{data.ensembleRuns}</span> times and show the plans that came
               out on top most often. These are planning aids, not medical advice.
             </p>
@@ -262,19 +266,19 @@ export default function RecommendationView({
       {/* Not recommended */}
       {data.excluded.length > 0 && (
         <>
-          <div className="mb-2.5 text-xs font-bold uppercase tracking-[.04em] text-slate-500">Not recommended</div>
+          <div className="eyebrow mb-2.5 text-ink2">Not recommended for this member</div>
           <div className="mb-7 flex flex-col gap-[7px]">
             {data.excluded.map(({ plan, reasons }) => (
               <div
                 key={plan.id}
-                className="flex items-center gap-3 rounded-[9px] border border-slate-100 bg-white px-3.5 py-2.5"
+                className="flex items-center gap-3 rounded-sm border border-line bg-surface px-3.5 py-2.5"
               >
-                <span className="flex-none font-bold text-rose-600">✗</span>
+                <span className="flex-none font-bold text-neg">✗</span>
                 <div className="flex-1">
                   <span className="text-[13px] font-semibold">{plan.name}</span>{" "}
-                  <span className="text-xs text-slate-400">· {plan.carrier}</span>
+                  <span className="text-xs text-ink2">· {plan.carrier}</span>
                 </div>
-                <div className="flex-[1.4] text-right text-xs text-rose-800">
+                <div className="flex-[1.4] text-right text-xs text-neg">
                   {reasons.map((r) => r.detail).join(" ")}
                 </div>
               </div>
@@ -283,13 +287,45 @@ export default function RecommendationView({
         </>
       )}
 
-      {/* Audit footer */}
-      {auditId && (
-        <div className="flex items-center gap-2.5 rounded-[11px] border border-slate-200 bg-slate-50 px-[18px] py-3.5 text-[12.5px] text-slate-600">
-          <span className="font-bold text-emerald-600">✓</span> Audit record saved on view —{" "}
-          <Link href={`/audit/${auditId}`} className="num lk font-medium">
-            {auditId}
-          </Link>
+      {/* Record strip — the signature. The recommendation is snapshotted to a
+          reproducible audit record the moment it's viewed; the seal carries that
+          promise (same facts + engine → same ranking, re-verifiable). */}
+      {!noneEligible && (
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-line bg-surface shadow-card px-[18px] py-4">
+          <RecordSeal
+            tone={auditId ? "recorded" : "pending"}
+            caption={
+              auditId ? (
+                <>
+                  <span className="block text-[12px] font-semibold text-ink">On record · re-verifiable</span>
+                  {typeof data.ensembleRuns === "number" && data.ensembleRuns > 0 ? (
+                    <>
+                      Ranked across <span className="num">{data.ensembleRuns}</span> analysis runs and snapshotted to an
+                      immutable audit record — re-verify any time.
+                    </>
+                  ) : (
+                    <>
+                      <span className="num">{data.scenarioCount}</span> scenarios · seed{" "}
+                      <span className="num">{data.seed}</span> — the same facts always rank the same.
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  <span className="block text-[12px] font-semibold text-ink">Saving to record…</span>
+                  snapshotting this ranking for re-verification.
+                </>
+              )
+            }
+          />
+          {auditId && (
+            <Link
+              href={`/audit/${auditId}`}
+              className="flex-none rounded-lg border border-accent bg-surface px-3.5 py-2 text-[12.5px] font-semibold text-accent hover:bg-accent-tint"
+            >
+              View audit record <span className="num">{auditId}</span> →
+            </Link>
+          )}
         </div>
       )}
     </div>
@@ -324,16 +360,16 @@ function FullAnalysis({ item }: { item: RankedItem }) {
             <div className="my-4 grid grid-cols-2 gap-x-6 gap-y-2">
               <div>
                 {positives.map((r) => (
-                  <div key={r.code} className="mb-[5px] flex gap-2 text-[12.5px] leading-[1.45] text-slate-700">
-                    <span className="flex-none text-emerald-600">✓</span>
+                  <div key={r.code} className="mb-[5px] flex gap-2 text-[12.5px] leading-[1.45] text-ink">
+                    <span className="flex-none text-pos">✓</span>
                     <span>{r.text}<Ref n={refOf(r)} /></span>
                   </div>
                 ))}
               </div>
               <div>
                 {caveats.map((r) => (
-                  <div key={r.code} className="mb-[5px] flex gap-2 text-[12.5px] leading-[1.45] text-slate-700">
-                    <span className="flex-none text-amber-600">⚑</span>
+                  <div key={r.code} className="mb-[5px] flex gap-2 text-[12.5px] leading-[1.45] text-ink">
+                    <span className="flex-none text-warn">⚑</span>
                     <span>{r.text}<Ref n={refOf(r)} /></span>
                   </div>
                 ))}
@@ -344,18 +380,18 @@ function FullAnalysis({ item }: { item: RankedItem }) {
         );
       })()}
 
-      <div className="grid grid-cols-2 gap-2.5 border-t border-slate-100 pt-3.5 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 border-t border-line pt-3.5 sm:grid-cols-4">
         <Stat label="Meds covered">
           <span className="num">{pct(e.medCoverageRate)}</span>
         </Stat>
         <Stat label="Network">
-          <span className="text-emerald-600">{networkLabel}</span>
+          <span className="text-pos">{networkLabel}</span>
         </Stat>
         <Stat label="Worst-case / cat.">
-          <span className="num">{usd(e.worst)}</span> <span className="font-normal text-slate-400">· {pct(e.catastrophicRate)}</span>
+          <span className="num">{usd(e.worst)}</span> <span className="font-normal text-ink2">· {pct(e.catastrophicRate)}</span>
         </Stat>
         <Stat label="Confidence / est.">
-          {confLabel(item.confidence)} <span className="font-normal text-slate-400">· <span className="num">{usd(e.mean)}</span>/yr</span>
+          {confLabel(item.confidence)} <span className="font-normal text-ink2">· <span className="num">{usd(e.mean)}</span>/yr</span>
         </Stat>
       </div>
 
@@ -371,51 +407,44 @@ export function TopCard({ item, rank, highlight, ensembleRuns }: { item: RankedI
   const hasEnsemble = typeof ensembleRuns === "number" && ensembleRuns > 0 && typeof item.topThreeVotes === "number";
   return (
     <div
-      className="relative rounded-[13px] border bg-white p-[22px]"
-      style={{
-        borderColor: highlight ? "#0d6e6e" : "#e2e8f0",
-        boxShadow: highlight ? "0 8px 24px -12px rgba(13,110,110,.35)" : "none",
-      }}
+      className={`relative rounded-xl border bg-surface p-[22px] shadow-card ${highlight ? "border-brand/40" : "border-line"}`}
+      style={highlight ? { borderTopWidth: 3, borderTopColor: "#00a840" } : undefined}
     >
       <div className="flex items-start gap-4">
-        <div
-          className="num flex h-[34px] w-[34px] flex-none items-center justify-center rounded-[9px] text-[15px] font-bold text-white"
-          style={{ background: highlight ? "#0d6e6e" : "#0f172a" }}
-        >
-          {rank}
+        <div className={`num flex-none pt-0.5 text-[26px] font-semibold leading-none ${highlight ? "text-accent" : "text-ink2"}`}>
+          {String(rank).padStart(2, "0")}
         </div>
         <div className="min-w-0 flex-1">
+          {highlight && (
+            <div className="eyebrow mb-1 text-accent">Recommended — best fit for this member</div>
+          )}
           <div className="mb-0.5 flex flex-wrap items-center gap-2.5">
-            <h3 className="text-[17px] font-semibold">{item.plan.name}</h3>
+            <h3 className="display text-[22px] font-semibold leading-tight text-ink">{item.plan.name}</h3>
             <PlanKind snpType={item.plan.snpType} />
             <PlanChips plan={item.plan} />
-            {highlight && (
-              <span className="rounded-md bg-[#f0fdf9] px-2 py-0.5 text-[10.5px] font-semibold text-accent">Lead pick</span>
-            )}
           </div>
-          <div className="text-[12.5px] text-slate-500">
+          <div className="text-[12.5px] text-ink2">
             {item.plan.carrier} · {item.plan.planType} ·{" "}
-            {item.plan.monthlyPremium === 0 ? "$0" : usd(item.plan.monthlyPremium)} premium ·{" "}
-            {usd(item.plan.annualOOPMax)} OOP max
+            <span className="num">{item.plan.monthlyPremium === 0 ? "$0" : usd(item.plan.monthlyPremium)}</span> premium ·{" "}
+            <span className="num">{usd(item.plan.annualOOPMax)}</span> OOP max
           </div>
         </div>
-        <div className="flex-none text-right">
-          <div className="num text-[34px] font-bold leading-none text-accent">{item.total}</div>
-          <div className="text-[10.5px] uppercase tracking-[.03em] text-slate-400">fit score</div>
+        <div className="flex-none">
+          <FitScore value={item.total} confidence={item.confidence} />
           {hasEnsemble &&
             (item.topThreeVotes && item.topThreeVotes > 0 ? (
-              <div className="mt-1 text-[11px] leading-[1.35] text-slate-400">
-                top 3 in <span className="num font-semibold text-slate-600">{item.topThreeVotes}</span>/
+              <div className="mt-1.5 text-right text-[11px] leading-[1.35] text-ink2">
+                top 3 in <span className="num font-semibold text-ink2">{item.topThreeVotes}</span>/
                 <span className="num">{ensembleRuns}</span> runs
               </div>
             ) : (
-              <div className="mt-1 text-[11px] leading-[1.35] text-slate-400">rounds out the top 3</div>
+              <div className="mt-1.5 text-right text-[11px] leading-[1.35] text-ink2">rounds out the top 3</div>
             ))}
         </div>
       </div>
 
       {item.providerGaps && item.providerGaps.length > 0 && (
-        <div className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-[12.5px] text-rose-700">
+        <div className="mt-3 rounded-md border border-neg bg-surface px-3 py-2 text-[12.5px] text-neg">
           ✗ Drops required provider: <strong>{item.providerGaps.join(", ")}</strong>
         </div>
       )}
@@ -429,8 +458,8 @@ export function TopCard({ item, rank, highlight, ensembleRuns }: { item: RankedI
         return surfaceWhy.length > 0 ? (
           <div className="mt-3.5 flex flex-col gap-1.5">
             {surfaceWhy.map((r) => (
-              <div key={r.code} className="flex gap-2 text-[13px] leading-[1.45] text-slate-700">
-                <span className="flex-none text-emerald-600">✓</span>
+              <div key={r.code} className="flex gap-2 text-[13px] leading-[1.45] text-ink">
+                <span className="flex-none text-pos">✓</span>
                 <span>{r.text}</span>
               </div>
             ))}
@@ -438,37 +467,37 @@ export function TopCard({ item, rank, highlight, ensembleRuns }: { item: RankedI
         ) : null;
       })()}
 
-      <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-[12.5px] text-slate-500">
+      <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-[12.5px] text-ink2">
         <span>
           Your medications <span className="font-semibold text-ink">{pct(item.exposure.medCoverageRate)} covered</span>
         </span>
         <span>
           Network:{" "}
-          <span className="font-semibold text-emerald-600">
+          <span className="font-semibold text-pos">
             {item.networkStatus === "gap" ? "gap risk" : item.networkStatus === "keeps" ? "keeps your providers" : "in network"}
           </span>
         </span>
       </div>
 
       {/* ── Depth, one click away (nothing removed) ──────────────────────────── */}
-      <details className="mt-3.5 border-t border-slate-100 pt-3">
+      <details className="mt-3.5 border-t border-line pt-3">
         <summary className="cursor-pointer list-none text-[12.5px] font-medium text-accent">
           ▸ See full details, sources &amp; cost
         </summary>
         <div className="mt-3">
           {item.features && item.features.length > 0 && (
             <div className="mb-1">
-              <div className="mb-2 text-[10.5px] font-bold uppercase tracking-[.03em] text-slate-400">What it includes</div>
+              <div className="mb-2 text-[10.5px] font-bold uppercase tracking-[.03em] text-ink2">What it includes</div>
               <div className="grid grid-cols-1 gap-x-8 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
                 {item.features.map((f) => (
-                  <div key={f.label} className="flex items-baseline justify-between gap-3 border-b border-slate-50 py-[5px]">
-                    <span className="text-[12px] text-slate-500">{f.label}</span>
+                  <div key={f.label} className="flex items-baseline justify-between gap-3 border-b border-line py-[5px]">
+                    <span className="text-[12px] text-ink2">{f.label}</span>
                     {f.included ? (
                       <span className="flex items-baseline gap-1 text-right text-[12.5px] font-semibold text-ink">
-                        <span className="text-emerald-600">✓</span> <span className="num">{f.value}</span>
+                        <span className="text-pos">✓</span> <span className="num">{f.value}</span>
                       </span>
                     ) : (
-                      <span className="text-right text-[12px] text-slate-300">Not included</span>
+                      <span className="text-right text-[12px] text-line">Not included</span>
                     )}
                   </div>
                 ))}
@@ -489,19 +518,19 @@ function CompRow({ label, value, max, sign, why }: { label: string; value: numbe
   return (
     <div className="py-[3px]">
       <div className="flex items-center gap-2.5">
-        <span className="flex-[0_0_150px] text-[12px] text-slate-600">{label}</span>
-        <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+        <span className="flex-[0_0_150px] text-[12px] text-ink2">{label}</span>
+        <span className="h-[5px] flex-1 overflow-hidden bg-line">
           <span
-            className="block h-full rounded-full"
-            style={{ width: `${Math.round((Math.abs(value) / max) * 100)}%`, background: pos ? "#0d6e6e" : "#f59e0b" }}
+            className="block h-full"
+            style={{ width: `${Math.round((Math.abs(value) / max) * 100)}%`, background: pos ? "#047a32" : "#b07514" }}
           />
         </span>
-        <span className="num flex-[0_0_64px] text-right text-[12px] font-semibold" style={{ color: pos ? "#0f172a" : "#b45309" }}>
+        <span className="num flex-[0_0_64px] text-right text-[12px] font-semibold" style={{ color: pos ? "#142433" : "#b07514" }}>
           {sign}{round1(Math.abs(value))}
         </span>
-        <span className="num flex-[0_0_30px] text-right text-[11px] text-slate-400">/{max}</span>
+        <span className="num flex-[0_0_30px] text-right text-[11px] text-ink2">/{max}</span>
       </div>
-      {why && <div className="ml-[150px] pl-2.5 pr-[100px] text-[11px] leading-[1.4] text-slate-400">{why}</div>}
+      {why && <div className="ml-[150px] pl-2.5 pr-[100px] text-[11px] leading-[1.4] text-ink2">{why}</div>}
     </div>
   );
 }
@@ -509,7 +538,7 @@ function CompRow({ label, value, max, sign, why }: { label: string; value: numbe
 function BreakdownDetails({ item }: { item: RankedItem }) {
   const b = item.breakdown;
   return (
-    <details className="mt-3 border-t border-slate-100 pt-3">
+    <details className="mt-3 border-t border-line pt-3">
       <summary className="cursor-pointer list-none text-[12px] font-medium text-accent">
         ▸ How this fit score is built ({round1(item.total)})
       </summary>
@@ -518,48 +547,48 @@ function BreakdownDetails({ item }: { item: RankedItem }) {
         <CompRow label="Network fit" value={b.networkFit.value} max={b.networkFit.max} sign="+" why={b.networkFit.why} />
         <CompRow label="Medication fit" value={b.medicationFit.value} max={b.medicationFit.max} sign="+" why={b.medicationFit.why} />
         <CompRow label="Mismatch penalty" value={b.mismatchPenalty.value} max={b.mismatchPenalty.max} sign="−" why={b.mismatchPenalty.why} />
-        <div className="my-1.5 flex justify-between border-t border-dashed border-slate-200 pt-1.5 text-[12px]">
-          <span className="text-slate-500">= Expected fit</span>
+        <div className="my-1.5 flex justify-between border-t border-dashed border-line pt-1.5 text-[12px]">
+          <span className="text-ink2">= Expected fit</span>
           <span className="num font-semibold">{round1(item.expectedFit)}</span>
         </div>
         <CompRow label="Catastrophic downside" value={b.catastrophicDownside.value} max={b.catastrophicDownside.max} sign="−" why={b.catastrophicDownside.why} />
         {b.preference > 0 && (
           <div className="flex items-center gap-2.5 py-[3px]">
-            <span className="flex-[0_0_150px] text-[12px] text-slate-600">SMG/SCAN preference</span>
-            <span className="flex-1 text-[11px] italic text-slate-400">bounded tiebreak, logged</span>
+            <span className="flex-[0_0_150px] text-[12px] text-ink2">SMG/SCAN preference</span>
+            <span className="flex-1 text-[11px] italic text-ink2">bounded tiebreak, logged</span>
             <span className="num flex-[0_0_64px] text-right text-[12px] font-semibold text-accent">+{round1(b.preference)}</span>
-            <span className="num flex-[0_0_30px] text-right text-[11px] text-slate-400">/5</span>
+            <span className="num flex-[0_0_30px] text-right text-[11px] text-ink2">/5</span>
           </div>
         )}
-        <div className="mt-1.5 flex justify-between border-t border-slate-200 pt-1.5 text-[12.5px]">
+        <div className="mt-1.5 flex justify-between border-t border-line pt-1.5 text-[12.5px]">
           <span className="font-semibold">= Fit score</span>
           <span className="num font-bold text-accent">{round1(item.total)}</span>
         </div>
-        <p className="mt-2 text-[11px] leading-[1.45] text-slate-400">
+        <p className="mt-2 text-[11px] leading-[1.45] text-ink2">
           Each component is a 0–1 fit measure × its weight, with the AI&apos;s grounded reason for the score.
           Higher coverage/network/medication fit is better; mismatch and catastrophic downside are subtracted.
         </p>
       </div>
 
       {item.costBreakdown && item.costBreakdown.items.length > 0 && (
-        <div className="mt-3 border-t border-slate-100 pt-3">
+        <div className="mt-3 border-t border-line pt-3">
           <div className="mb-1.5 text-[12px] font-medium text-accent">
             Predicted annual cost — how the ${item.costBreakdown.estimatedAnnualTotal.toLocaleString()}/yr estimate is built
           </div>
           <div className="flex flex-col gap-1">
             {item.costBreakdown.items.map((ci, i) => (
               <div key={i} className="flex items-baseline gap-2.5 text-[12px]">
-                <span className="flex-[0_0_180px] text-slate-600">{ci.label}</span>
+                <span className="flex-[0_0_180px] text-ink2">{ci.label}</span>
                 <span className="num flex-[0_0_70px] text-right font-semibold text-ink">${ci.annualEstimate.toLocaleString()}</span>
-                <span className="flex-1 text-[11px] italic text-slate-400">{ci.basis}</span>
+                <span className="flex-1 text-[11px] italic text-ink2">{ci.basis}</span>
               </div>
             ))}
-            <div className="mt-1 flex items-baseline gap-2.5 border-t border-slate-200 pt-1.5 text-[12.5px]">
+            <div className="mt-1 flex items-baseline gap-2.5 border-t border-line pt-1.5 text-[12.5px]">
               <span className="flex-[0_0_180px] font-semibold">Estimated total / year</span>
               <span className="num flex-[0_0_70px] text-right font-bold text-accent">
                 ${item.costBreakdown.estimatedAnnualTotal.toLocaleString()}
               </span>
-              <span className="flex-1 text-[11px] italic text-slate-400">tied to this member&apos;s expected use</span>
+              <span className="flex-1 text-[11px] italic text-ink2">tied to this member&apos;s expected use</span>
             </div>
           </div>
         </div>
@@ -571,7 +600,7 @@ function BreakdownDetails({ item }: { item: RankedItem }) {
 function Stat({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <div className="mb-0.5 text-[10.5px] uppercase tracking-[.03em] text-slate-400">{label}</div>
+      <div className="mb-0.5 text-[10.5px] uppercase tracking-[.03em] text-ink2">{label}</div>
       <div className="text-[13px] font-semibold">{children}</div>
     </div>
   );

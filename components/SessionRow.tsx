@@ -47,14 +47,14 @@ export default function SessionRow({
   }
 
   return (
-    <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 border-b border-slate-100 px-5 py-[15px] last:border-b-0 hover:bg-slate-50">
+    <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 border-b border-line px-5 py-[15px] last:border-b-0 hover:bg-paper">
       <Link href={`/session/${id}`} className="contents">
         <div>
           <div className="text-sm font-semibold text-ink">{title}</div>
-          <div className="num text-xs text-slate-400">{code}</div>
+          <div className="num text-xs text-ink2">{code}</div>
         </div>
         <StatusPill status={captured ? "captured" : "awaiting"} />
-        <div className="num text-[13px] text-slate-500">{fmtDate(createdAt)}</div>
+        <div className="num text-[13px] text-ink2">{fmtDate(createdAt)}</div>
       </Link>
       <button
         type="button"
@@ -62,7 +62,7 @@ export default function SessionRow({
         disabled={busy}
         aria-label="Remove session"
         title="Remove session"
-        className="rounded-md px-2 py-1 text-[12.5px] font-medium text-slate-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
+        className="rounded-sm px-2 py-1 text-[12.5px] font-medium text-ink2 hover:bg-neg/10 hover:text-neg disabled:opacity-50"
       >
         {busy ? "…" : "Remove"}
       </button>

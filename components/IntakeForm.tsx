@@ -10,16 +10,16 @@ import { StepLabel } from "@/components/ui/SectionLabel";
 import Spinner from "@/components/ui/Spinner";
 
 const inputCls =
-  "w-full rounded-lg border border-slate-300 px-[11px] py-[9px] text-[13.5px] focus:border-accent";
-const labelCls = "mb-1.5 block text-xs font-medium text-slate-700";
-const errCls = "mt-1 text-[11.5px] text-rose-600";
-const divider = <div className="my-[22px] h-px bg-slate-100" />;
+  "w-full rounded-sm border border-line bg-surface px-[11px] py-[9px] text-[13.5px] focus:border-accent";
+const labelCls = "mb-1.5 block text-xs font-medium text-ink";
+const errCls = "mt-1 text-[11.5px] text-neg";
+const divider = <div className="my-[22px] border-t border-line" />;
 
-function bmiCategory(bmi: number): { label: string; color: string } {
-  if (bmi < 18.5) return { label: "Underweight", color: "#d97706" };
-  if (bmi < 25) return { label: "Normal range", color: "#059669" };
-  if (bmi < 30) return { label: "Overweight", color: "#d97706" };
-  return { label: "Obese", color: "#e11d48" };
+function bmiCategory(bmi: number): { label: string; cls: string } {
+  if (bmi < 18.5) return { label: "Underweight", cls: "text-warn" };
+  if (bmi < 25) return { label: "Normal range", cls: "text-pos" };
+  if (bmi < 30) return { label: "Overweight", cls: "text-warn" };
+  return { label: "Obese", cls: "text-neg" };
 }
 
 export default function IntakeForm({
@@ -135,7 +135,7 @@ export default function IntakeForm({
   return (
     <form onSubmit={submit}>
       {(errors.form || serverError) && (
-        <div className="mb-5 rounded-lg border border-rose-200 bg-rose-50 px-3.5 py-[11px] text-[13px] text-rose-800">
+        <div className="mb-5 block rounded-sm border border-neg/30 bg-neg/10 px-3.5 py-[11px] text-[13px] text-neg">
           {serverError ?? errors.form}
         </div>
       )}
@@ -151,7 +151,7 @@ export default function IntakeForm({
         </div>
         <div>
           <label className={labelCls}>Gender</label>
-          <select className={`${inputCls} bg-white`} value={v.gender}
+          <select className={`${inputCls}`} value={v.gender}
             onChange={(e) => update({ gender: e.target.value as Gender })}>
             <option value="">Select…</option>
             <option value="female">Female</option>
@@ -160,7 +160,7 @@ export default function IntakeForm({
         </div>
         <div>
           <label className={labelCls}>Market region <Req /></label>
-          <select className={`${inputCls} bg-white`} value={v.marketRegion}
+          <select className={`${inputCls}`} value={v.marketRegion}
             onChange={(e) => update({ marketRegion: e.target.value })}>
             <option value="">SMG service area…</option>
             {reference.regions.map((r) => (
@@ -187,7 +187,7 @@ export default function IntakeForm({
 
       {/* 2 Medications */}
       <StepLabel step={2}>Current medications</StepLabel>
-      <p className="-mt-1.5 mb-3 text-xs text-slate-400">
+      <p className="-mt-1.5 mb-3 text-xs text-ink2">
         Add each medication the client takes. Start typing for suggestions.
       </p>
       <datalist id="drug-suggestions">
@@ -199,7 +199,7 @@ export default function IntakeForm({
             <input className={`${inputCls} flex-1`} list="drug-suggestions" placeholder="e.g. Metformin 1000mg"
               value={m} onChange={(e) => setMed(i, e.target.value)} />
             <button type="button" onClick={() => removeMed(i)} disabled={v.medications.length <= 1}
-              className="h-9 w-9 flex-none rounded-lg border border-slate-200 bg-white text-base text-slate-400 disabled:opacity-40 hover:bg-slate-50">
+              className="h-9 w-9 flex-none rounded-sm border border-line bg-surface text-base text-ink2 disabled:opacity-40 hover:bg-paper">
               −
             </button>
           </div>
@@ -215,7 +215,7 @@ export default function IntakeForm({
       <StepLabel step={3}>Diagnosed conditions</StepLabel>
       <div className="mb-3 grid grid-cols-2 gap-x-3.5 gap-y-[7px]">
         {reference.conditionOptions.map((c) => (
-          <label key={c.value} className="flex cursor-pointer items-center gap-2.5 py-[3px] text-[13px] text-slate-700">
+          <label key={c.value} className="flex cursor-pointer items-center gap-2.5 py-[3px] text-[13px] text-ink">
             <input type="checkbox" checked={v.conditions.includes(c.value)} onChange={() => toggleCondition(c.value)}
               className="h-4 w-4 flex-none accent-accent" />
             {c.label}
@@ -245,11 +245,11 @@ export default function IntakeForm({
         {bmi !== null && (() => {
           const cat = bmiCategory(bmi);
           return (
-            <div className="rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2">
-              <div className="text-[11px] text-slate-400">BMI</div>
+            <div className="rounded-sm border border-line bg-paper px-3.5 py-2">
+              <div className="eyebrow text-ink2">BMI</div>
               <div className="flex items-baseline gap-2">
-                <span className="num text-lg font-semibold">{bmi}</span>
-                <span className="text-xs font-semibold" style={{ color: cat.color }}>{cat.label}</span>
+                <span className="num text-lg font-semibold text-ink">{bmi}</span>
+                <span className={`text-xs font-semibold ${cat.cls}`}>{cat.label}</span>
               </div>
             </div>
           );
@@ -265,7 +265,7 @@ export default function IntakeForm({
           const cur = familyStatus(c.value);
           return (
             <div key={c.value} className="flex items-center justify-between gap-3">
-              <span className="text-[13px] text-slate-700">{c.label}</span>
+              <span className="text-[13px] text-ink">{c.label}</span>
               <div className="flex gap-1.5">
                 {(["yes", "no", "unknown"] as const).map((opt) => (
                   <FamilyButton key={opt} active={cur === opt}
@@ -282,13 +282,13 @@ export default function IntakeForm({
 
       {/* 6 Providers */}
       <StepLabel step={6}>Doctors / hospitals to keep</StepLabel>
-      <p className="-mt-1.5 mb-3 text-xs text-slate-400">
-        Selected systems become <strong className="text-slate-600">hard requirements</strong> — plans not
+      <p className="-mt-1.5 mb-3 text-xs text-ink2">
+        Selected systems become <strong className="text-ink">hard requirements</strong> — plans not
         contracting them are excluded.
       </p>
       <div className="grid grid-cols-2 gap-x-3.5 gap-y-[7px]">
         {reference.providerSystems.map((s) => (
-          <label key={s.id} className="flex cursor-pointer items-center gap-2.5 py-[3px] text-[13px] text-slate-700">
+          <label key={s.id} className="flex cursor-pointer items-center gap-2.5 py-[3px] text-[13px] text-ink">
             <input type="checkbox" checked={v.mustKeepSystemIds.includes(s.id)} onChange={() => toggleSystem(s.id)}
               className="h-4 w-4 flex-none accent-accent" />
             {s.name}
@@ -313,7 +313,7 @@ export default function IntakeForm({
 
       {/* 8 Lifestyle & well-being */}
       <StepLabel step={8}>Lifestyle &amp; well-being</StepLabel>
-      <p className="-mt-1.5 mb-3 text-xs text-slate-400">
+      <p className="-mt-1.5 mb-3 text-xs text-ink2">
         All optional and self-reported — these add light context and are not weighted heavily.
       </p>
       <div className="grid grid-cols-2 gap-3.5">
@@ -323,7 +323,7 @@ export default function IntakeForm({
           onChange={(x) => update({ sleepHoursPerNight: x })} />
         <div>
           <label className={labelCls}>Sleep quality</label>
-          <select className={`${inputCls} bg-white`} value={v.sleepQuality}
+          <select className={`${inputCls}`} value={v.sleepQuality}
             onChange={(e) => update({ sleepQuality: e.target.value as IntakeFormValues["sleepQuality"] })}>
             <option value="">Select…</option>
             {SLEEP_QUALITY_OPTIONS.map((o) => (
@@ -334,7 +334,7 @@ export default function IntakeForm({
         </div>
         <div>
           <label className={labelCls}>Overall health, self-rated</label>
-          <select className={`${inputCls} bg-white`} value={v.selfRatedHealth}
+          <select className={`${inputCls}`} value={v.selfRatedHealth}
             onChange={(e) => update({ selfRatedHealth: e.target.value as IntakeFormValues["selfRatedHealth"] })}>
             <option value="">Select…</option>
             {SELF_RATED_HEALTH_OPTIONS.map((o) => (
@@ -349,16 +349,16 @@ export default function IntakeForm({
 
       {/* 9 Dual eligibility — gates D-SNP plans */}
       <StepLabel step={9}>Dual eligibility</StepLabel>
-      <label className="flex cursor-pointer items-start gap-3 rounded-[9px] border border-slate-200 bg-white px-3.5 py-3">
+      <label className="flex cursor-pointer items-start gap-3 rounded-sm border border-line bg-surface px-3.5 py-3">
         <input
           type="checkbox"
-          className="mt-0.5"
+          className="mt-0.5 accent-accent"
           checked={v.dualEligible}
           onChange={(e) => update({ dualEligible: e.target.checked })}
         />
-        <span className="text-[13px] leading-[1.5] text-slate-700">
+        <span className="text-[13px] leading-[1.5] text-ink">
           <span className="font-semibold">Dual-eligible (Medicare + Medi-Cal)</span>
-          <span className="block text-[12px] text-slate-500">
+          <span className="block text-[12px] text-ink2">
             Check only if the client is confirmed dual-eligible. Dual-eligible Special Needs Plans (D-SNPs) are
             shown only when this is checked.
           </span>
@@ -368,22 +368,22 @@ export default function IntakeForm({
       {divider}
 
       {/* Consent — required to submit (enforced in validateIntake) */}
-      <label className="flex cursor-pointer items-start gap-3 rounded-[9px] border border-slate-200 bg-white px-3.5 py-3">
+      <label className="flex cursor-pointer items-start gap-3 rounded-sm border border-line bg-surface px-3.5 py-3">
         <input
           type="checkbox"
-          className="mt-0.5"
+          className="mt-0.5 accent-accent"
           checked={v.consentAcknowledged}
           onChange={(e) => update({ consentAcknowledged: e.target.checked })}
         />
-        <span className="text-[13px] leading-[1.5] text-slate-700">
+        <span className="text-[13px] leading-[1.5] text-ink">
           I confirm the member consents to using this information to recommend a Medicare plan.{" "}
-          <span className="text-slate-500">This is not medical advice.</span>
+          <span className="text-ink2">This is not medical advice.</span>
         </span>
       </label>
       {errors.fields.consentAcknowledged && <div className={errCls}>{errors.fields.consentAcknowledged}</div>}
 
       <button type="submit" disabled={submitting}
-        className="mt-[26px] flex w-full items-center justify-center gap-2.5 rounded-[9px] bg-accent py-[13px] text-[14.5px] font-semibold text-white hover:opacity-90 disabled:opacity-50">
+        className="mt-[26px] flex w-full items-center justify-center gap-2.5 rounded-sm bg-accent py-[13px] text-[14.5px] font-semibold text-white hover:opacity-90 disabled:opacity-50">
         {submitting && <Spinner light size={15} />}
         {submitting ? "Saving…" : submitLabel ?? defaultLabel}
       </button>
@@ -394,19 +394,19 @@ export default function IntakeForm({
 function FamilyButton({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
   return (
     <button type="button" onClick={onClick}
-      className="rounded-[7px] border px-[13px] py-[5px] text-xs font-medium"
-      style={{
-        background: active ? "#0d6e6e" : "#ffffff",
-        color: active ? "#ffffff" : "#475569",
-        borderColor: active ? "#0d6e6e" : "#cbd5e1",
-      }}>
+      aria-pressed={active}
+      className={`rounded-sm border px-[13px] py-[5px] text-[10.5px] font-semibold uppercase tracking-[.04em] ${
+        active
+          ? "border-accent bg-accent text-white"
+          : "border-line bg-surface text-ink2 hover:bg-paper"
+      }`}>
       {label}
     </button>
   );
 }
 
 function Req() {
-  return <span className="text-rose-500">*</span>;
+  return <span className="text-neg">*</span>;
 }
 
 function NumField({ label, value, err, onChange }: { label: string; value: string; err?: string; onChange: (v: string) => void }) {

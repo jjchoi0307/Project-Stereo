@@ -19,7 +19,8 @@ import IntakeForm from "./IntakeForm";
 import Card from "@/components/ui/Card";
 import StatusPill from "@/components/ui/StatusPill";
 import { ReadLabel } from "@/components/ui/SectionLabel";
-import Spinner from "@/components/ui/Spinner";
+import SmgLoader from "@/components/ui/SmgLoader";
+import Stepper from "@/components/ui/Stepper";
 
 interface PlanLite {
   id: string;
@@ -72,6 +73,15 @@ interface HealthView {
   outcomeIncidence: { outcome: string; label: string; rate: number }[];
   sampleTrajectories: HealthReplica[];
 }
+
+// The shared 4-step broker journey (see WORKFLOW.md). Same steps everywhere; the
+// Stepper only links completed steps, so unfinished hrefs are harmless.
+const journeySteps = (id: string) => [
+  { label: "Capture facts", href: `/session/${id}` },
+  { label: "Clinical read", href: `/session/${id}` },
+  { label: "Recommendation", href: `/session/${id}/recommendation` },
+  { label: "On record" },
+];
 
 const usd = (n: number) => "$" + n.toLocaleString();
 const pct = (n: number) => Math.round(n * 100) + "%";
@@ -184,12 +194,13 @@ export default function BrokerSession({
   if (session.status === "intake_complete" && session.profile && !editing) {
     return (
       <div data-fade className="mx-auto max-w-[880px]">
+        <Stepper steps={journeySteps(session.id)} current={1} />
         <div className="mb-2 flex items-center gap-2.5">
-          <span className="num text-xs font-semibold text-slate-600" title={session.id}>{clientRef(session.id)}</span>
+          <span className="num text-xs font-semibold text-ink2" title={session.id}>{clientRef(session.id)}</span>
           <StatusPill status="captured" />
         </div>
-        <h1 className="mb-1 text-2xl font-semibold tracking-[-.01em] text-ink">Clinical read</h1>
-        <p className="mb-6 text-[13.5px] text-slate-500">
+        <h1 className="display mb-1 text-[26px] font-semibold text-ink">Clinical read</h1>
+        <p className="mb-6 text-[13.5px] text-ink2">
           Risk markers and health futures are AI-read from the captured facts; plan screening and
           simulation are deterministic and expandable to their trace.
         </p>
@@ -214,19 +225,24 @@ export default function BrokerSession({
           {sim ? <SimulationCard sim={sim} /> : <LoadingCard label="simulation" />}
         </div>
 
-        <div className="mt-6 flex flex-wrap items-center gap-3">
-          <Link
-            href={`/session/${session.id}/recommendation`}
-            className="rounded-[9px] bg-accent px-[22px] py-[13px] text-[14.5px] font-semibold text-white hover:opacity-90"
-          >
-            Continue to recommendation →
-          </Link>
-          <button
-            onClick={() => setEditing(true)}
-            className="rounded-[9px] border border-slate-300 bg-white px-[18px] py-[13px] text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
-            Correct facts
-          </button>
+        <div className="mt-7 border-t border-line pt-5">
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href={`/session/${session.id}/recommendation`}
+              className="rounded-sm bg-accent px-[22px] py-[13px] text-[14.5px] font-semibold text-surface hover:bg-accent-strong"
+            >
+              Continue to recommendation →
+            </Link>
+            <button
+              onClick={() => setEditing(true)}
+              className="rounded-sm border border-line bg-surface px-[18px] py-[13px] text-sm font-medium text-ink hover:bg-paper"
+            >
+              Correct facts
+            </button>
+          </div>
+          <p className="mt-2.5 text-[12px] leading-[1.5] text-ink2">
+            Facts look right? Continue to the ranked recommendation. Need a change? <span className="font-medium text-ink">Correct facts</span> reopens the prefilled form — resubmitting updates the saved facts, attributing any edits to you while preserving the member&apos;s original entries.
+          </p>
         </div>
       </div>
     );
@@ -236,8 +252,14 @@ export default function BrokerSession({
   if (editing && session.profile) {
     return (
       <div data-fade className="mx-auto max-w-[880px]">
-        <h1 className="mb-4 text-2xl font-semibold tracking-[-.01em] text-ink">Correct facts</h1>
-        <div className="max-w-[660px] rounded-xl border border-slate-200 bg-white p-[26px]">
+        <Stepper steps={journeySteps(session.id)} current={1} />
+        <h1 className="display mb-1 text-[26px] font-semibold text-ink">Correct facts</h1>
+        <p className="mb-5 max-w-[660px] text-[13.5px] leading-[1.5] text-ink2">
+          The form is prefilled with the saved facts. Saving updates this session in place — your
+          edits are attributed to you, the member&apos;s original entries are preserved, and the
+          clinical read recomputes.
+        </p>
+        <div className="max-w-[660px] border border-line bg-surface p-[26px]">
           <IntakeForm
             sessionId={session.id}
             capturedBy="broker"
@@ -247,7 +269,7 @@ export default function BrokerSession({
             submitLabel="Save corrections"
             onSubmitted={onSubmitted}
           />
-          <button onClick={() => setEditing(false)} className="mt-4 text-sm text-slate-500 hover:underline">
+          <button onClick={() => setEditing(false)} className="mt-4 text-sm text-ink2 hover:underline">
             Cancel
           </button>
         </div>
@@ -258,64 +280,83 @@ export default function BrokerSession({
   // ── Awaiting facts: broker entry + patient handoff ───────────────────────
   return (
     <div data-fade>
-      <div className="mb-[18px] flex items-center gap-2.5">
-        <span className="num text-xs text-slate-400">{session.id}</span>
+      <Stepper steps={journeySteps(session.id)} current={0} />
+      <div className="mb-2 flex items-center gap-2.5">
+        <span className="num text-xs text-ink2" title={session.id}>{clientRef(session.id)}</span>
         <StatusPill status="awaiting" pulse />
       </div>
-      <h1 className="mb-[18px] text-2xl font-semibold tracking-[-.01em] text-ink">Client session</h1>
+      <h1 className="display mb-1 text-[26px] font-semibold text-ink">Capture facts</h1>
+      <p className="mb-6 text-[13.5px] leading-[1.5] text-ink2">
+        Two ways to get this member&apos;s facts on the record — pick whichever fits the conversation.
+        Either path lands in the same place and flips this page to the clinical read.
+      </p>
 
-      <div className="flex flex-wrap items-start gap-6">
-        <div className="min-w-0 flex-1 basis-[560px] rounded-xl border border-slate-200 bg-white p-[26px]">
-          <IntakeForm
-            sessionId={session.id}
-            capturedBy="broker"
-            reference={reference}
-            variant="broker"
-            onSubmitted={onSubmitted}
-          />
-        </div>
+      <div className="grid items-start gap-5 lg:grid-cols-[1fr_340px]">
+        {/* Path A — broker enters the facts directly */}
+        <section className="min-w-0 rounded-xl border border-line bg-surface shadow-card">
+          <div className="border-b border-line px-[26px] py-4">
+            <div className="eyebrow mb-1 text-accent">Path A</div>
+            <h2 className="text-[15px] font-semibold text-ink">Enter the facts yourself</h2>
+            <p className="mt-1 text-[12.5px] leading-[1.5] text-ink2">
+              You have the details in front of you — fill them in here. Submitting saves the facts to
+              this session.
+            </p>
+          </div>
+          <div className="p-[26px]">
+            <IntakeForm
+              sessionId={session.id}
+              capturedBy="broker"
+              reference={reference}
+              variant="broker"
+              onSubmitted={onSubmitted}
+            />
+          </div>
+        </section>
 
-        <aside className="sticky top-[80px] flex flex-none basis-[312px] flex-col gap-4">
-          <div className="rounded-xl border border-slate-200 bg-white p-5">
-            <h3 className="mb-1.5 text-sm font-semibold text-ink">Have the client enter their own facts</h3>
-            <p className="mb-3.5 text-[12.5px] leading-[1.5] text-slate-500">
-              Share this single-use link. The client fills the same form; this session updates
-              automatically.
+        {/* Path B — hand off a secure link to the member */}
+        <aside className="sticky top-[80px] flex flex-col gap-4">
+          <div className="rounded-xl border border-line bg-surface shadow-card p-5">
+            <div className="eyebrow mb-1 text-blue">Path B</div>
+            <h3 className="mb-1.5 text-[15px] font-semibold text-ink">Send the member a secure link</h3>
+            <p className="mb-3.5 text-[12.5px] leading-[1.5] text-ink2">
+              Share this single-use link. The member fills the same form on their own device; this
+              session updates automatically.
             </p>
             <div className="flex gap-2">
               <input
                 readOnly
                 value={patientLink || (linkError ? "" : "Generating link…")}
-                className="num min-w-0 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-[11px] py-[9px] text-xs text-slate-600"
+                className="num min-w-0 flex-1 rounded-sm border border-line bg-paper px-[11px] py-[9px] text-xs text-ink2"
               />
               <button
                 type="button"
                 onClick={copyLink}
                 disabled={!patientLink}
-                className="flex-none rounded-lg px-3.5 py-[9px] text-[12.5px] font-semibold disabled:opacity-50"
-                style={{
-                  background: copied ? "#ecfdf5" : "#0d6e6e",
-                  color: copied ? "#059669" : "#ffffff",
-                  border: `1px solid ${copied ? "#a7f3d0" : "#0d6e6e"}`,
-                }}
+                className={`flex-none rounded-sm border px-3.5 py-[9px] text-[12.5px] font-semibold disabled:opacity-50 ${
+                  copied
+                    ? "border-pos/30 bg-pos/10 text-pos"
+                    : "border-accent bg-accent text-surface hover:bg-accent-strong"
+                }`}
               >
                 {copied ? "Copied ✓" : "Copy"}
               </button>
             </div>
             {linkError && (
-              <p className="mt-1.5 text-xs text-rose-600">Couldn&apos;t generate the link. Reload to retry.</p>
+              <p className="mt-1.5 text-xs text-neg">Couldn&apos;t generate the link. Reload to retry.</p>
             )}
           </div>
 
-          <div className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-[18px]">
+          <div className="rounded-xl border border-neg/30 bg-neg/10 px-5 py-[18px]">
             <div className="mb-2 flex items-center gap-2.5">
               <span
-                className="h-[9px] w-[9px] rounded-full"
-                style={{ background: "#d97706", animation: "pulseDot 1.4s ease-in-out infinite" }}
+                className="h-1.5 w-1.5 flex-none rounded-full bg-neg"
+                style={{ animation: "pulseDot 1.4s ease-in-out infinite" }}
               />
-              <span className="text-[13px] font-semibold text-amber-800">Waiting for the client to submit…</span>
+              <span className="text-[13px] font-semibold text-neg">
+                Waiting for the member to submit their facts…
+              </span>
             </div>
-            <p className="text-xs leading-[1.5] text-amber-700">
+            <p className="text-xs leading-[1.5] text-neg">
               This page checks for new facts every few seconds. It will switch to the clinical read
               automatically.
             </p>
@@ -329,8 +370,8 @@ export default function BrokerSession({
 function LoadingCard({ label }: { label: string }) {
   return (
     <Card>
-      <div className="flex items-center gap-2.5 text-[13px] text-slate-400">
-        <Spinner size={14} /> Computing {label}…
+      <div className="flex items-center gap-2.5 text-[13px] text-ink2">
+        <SmgLoader size={22} /> Computing {label}…
       </div>
     </Card>
   );
@@ -393,9 +434,9 @@ function CapturedFacts({ profile, reference }: { profile: ClientProfileInput; re
           return (
             <div
               key={r.label}
-              className="grid grid-cols-[160px_1fr_auto] items-center gap-3.5 border-b border-slate-100 py-[9px] last:border-b-0"
+              className="grid grid-cols-[160px_1fr_auto] items-center gap-3.5 border-b border-line py-[9px] last:border-b-0"
             >
-              <div className="text-[12.5px] text-slate-500">{r.label}</div>
+              <div className="text-[12.5px] text-ink2">{r.label}</div>
               <div className="text-[13.5px] text-ink">{r.value}</div>
               <ProvChip source={p} />
             </div>
@@ -410,11 +451,9 @@ function ProvChip({ source }: { source: "patient" | "broker" }) {
   const patient = source === "patient";
   return (
     <span
-      className="whitespace-nowrap rounded px-2 py-[3px] text-[10.5px] font-semibold"
-      style={{
-        background: patient ? "#eff6ff" : "#f1f5f9",
-        color: patient ? "#1d4ed8" : "#475569",
-      }}
+      className={`eyebrow whitespace-nowrap rounded-sm border px-2 py-0.5 text-[10.5px] ${
+        patient ? "border-prov/30 bg-prov/10 text-prov" : "border-ai/30 bg-ai/10 text-ai"
+      }`}
     >
       {patient ? "Patient-entered" : "Broker-entered"}
     </span>
@@ -422,11 +461,14 @@ function ProvChip({ source }: { source: "patient" | "broker" }) {
 }
 
 // ── 2 · Risk markers ─────────────────────────────────────────────────────────
-const BAND_STYLE: Record<RiskBand, { bg: string; fg: string; bar: string; label: string }> = {
-  low: { bg: "#f1f5f9", fg: "#475569", bar: "#94a3b8", label: "Low" },
-  moderate: { bg: "#fffbeb", fg: "#92400e", bar: "#f59e0b", label: "Moderate" },
-  high: { bg: "#fff7ed", fg: "#9a3412", bar: "#f97316", label: "High" },
-  very_high: { bg: "#fff1f2", fg: "#9f1239", bar: "#f43f5e", label: "Very high" },
+// Risk-band tints map to the data-only semantics (DESIGN.md): low reads as
+// neutral ink2, moderate/high escalate through warn, very_high lands on neg.
+// `chip` is a square bordered token chip; `bar` is the marker fill color.
+const BAND_STYLE: Record<RiskBand, { chip: string; bar: string; label: string }> = {
+  low: { chip: "border-line bg-paper text-ink2", bar: "bg-ink2", label: "Low" },
+  moderate: { chip: "border-warn/30 bg-warn/10 text-warn", bar: "bg-warn", label: "Moderate" },
+  high: { chip: "border-warn/30 bg-warn/10 text-warn", bar: "bg-warn", label: "High" },
+  very_high: { chip: "border-neg/30 bg-neg/10 text-neg", bar: "bg-neg", label: "Very high" },
 };
 // The bar shows the BAND, not a raw 0–100 score. A precise number (e.g. "70")
 // reads as a false-precise measurement to brokers/members and is confusing; the
@@ -450,10 +492,10 @@ function MarkersCard({ clinical }: { clinical: ClinicalRead }) {
       <div className="mb-1.5">
         <ReadLabel>
           2 · Risk markers{" "}
-          <span className="font-medium normal-case tracking-normal text-slate-400">· AI read</span>
+          <span className="font-medium normal-case tracking-normal text-ai">· AI read</span>
         </ReadLabel>
       </div>
-      <p className="mb-[18px] text-[12.5px] text-slate-400">
+      <p className="mb-[18px] text-[12.5px] text-ink2">
         Each marker is rated Low → Very high from the captured facts. Click any to read why.
       </p>
       <div className="flex flex-col gap-3.5">
@@ -469,22 +511,21 @@ function MarkersCard({ clinical }: { clinical: ClinicalRead }) {
                 aria-expanded={isOpen}
                 className="flex w-full cursor-pointer items-center gap-3 text-left"
               >
-                <div className="flex flex-[0_0_168px] items-center gap-1.5 text-[13px] font-medium text-slate-700">
-                  <span className="text-[10px] text-slate-400">{isOpen ? "▾" : "▸"}</span>
+                <div className="flex flex-[0_0_168px] items-center gap-1.5 text-[13px] font-medium text-ink">
+                  <span className="text-[10px] text-accent">{isOpen ? "▾" : "▸"}</span>
                   {m.label}
                 </div>
-                <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
-                  <span className="block h-full rounded-full" style={{ width: `${p}%`, background: st.bar }} />
+                <div className="h-[5px] flex-1 overflow-hidden bg-line">
+                  <span className={`block h-full ${st.bar}`} style={{ width: `${p}%` }} />
                 </div>
                 <span
-                  className="flex-[0_0_92px] rounded-md py-[3px] text-center text-[11px] font-semibold"
-                  style={{ background: st.bg, color: st.fg }}
+                  className={`eyebrow flex-[0_0_92px] rounded-sm border py-0.5 text-center text-[11px] ${st.chip}`}
                 >
                   {st.label}
                 </span>
               </button>
               {isOpen && (
-                <div className="ml-[180px] mt-2.5 rounded-r-lg border-l-2 border-slate-300 bg-slate-50 px-3.5 py-[11px] text-[12.5px] leading-[1.55] text-slate-600">
+                <div className="ml-[180px] mt-2.5 border-l-2 border-line bg-paper px-3.5 py-[11px] text-[12.5px] leading-[1.55] text-ink2">
                   {m.why}
                 </div>
               )}
@@ -503,7 +544,7 @@ function MarkersCardDeterministic({ normalized }: { normalized: NormalizedProfil
       <div className="mb-1.5">
         <ReadLabel>2 · Risk markers</ReadLabel>
       </div>
-      <p className="mb-[18px] text-[12.5px] text-slate-400">
+      <p className="mb-[18px] text-[12.5px] text-ink2">
         Six markers from the captured profile, each rated Low → Very high. Click any to read its trace.
       </p>
       <div className="flex flex-col gap-3.5">
@@ -520,22 +561,21 @@ function MarkersCardDeterministic({ normalized }: { normalized: NormalizedProfil
                 aria-expanded={isOpen}
                 className="flex w-full cursor-pointer items-center gap-3 text-left"
               >
-                <div className="flex flex-[0_0_168px] items-center gap-1.5 text-[13px] font-medium text-slate-700">
-                  <span className="text-[10px] text-slate-400">{isOpen ? "▾" : "▸"}</span>
+                <div className="flex flex-[0_0_168px] items-center gap-1.5 text-[13px] font-medium text-ink">
+                  <span className="text-[10px] text-accent">{isOpen ? "▾" : "▸"}</span>
                   {m.label}
                 </div>
-                <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
-                  <span className="block h-full rounded-full" style={{ width: `${p}%`, background: st.bar }} />
+                <div className="h-[5px] flex-1 overflow-hidden bg-line">
+                  <span className={`block h-full ${st.bar}`} style={{ width: `${p}%` }} />
                 </div>
                 <span
-                  className="flex-[0_0_92px] rounded-md py-[3px] text-center text-[11px] font-semibold"
-                  style={{ background: st.bg, color: st.fg }}
+                  className={`eyebrow flex-[0_0_92px] rounded-sm border py-0.5 text-center text-[11px] ${st.chip}`}
                 >
                   {st.label}
                 </span>
               </button>
               {isOpen && (
-                <div className="ml-[180px] mt-2.5 rounded-r-lg border-l-2 border-slate-300 bg-slate-50 px-3.5 py-[11px] text-[12.5px] leading-[1.55] text-slate-600">
+                <div className="ml-[180px] mt-2.5 border-l-2 border-line bg-paper px-3.5 py-[11px] text-[12.5px] leading-[1.55] text-ink2">
                   {marker.trace.map((t, i) => (
                     <div key={i}>· {t}</div>
                   ))}
@@ -550,15 +590,15 @@ function MarkersCardDeterministic({ normalized }: { normalized: NormalizedProfil
 }
 
 // ── 3 · Health futures ─────────────────────────────────────────────────────
-const OUTLOOK_STYLE: Record<"stable" | "watch" | "elevated", { bg: string; fg: string; label: string }> = {
-  stable: { bg: "#ecfdf5", fg: "#059669", label: "Stable" },
-  watch: { bg: "#fffbeb", fg: "#92400e", label: "Watch" },
-  elevated: { bg: "#fff1f2", fg: "#9f1239", label: "Elevated" },
+const OUTLOOK_STYLE: Record<"stable" | "watch" | "elevated", { chip: string; label: string }> = {
+  stable: { chip: "border-pos/30 bg-pos/10 text-pos", label: "Stable" },
+  watch: { chip: "border-warn/30 bg-warn/10 text-warn", label: "Watch" },
+  elevated: { chip: "border-neg/30 bg-neg/10 text-neg", label: "Elevated" },
 };
-const LIKELIHOOD_STYLE: Record<"unlikely" | "possible" | "likely", { bg: string; fg: string; label: string }> = {
-  unlikely: { bg: "#f1f5f9", fg: "#475569", label: "Unlikely" },
-  possible: { bg: "#fffbeb", fg: "#92400e", label: "Possible" },
-  likely: { bg: "#fff7ed", fg: "#9a3412", label: "Likely" },
+const LIKELIHOOD_STYLE: Record<"unlikely" | "possible" | "likely", { chip: string; label: string }> = {
+  unlikely: { chip: "border-line bg-paper text-ink2", label: "Unlikely" },
+  possible: { chip: "border-warn/30 bg-warn/10 text-warn", label: "Possible" },
+  likely: { chip: "border-warn/30 bg-warn/10 text-warn", label: "Likely" },
 };
 
 // AI-powered health futures, grounded in the captured de-identified facts.
@@ -574,10 +614,10 @@ function HealthFuturesCard({ clinical }: { clinical: ClinicalRead }) {
       <div className="mb-1.5">
         <ReadLabel>
           3 · Health futures{" "}
-          <span className="font-medium normal-case tracking-normal text-slate-400">· AI read</span>
+          <span className="font-medium normal-case tracking-normal text-ai">· AI read</span>
         </ReadLabel>
       </div>
-      <p className="mb-[18px] text-[12.5px] text-slate-400">
+      <p className="mb-[18px] text-[12.5px] text-ink2">
         Where this person&apos;s health is most likely headed, read from the captured facts.
       </p>
 
@@ -586,13 +626,10 @@ function HealthFuturesCard({ clinical }: { clinical: ClinicalRead }) {
         {ordered.map((h) => {
           const st = OUTLOOK_STYLE[h.outlook];
           return (
-            <div key={h.years} className="rounded-[10px] border border-slate-200 bg-slate-50 p-3.5">
+            <div key={h.years} className="border border-line bg-paper p-3.5">
               <div className="mb-2 flex items-center justify-between">
-                <span className="num text-[13px] font-semibold text-slate-700">{h.years}-year</span>
-                <span
-                  className="rounded-md px-2 py-[3px] text-[11px] font-semibold"
-                  style={{ background: st.bg, color: st.fg }}
-                >
+                <span className="num text-[13px] font-semibold text-ink">{h.years}-year</span>
+                <span className={`eyebrow rounded-sm border px-2 py-0.5 text-[11px] ${st.chip}`}>
                   {st.label}
                 </span>
               </div>
@@ -613,41 +650,38 @@ function HealthFuturesCard({ clinical }: { clinical: ClinicalRead }) {
       </button>
 
       {open && (
-        <div className="mt-3.5 border-t border-slate-100 pt-4">
+        <div className="mt-3.5 border-t border-line pt-4">
           {/* Per-horizon summaries */}
           <div className="mb-4 flex flex-col gap-3">
             {ordered.map((h) => (
               <div key={h.years}>
-                <div className="num mb-0.5 text-[11px] font-bold uppercase tracking-[.04em] text-slate-500">
+                <div className="num mb-0.5 text-[11px] font-bold uppercase tracking-[.04em] text-ink2">
                   {h.years}-year
                 </div>
-                <p className="text-[12.5px] leading-[1.5] text-slate-600">{h.summary}</p>
+                <p className="text-[12.5px] leading-[1.5] text-ink2">{h.summary}</p>
               </div>
             ))}
           </div>
 
-          <div className="mb-2.5 text-xs font-semibold text-slate-600">Possible outcomes</div>
+          <div className="eyebrow mb-2.5 text-ink2">Possible outcomes</div>
           <div className="mb-[18px] flex flex-col gap-2.5">
             {outcomes.map((o, i) => {
               const st = LIKELIHOOD_STYLE[o.likelihood];
               return (
-                <div key={i} className="rounded-lg border border-slate-200 bg-white px-3.5 py-[11px]">
+                <div key={i} className="border border-line bg-surface px-3.5 py-[11px]">
                   <div className="flex items-center gap-2.5">
-                    <span className="flex-1 text-[13px] font-medium text-slate-700">{o.label}</span>
-                    <span
-                      className="flex-none rounded-md px-2 py-[3px] text-[11px] font-semibold"
-                      style={{ background: st.bg, color: st.fg }}
-                    >
+                    <span className="flex-1 text-[13px] font-medium text-ink">{o.label}</span>
+                    <span className={`eyebrow flex-none rounded-sm border px-2 py-0.5 text-[11px] ${st.chip}`}>
                       {st.label}
                     </span>
                   </div>
-                  <p className="mt-1 text-[12.5px] leading-[1.5] text-slate-500">{o.why}</p>
+                  <p className="mt-1 text-[12.5px] leading-[1.5] text-ink2">{o.why}</p>
                 </div>
               );
             })}
           </div>
 
-          <p className="text-[11.5px] italic leading-[1.5] text-slate-400">{caveat}</p>
+          <p className="text-[11.5px] italic leading-[1.5] text-ink2">{caveat}</p>
         </div>
       )}
     </Card>
@@ -656,51 +690,53 @@ function HealthFuturesCard({ clinical }: { clinical: ClinicalRead }) {
 
 function HealthFuturesCardDeterministic({ health }: { health: HealthView }) {
   const [open, setOpen] = useState(false);
-  const outcomeColor = (rate: number) => (rate >= 0.2 ? "#f97316" : rate >= 0.1 ? "#f59e0b" : "#94a3b8");
+  // Outcome incidence bar fill: rarer events stay neutral ink2, common ones
+  // escalate to warn — the data-only semantics, no raw hue.
+  const outcomeColor = (rate: number) => (rate >= 0.1 ? "bg-warn" : "bg-ink2");
   return (
     <Card>
       <div className="mb-1.5">
         <ReadLabel>
           3 · Health futures{" "}
-          <span className="font-medium normal-case tracking-normal text-slate-400">
+          <span className="font-medium normal-case tracking-normal text-ink2">
             · {health.replicas} simulated futures
           </span>
         </ReadLabel>
       </div>
-      <p className="mb-[18px] text-[12.5px] text-slate-400">
+      <p className="mb-[18px] text-[12.5px] text-ink2">
         Deterministic projection over the captured profile · {health.horizonYears}-year horizon · seed{" "}
-        {health.seed}.
+        <span className="num">{health.seed}</span>.
       </p>
 
       <div className="mb-5 grid grid-cols-3 gap-3">
-        <div className="rounded-[10px] border border-emerald-200 bg-emerald-50 p-3.5">
-          <div className="num text-[26px] font-semibold text-emerald-900">{pct(health.stableRate)}</div>
-          <div className="mt-0.5 text-xs text-emerald-700">remain stable</div>
+        <div className="border border-pos/30 bg-pos/10 p-3.5">
+          <div className="num text-[26px] font-semibold text-pos">{pct(health.stableRate)}</div>
+          <div className="mt-0.5 text-xs text-ink2">remain stable</div>
         </div>
-        <div className="rounded-[10px] border border-orange-200 bg-orange-50 p-3.5">
-          <div className="num text-[26px] font-semibold text-orange-900">{pct(health.severeRate)}</div>
-          <div className="mt-0.5 text-xs text-orange-700">need more care</div>
+        <div className="border border-warn/30 bg-warn/10 p-3.5">
+          <div className="num text-[26px] font-semibold text-warn">{pct(health.severeRate)}</div>
+          <div className="mt-0.5 text-xs text-ink2">need more care</div>
         </div>
-        <div className="rounded-[10px] border border-slate-200 bg-slate-50 p-3.5">
-          <div className="text-[22px] font-semibold capitalize text-ink">{careLevel(health.meanComplexity)}</div>
-          <div className="mt-0.5 text-xs text-slate-500">typical care needs</div>
+        <div className="border border-line bg-paper p-3.5">
+          <div className="display text-[22px] font-semibold capitalize text-ink">{careLevel(health.meanComplexity)}</div>
+          <div className="mt-0.5 text-xs text-ink2">typical care needs</div>
         </div>
       </div>
 
-      <div className="mb-2.5 text-xs font-semibold text-slate-600">
+      <div className="eyebrow mb-2.5 text-ink2">
         Outcome incidence over {health.horizonYears} years
       </div>
       <div className="mb-[18px] flex flex-col gap-2.5">
         {health.outcomeIncidence.map((o) => (
           <div key={o.outcome} className="flex items-center gap-3">
-            <span className="flex-[0_0_188px] text-[12.5px] text-slate-700">{o.label}</span>
-            <span className="h-[7px] flex-1 overflow-hidden rounded-full bg-slate-100">
+            <span className="flex-[0_0_188px] text-[12.5px] text-ink">{o.label}</span>
+            <span className="h-[5px] flex-1 overflow-hidden bg-line">
               <span
-                className="block h-full rounded-full"
-                style={{ width: `${Math.round(o.rate * 100)}%`, background: outcomeColor(o.rate) }}
+                className={`block h-full ${outcomeColor(o.rate)}`}
+                style={{ width: `${Math.round(o.rate * 100)}%` }}
               />
             </span>
-            <span className="num flex-[0_0_34px] text-right text-[12.5px] font-semibold text-slate-600">
+            <span className="num flex-[0_0_34px] text-right text-[12.5px] font-semibold text-ink2">
               {pct(o.rate)}
             </span>
           </div>
@@ -722,9 +758,9 @@ function HealthFuturesCardDeterministic({ health }: { health: HealthView }) {
               {health.sampleTrajectories.map((r) => (
                 <div
                   key={r.index}
-                  className="rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-[11px] text-[12.5px] leading-[1.5] text-slate-600"
+                  className="border border-line bg-paper px-3.5 py-[11px] text-[12.5px] leading-[1.5] text-ink2"
                 >
-                  <span className="font-semibold text-slate-700">Example #{r.index}</span> · ends with{" "}
+                  <span className="font-semibold text-ink">Example #{r.index}</span> · ends with{" "}
                   {careLevel(r.complexityScore)} care needs —{" "}
                   {r.events.length
                     ? r.events.map((e) => `Yr ${e.year}: ${e.label}`).join("; ")
@@ -746,30 +782,30 @@ function ScreeningCard({ rules }: { rules: RulesView }) {
     <Card>
       <div className="mb-4 flex items-baseline justify-between">
         <ReadLabel>4 · Plan screening</ReadLabel>
-        <div className="text-[13px] text-slate-600">
-          <span className="num font-semibold text-emerald-600">{rules.surviving.length}</span> of{" "}
-          <span className="num font-semibold">{rules.total}</span> plans pass
+        <div className="text-[13px] text-ink2">
+          <span className="num font-semibold text-pos">{rules.surviving.length}</span> of{" "}
+          <span className="num font-semibold text-ink">{rules.total}</span> plans pass
         </div>
       </div>
 
-      <div className="mb-2.5 text-xs font-semibold text-emerald-600">Eligible</div>
+      <div className="eyebrow mb-2.5 text-pos">Eligible</div>
       <div className="mb-5 flex flex-col gap-2">
         {rules.surviving.map(({ plan, flags }) => (
           <div
             key={plan.id}
-            className="flex items-center gap-3 rounded-[9px] border border-[#ccebe6] bg-[#f6fdfb] px-3.5 py-2.5"
+            className="flex items-center gap-3 border border-pos/30 bg-pos/10 px-3.5 py-2.5"
           >
-            <span className="flex-none text-sm font-bold text-emerald-600">✓</span>
+            <span className="flex-none text-sm font-bold text-pos">✓</span>
             <div className="min-w-0 flex-1">
-              <div className="text-[13.5px] font-semibold">{plan.name}</div>
-              <div className="text-xs text-slate-500">
+              <div className="text-[13.5px] font-semibold text-ink">{plan.name}</div>
+              <div className="text-xs text-ink2">
                 {plan.carrier} · {plan.planType}
               </div>
             </div>
             {flags.map((f, i) => (
               <span
                 key={i}
-                className="whitespace-nowrap rounded-md bg-amber-50 px-2.5 py-[3px] text-[11px] font-medium text-amber-800"
+                className="eyebrow whitespace-nowrap rounded-sm border border-warn/30 bg-warn/10 px-2.5 py-0.5 text-[11px] text-warn"
               >
                 ⚑ {f.detail}
               </span>
@@ -780,19 +816,19 @@ function ScreeningCard({ rules }: { rules: RulesView }) {
 
       {rules.excluded.length > 0 && (
         <>
-          <div className="mb-2.5 text-xs font-semibold text-rose-700">Not recommended</div>
+          <div className="eyebrow mb-2.5 text-neg">Not recommended</div>
           <div className="flex flex-col gap-2">
             {rules.excluded.map(({ plan, reasons }) => (
               <div
                 key={plan.id}
-                className="flex items-start gap-3 rounded-[9px] border border-[#fbd5da] bg-[#fff7f8] px-3.5 py-2.5"
+                className="flex items-start gap-3 border border-neg/30 bg-neg/10 px-3.5 py-2.5"
               >
-                <span className="flex-none text-sm font-bold text-rose-600">✗</span>
+                <span className="flex-none text-sm font-bold text-neg">✗</span>
                 <div className="min-w-0 flex-1">
-                  <div className="text-[13.5px] font-semibold">
-                    {plan.name} <span className="text-xs font-normal text-slate-400">· {plan.carrier}</span>
+                  <div className="text-[13.5px] font-semibold text-ink">
+                    {plan.name} <span className="text-xs font-normal text-ink2">· {plan.carrier}</span>
                   </div>
-                  <div className="mt-0.5 text-xs leading-[1.45] text-rose-800">
+                  <div className="mt-0.5 text-xs leading-[1.45] text-neg">
                     {reasons.map((r) => r.detail).join(" ")}
                   </div>
                 </div>
@@ -807,19 +843,22 @@ function ScreeningCard({ rules }: { rules: RulesView }) {
 
 // ── 5 · Simulation ───────────────────────────────────────────────────────────
 function SimulationCard({ sim }: { sim: SimView }) {
-  const catColor = (r: number) => (r >= 0.05 ? "#f97316" : r >= 0.03 ? "#f59e0b" : "#94a3b8");
+  // Catastrophic rate: low stays neutral ink2, elevated reads as warn — the
+  // data-only semantics, no raw orange/amber hue.
+  const catColor = (r: number) => (r >= 0.03 ? "text-warn" : "text-ink2");
   return (
     <Card>
       <div className="mb-1.5">
         <ReadLabel>5 · Simulation · projected exposure</ReadLabel>
       </div>
-      <p className="mb-4 text-[12.5px] text-slate-400">
-        Per-plan annual out-of-pocket across the {sim.count} simulated futures · seed {sim.seed}.
+      <p className="mb-4 text-[12.5px] text-ink2">
+        Per-plan annual out-of-pocket across the <span className="num">{sim.count}</span> simulated futures · seed{" "}
+        <span className="num">{sim.seed}</span>.
       </p>
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-[12.5px]">
           <thead>
-            <tr className="text-left text-[11px] uppercase tracking-[.03em] text-slate-500">
+            <tr className="text-left text-[11px] uppercase tracking-[.03em] text-ink2">
               <th className="px-2.5 py-2 font-semibold">Plan</th>
               <th className="px-2.5 py-2 text-right font-semibold">Mean / yr</th>
               <th className="px-2.5 py-2 text-right font-semibold">Worst / yr</th>
@@ -829,13 +868,13 @@ function SimulationCard({ sim }: { sim: SimView }) {
           </thead>
           <tbody>
             {sim.perPlan.map((s) => (
-              <tr key={s.planId} className="border-t border-slate-100">
-                <td className="px-2.5 py-[9px] font-medium">{s.name}</td>
-                <td className="num px-2.5 py-[9px] text-right">{usd(s.meanExposure)}</td>
-                <td className="num px-2.5 py-[9px] text-right text-slate-500">{usd(s.worstExposure)}</td>
-                <td className="num px-2.5 py-[9px] text-right">{Math.round(s.medCoverageRate * 100)}%</td>
+              <tr key={s.planId} className="border-t border-line">
+                <td className="px-2.5 py-[9px] font-medium text-ink">{s.name}</td>
+                <td className="num px-2.5 py-[9px] text-right text-ink">{usd(s.meanExposure)}</td>
+                <td className="num px-2.5 py-[9px] text-right text-ink2">{usd(s.worstExposure)}</td>
+                <td className="num px-2.5 py-[9px] text-right text-ink">{Math.round(s.medCoverageRate * 100)}%</td>
                 <td className="px-2.5 py-[9px] text-right">
-                  <span className="num font-semibold" style={{ color: catColor(s.catastrophicRate) }}>
+                  <span className={`num font-semibold ${catColor(s.catastrophicRate)}`}>
                     {Math.round(s.catastrophicRate * 100)}%
                   </span>
                 </td>
