@@ -1,4 +1,5 @@
-/** White rounded card matching the design's section surface. */
+/** SMG card surface — a clean white card with soft elevation and rounded
+ *  corners (see DESIGN.md). Approachable, not boxy. */
 export default function Card({
   children,
   className = "",
@@ -9,7 +10,7 @@ export default function Card({
   pad?: string;
 }) {
   return (
-    <section className={`rounded-xl border border-slate-200 bg-white ${pad} ${className}`}>
+    <section className={`rounded-xl border border-line bg-surface shadow-card ${pad} ${className}`}>
       {children}
     </section>
   );
