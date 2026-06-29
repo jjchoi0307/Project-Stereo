@@ -3,6 +3,32 @@ import { updateSession } from "@/lib/supabase/middleware";
 
 const MUTATING = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
+/**
+ * Content-Security-Policy, set per-request so the strict PHI policy stays intact
+ * everywhere EXCEPT the public auth pages (/login, /signup), which additionally
+ * allow the YouTube embed + thumbnails for the "Our Heroes" showcase. 'unsafe-eval'
+ * is dev-only (Fast Refresh); production stays strict.
+ */
+function contentSecurityPolicy(pathname: string): string {
+  const isDev = process.env.NODE_ENV !== "production";
+  const isAuthPage = pathname === "/login" || pathname === "/signup";
+  const directives = [
+    "default-src 'self'",
+    `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
+    "style-src 'self' 'unsafe-inline'",
+    `img-src 'self' data:${isAuthPage ? " https://i.ytimg.com" : ""}`,
+    "font-src 'self'",
+    "connect-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+  ];
+  // Only the public auth pages may frame the YouTube (no-cookie) player.
+  if (isAuthPage) directives.push("frame-src 'self' https://www.youtube-nocookie.com");
+  return directives.join("; ");
+}
+
 export async function middleware(request: NextRequest) {
   // CSRF defense-in-depth: reject cross-origin state-changing API calls. Browsers
   // always send an Origin header on such requests; a legitimate same-origin call
@@ -26,7 +52,11 @@ export async function middleware(request: NextRequest) {
       if (site !== "same-origin") return reject();
     }
   }
-  return updateSession(request);
+  const response = await updateSession(request);
+  // Apply CSP per-route here (not in next.config) so the YouTube allowance can be
+  // scoped to the auth pages while every other route keeps the strict policy.
+  response.headers.set("Content-Security-Policy", contentSecurityPolicy(request.nextUrl.pathname));
+  return response;
 }
 
 export const config = {

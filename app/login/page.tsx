@@ -1,8 +1,10 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import LoginForm from "@/components/LoginForm";
+import HeroVideos from "@/components/HeroVideos";
 import { safeNext } from "@/app/login/actions";
 import { getBrokerContext } from "@/lib/supabase/auth";
+import { getEpisodes } from "@/lib/youtube";
 
 export const dynamic = "force-dynamic";
 
@@ -13,23 +15,33 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   // Already signed in → skip the form.
   if (await getBrokerContext()) redirect(dest);
 
+  const episodes = await getEpisodes();
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-paper px-5 py-10">
-      <div className="w-full max-w-[400px]" data-fade>
-        <div className="mb-7 text-center">
-          <Image
-            src="/smg-logo.png"
-            alt="Seoul Medical Group"
-            width={229}
-            height={44}
-            priority
-            className="mx-auto mb-4 h-[44px] w-auto"
-          />
-          <div className="eyebrow mb-2 text-accent">Seoul Medical Group</div>
-          <h1 className="display mb-1.5 text-[26px] font-semibold leading-[1.15] text-ink">Broker sign in</h1>
-          <p className="num text-[12.5px] text-ink2">Broker Plan Recommender · 2026</p>
-        </div>
-        <LoginForm next={dest} allowSignup={process.env.ALLOW_SIGNUP === "true"} />
+      <div className="grid w-full max-w-[1080px] items-center gap-10 lg:grid-cols-[1.25fr_minmax(360px,0.85fr)] lg:gap-14">
+        {/* Showcase — left on desktop, below the form on mobile (sign-in stays first) */}
+        <section className="order-2 lg:order-1">
+          <HeroVideos episodes={episodes} />
+        </section>
+
+        {/* Sign in — right on desktop, first on mobile */}
+        <section className="order-1 mx-auto w-full max-w-[400px] lg:order-2" data-fade>
+          <div className="mb-7 text-center lg:text-left">
+            <Image
+              src="/smg-logo.png"
+              alt="Seoul Medical Group"
+              width={229}
+              height={44}
+              priority
+              className="mx-auto mb-4 h-[44px] w-auto lg:mx-0"
+            />
+            <div className="eyebrow mb-2 text-accent">Seoul Medical Group</div>
+            <h1 className="display mb-1.5 text-[26px] font-semibold leading-[1.15] text-ink">Broker sign in</h1>
+            <p className="num text-[12.5px] text-ink2">Broker Plan Recommender · 2026</p>
+          </div>
+          <LoginForm next={dest} allowSignup={process.env.ALLOW_SIGNUP === "true"} />
+        </section>
       </div>
     </main>
   );
