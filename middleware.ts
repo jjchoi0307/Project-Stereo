@@ -4,13 +4,14 @@ import { updateSession } from "@/lib/supabase/middleware";
 const MUTATING = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 /**
- * Content-Security-Policy. Strict for the PHI app; the only relaxation is the
- * YouTube THUMBNAIL image host for the "Our Heroes" showcase (which links out to
- * YouTube — no iframe, so no frame-src allowance is needed). img-src allows
- * i.ytimg.com GLOBALLY (not just on /login): client-side soft navigations don't
- * re-apply per-route CSP, so a page navigated *from* (e.g. /home) must already
- * permit it — otherwise the thumbnail is blocked until a hard refresh. An image
- * CDN in img-src can't execute code, so this is a safe, minimal relaxation.
+ * Content-Security-Policy. Strict for the PHI app; the only relaxations are for
+ * the "Our Heroes" showcase: the YouTube THUMBNAIL host (img-src i.ytimg.com) and
+ * the privacy-preserving YouTube PLAYER frame (frame-src youtube-nocookie). Both
+ * are allowed GLOBALLY (not scoped per-route): client-side soft navigations don't
+ * re-apply per-route CSP, so a page navigated *from* (e.g. /home → /login) must
+ * already permit them — otherwise the thumbnail/player is blocked until a hard
+ * refresh. An image CDN and a single trusted frame origin can't execute code in
+ * our context, so this stays a minimal relaxation; everything else is strict.
  * 'unsafe-eval' is dev-only (Fast Refresh); production stays strict.
  */
 function contentSecurityPolicy(): string {
@@ -26,6 +27,7 @@ function contentSecurityPolicy(): string {
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",
+    "frame-src 'self' https://www.youtube-nocookie.com",
   ];
   return directives.join("; ");
 }
