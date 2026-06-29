@@ -4,20 +4,22 @@ import { updateSession } from "@/lib/supabase/middleware";
 const MUTATING = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 /**
- * Content-Security-Policy, set per-request so the strict PHI policy stays intact
- * everywhere. The public auth pages (/login, /signup) additionally allow YouTube
- * THUMBNAIL images for the "Our Heroes" showcase (which links out to YouTube — no
- * iframe, so no frame-src allowance is needed). 'unsafe-eval' is dev-only (Fast
- * Refresh); production stays strict.
+ * Content-Security-Policy. Strict for the PHI app; the only relaxation is the
+ * YouTube THUMBNAIL image host for the "Our Heroes" showcase (which links out to
+ * YouTube — no iframe, so no frame-src allowance is needed). img-src allows
+ * i.ytimg.com GLOBALLY (not just on /login): client-side soft navigations don't
+ * re-apply per-route CSP, so a page navigated *from* (e.g. /home) must already
+ * permit it — otherwise the thumbnail is blocked until a hard refresh. An image
+ * CDN in img-src can't execute code, so this is a safe, minimal relaxation.
+ * 'unsafe-eval' is dev-only (Fast Refresh); production stays strict.
  */
-function contentSecurityPolicy(pathname: string): string {
+function contentSecurityPolicy(): string {
   const isDev = process.env.NODE_ENV !== "production";
-  const isAuthPage = pathname === "/login" || pathname === "/signup";
   const directives = [
     "default-src 'self'",
     `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline'",
-    `img-src 'self' data:${isAuthPage ? " https://i.ytimg.com" : ""}`,
+    "img-src 'self' data: https://i.ytimg.com",
     "font-src 'self'",
     "connect-src 'self'",
     "object-src 'none'",
@@ -54,7 +56,7 @@ export async function middleware(request: NextRequest) {
   const response = await updateSession(request);
   // Apply CSP per-route here (not in next.config) so the YouTube allowance can be
   // scoped to the auth pages while every other route keeps the strict policy.
-  response.headers.set("Content-Security-Policy", contentSecurityPolicy(request.nextUrl.pathname));
+  response.headers.set("Content-Security-Policy", contentSecurityPolicy());
   return response;
 }
 
