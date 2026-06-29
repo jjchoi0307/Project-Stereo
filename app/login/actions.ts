@@ -1,11 +1,30 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getServerSupabase } from "@/lib/supabase/server";
 
 export interface AuthState {
   error?: string;
   notice?: string;
+}
+
+/**
+ * The origin the request actually came in on, so confirmation emails link back to
+ * the deployed site (not Supabase's localhost Site URL). Prefers an explicit
+ * NEXT_PUBLIC_SITE_URL, else derives from the forwarded host/proto. NOTE: the
+ * target must also be allow-listed in Supabase → Auth → URL Configuration.
+ */
+async function requestOrigin(): Promise<string | undefined> {
+  const explicit = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "");
+  if (explicit) return explicit;
+  const h = await headers();
+  const origin = h.get("origin");
+  if (origin) return origin;
+  const host = h.get("host");
+  if (!host) return undefined;
+  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+  return `${proto}://${host}`;
 }
 
 // Shared open-redirect guard. Async because this is a "use server" module: every
@@ -50,12 +69,17 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   if (!fullName || !agency) return { error: "Your name and broker agency are required." };
 
   const supabase = await getServerSupabase();
-  // Stash name + agency in user metadata; first-login provisioning (resolveBroker)
-  // reads them to attach the broker to their agency's organization.
+  // Point the confirmation link at the deployed origin (not Supabase's Site URL,
+  // which may still be localhost). Stash name + agency in user metadata;
+  // first-login provisioning (resolveBroker) reads them to attach the broker.
+  const origin = await requestOrigin();
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { full_name: fullName, agency } },
+    options: {
+      data: { full_name: fullName, agency },
+      ...(origin ? { emailRedirectTo: `${origin}/login` } : {}),
+    },
   });
   // One generic message for ALL sign-up errors so "User already registered" can't
   // be distinguished from other failures (account enumeration). Logged server-side.
