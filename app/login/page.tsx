@@ -19,22 +19,22 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-paper px-5 py-10">
-      <div className="grid w-full max-w-[1080px] items-center gap-10 lg:grid-cols-[1.25fr_minmax(360px,0.85fr)] lg:gap-14">
+      <div className="grid w-full max-w-[1120px] items-center gap-10 lg:grid-cols-[1.05fr_minmax(400px,0.95fr)] lg:gap-12">
         {/* Showcase — left on desktop, below the form on mobile (sign-in stays first) */}
         <section className="order-2 lg:order-1">
           <HeroVideos episodes={episodes} />
         </section>
 
-        {/* Sign in — right on desktop, first on mobile */}
-        <section className="order-1 mx-auto w-full max-w-[400px] lg:order-2" data-fade>
-          <div className="mb-7 text-center lg:text-left">
+        {/* Sign in — right on desktop, first on mobile; header centered over the card */}
+        <section className="order-1 mx-auto w-full max-w-[420px] lg:order-2" data-fade>
+          <div className="mb-7 text-center">
             <Image
               src="/smg-logo.png"
               alt="Seoul Medical Group"
               width={229}
               height={44}
               priority
-              className="mx-auto mb-4 h-[44px] w-auto lg:mx-0"
+              className="mx-auto mb-4 h-[44px] w-auto"
             />
             <div className="eyebrow mb-2 text-accent">Seoul Medical Group</div>
             <h1 className="display mb-1.5 text-[26px] font-semibold leading-[1.15] text-ink">Broker sign in</h1>
