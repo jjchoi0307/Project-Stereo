@@ -118,6 +118,15 @@ export default async function Home({
   const { filter } = await searchParams; // "awaiting" | "ready" | undefined — filters the session list
   // Resolve the broker once (null in memory mode) and reuse it for the store.
   const ctx = await getBrokerContext();
+
+  // Personalize the workspace heading with the broker's first name (from their
+  // signup full name, else the email's local part). Null in memory/dev mode.
+  const user = ctx ? (await ctx.client.auth.getUser()).data.user : null;
+  const fullName = (user?.user_metadata?.full_name as string | undefined)?.trim();
+  const emailLocal = user?.email?.split("@")[0]?.split(/[._-]+/)[0];
+  const firstName =
+    fullName?.split(/\s+/)[0] ||
+    (emailLocal ? emailLocal.charAt(0).toUpperCase() + emailLocal.slice(1) : null);
   const [sessions, records, plans] = await Promise.all([
     (await getSessionStore(ctx ?? undefined)).list(),
     (await getAuditStore()).list(),
@@ -178,7 +187,9 @@ export default async function Home({
         <div className="mb-7 flex flex-wrap items-end justify-between gap-6">
           <div>
             <div className="eyebrow mb-1.5 text-accent">Broker workspace</div>
-            <h1 className="display text-[33px] leading-[1.05] text-ink">Your workspace</h1>
+            <h1 className="display text-[33px] leading-[1.05] text-ink">
+              {firstName ? `${firstName}’s workspace` : "Your workspace"}
+            </h1>
             <p className="mt-1.5 text-[13.5px] text-ink2">
               Start a client session, follow up on members, and review delivered recommendations.
             </p>
