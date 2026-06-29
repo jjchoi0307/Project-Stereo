@@ -321,7 +321,7 @@ export default function RecommendationView({
           {auditId && (
             <Link
               href={`/audit/${auditId}`}
-              className="flex-none rounded-lg border border-accent bg-surface px-3.5 py-2 text-[12.5px] font-semibold text-accent hover:bg-accent-tint"
+              className="flex-none rounded-lg border border-accent bg-surface px-3.5 py-2 text-[12.5px] font-semibold text-accent hover:bg-accent/10"
             >
               View audit record <span className="num">{auditId}</span> →
             </Link>

@@ -93,7 +93,7 @@ a:focus-visible {
     inset 0 0 0 8.5px color-mix(in srgb, var(--seal-ink) 35%, transparent);
 }
 .seal--pending {
-  --seal-ink: #94a3b8;
+  --seal-ink: #5b6b7a; /* ink2 — on-system muted, not off-palette grey */
 }
 .seal--broken {
   --seal-ink: #c23b3b;
