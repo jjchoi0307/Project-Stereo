@@ -21,6 +21,10 @@ export default function StartSessionButton({ compact = false }: { compact?: bool
         return;
       }
       router.push(`/session/${data.session.id}`);
+      // Invalidate the Router Cache so the dashboard re-renders fresh on return:
+      // once the first session exists, the empty first-run screen must give way
+      // to the populated "<name>'s workspace" cockpit (not a stale cached copy).
+      router.refresh();
     } catch {
       setError("Network error. Please try again.");
       setBusy(false);
