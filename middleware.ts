@@ -5,9 +5,10 @@ const MUTATING = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 /**
  * Content-Security-Policy, set per-request so the strict PHI policy stays intact
- * everywhere EXCEPT the public auth pages (/login, /signup), which additionally
- * allow the YouTube embed + thumbnails for the "Our Heroes" showcase. 'unsafe-eval'
- * is dev-only (Fast Refresh); production stays strict.
+ * everywhere. The public auth pages (/login, /signup) additionally allow YouTube
+ * THUMBNAIL images for the "Our Heroes" showcase (which links out to YouTube — no
+ * iframe, so no frame-src allowance is needed). 'unsafe-eval' is dev-only (Fast
+ * Refresh); production stays strict.
  */
 function contentSecurityPolicy(pathname: string): string {
   const isDev = process.env.NODE_ENV !== "production";
@@ -24,8 +25,6 @@ function contentSecurityPolicy(pathname: string): string {
     "form-action 'self'",
     "frame-ancestors 'none'",
   ];
-  // Only the public auth pages may frame the YouTube (no-cookie) player.
-  if (isAuthPage) directives.push("frame-src 'self' https://www.youtube-nocookie.com");
   return directives.join("; ");
 }
 
