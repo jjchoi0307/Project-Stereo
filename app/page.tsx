@@ -162,7 +162,9 @@ export default async function Home({
         <Header />
         <main className="mx-auto w-full max-w-[1120px] px-7 pb-16 pt-9" data-fade>
           <div className="mb-8 rounded-xl border border-line bg-surface px-7 py-8 shadow-card sm:px-9 sm:py-10">
-            <div className="eyebrow mb-2 text-accent">Welcome to your workspace</div>
+            <div className="eyebrow mb-2 text-accent">
+              {firstName ? `Welcome, ${firstName}` : "Welcome to your workspace"}
+            </div>
             <h1 className="display text-[33px] leading-[1.05] text-ink">Start your first client session</h1>
             <p className="mt-2.5 max-w-[560px] text-[14px] leading-[1.55] text-ink2">
               Capture a member&apos;s health profile, get a ranked and cited plan recommendation, and
