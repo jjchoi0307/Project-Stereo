@@ -1,14 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Episode } from "@/lib/youtube";
 
 /**
- * "Our Heroes / 우리동네 영웅들" showcase for the public login page. Click-to-play:
- * the latest episode's thumbnail shows immediately (always renders, even where a
- * raw embed is finicky), and the privacy-preserving youtube-nocookie player loads
- * inline on click. Thumbnails come from i.ytimg.com; both hosts are allowed by the
- * CSP only on the auth pages (see middleware.ts).
+ * "Our Heroes / 우리동네 영웅들" showcase for the public login page.
+ *
+ * On a real domain the player loads eagerly so it's ready right away. On
+ * localhost — where YouTube refuses to embed (Error 153) — it stays a branded
+ * thumbnail (click to attempt play) so dev never shows an error box. Either way
+ * the latest episode is featured and the strip swaps the active one. Uses the
+ * youtube-nocookie player + i.ytimg.com thumbnails, allowed by the CSP only on
+ * the auth pages (see middleware.ts).
  */
 function thumb(id: string) {
   return `https://i.ytimg.com/vi/${id}/maxresdefault.jpg`;
@@ -19,7 +22,15 @@ function thumbFallback(id: string) {
 
 export default function HeroVideos({ episodes }: { episodes: Episode[] }) {
   const [activeId, setActiveId] = useState(episodes[0]?.id ?? "");
-  const [playing, setPlaying] = useState(false);
+  // Load the player immediately on real domains; keep the thumbnail on localhost
+  // (YouTube blocks localhost embeds). Decided after mount to avoid hydration drift.
+  const [eager, setEager] = useState(false);
+  useEffect(() => {
+    const h = window.location.hostname;
+    const isLocal = h === "localhost" || h === "127.0.0.1" || h === "0.0.0.0" || h === "[::1]";
+    if (!isLocal) setEager(true);
+  }, []);
+
   if (!episodes.length) return null;
   const active = episodes.find((e) => e.id === activeId) ?? episodes[0];
 
@@ -34,13 +45,13 @@ export default function HeroVideos({ episodes }: { episodes: Episode[] }) {
         Seoul Medical Group.
       </p>
 
-      {/* Featured: thumbnail → inline player on click */}
+      {/* Featured player */}
       <div className="aspect-video w-full overflow-hidden rounded-xl border border-line bg-ink shadow-card">
-        {playing ? (
+        {eager ? (
           <iframe
             key={activeId}
             className="h-full w-full"
-            src={`https://www.youtube-nocookie.com/embed/${activeId}?rel=0&modestbranding=1&autoplay=1`}
+            src={`https://www.youtube-nocookie.com/embed/${activeId}?rel=0&modestbranding=1`}
             title={active.title}
             referrerPolicy="strict-origin-when-cross-origin"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -49,7 +60,7 @@ export default function HeroVideos({ episodes }: { episodes: Episode[] }) {
         ) : (
           <button
             type="button"
-            onClick={() => setPlaying(true)}
+            onClick={() => setEager(true)}
             aria-label={`Play: ${active.title}`}
             className="group relative block h-full w-full"
           >
@@ -80,14 +91,14 @@ export default function HeroVideos({ episodes }: { episodes: Episode[] }) {
       {episodes.length > 1 && (
         <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4">
           {episodes.map((ep) => {
-            const isActive = ep.id === activeId && playing;
+            const isActive = ep.id === activeId;
             return (
               <button
                 key={ep.id}
                 type="button"
                 onClick={() => {
                   setActiveId(ep.id);
-                  setPlaying(true);
+                  setEager(true);
                 }}
                 aria-label={`Play: ${ep.title}`}
                 className={`group overflow-hidden rounded-lg border bg-surface text-left transition-colors ${
