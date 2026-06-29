@@ -44,7 +44,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Header authed={authed} />
+      <Header />
       <main className="mx-auto w-full max-w-[760px] px-6 pb-16 pt-9" data-fade>
         {/* Masthead */}
         <div className="mb-8">

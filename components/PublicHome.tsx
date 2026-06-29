@@ -46,7 +46,9 @@ export default function PublicHome() {
       {/* Masthead */}
       <header className="border-b border-line bg-surface">
         <div className="mx-auto flex h-[60px] max-w-[1120px] items-center gap-5 px-7">
-          <Image src="/smg-logo.png" alt="Seoul Medical Group" width={156} height={30} priority className="h-[30px] w-auto" />
+          <Link href="/home" className="flex items-center">
+            <Image src="/smg-logo.png" alt="Seoul Medical Group" width={156} height={30} priority className="h-[30px] w-auto" />
+          </Link>
           <span className="hidden border-l border-line pl-3 font-mono text-[10px] uppercase leading-tight tracking-[.14em] text-ink2 sm:block">
             Plan Recommender
             <br />
@@ -78,21 +80,18 @@ export default function PublicHome() {
             cited plan recommendation across the 2026 SMG-supported plans — and a reproducible record of
             exactly how it was reached. Nothing is a black box.
           </p>
-          <div className="mt-7 flex flex-wrap items-center gap-3">
+          <div className="mt-7">
             <Link
               href="/login"
               className="rounded-sm bg-accent px-5 py-2.5 text-[14px] font-semibold text-white hover:bg-accent-strong"
             >
               Broker sign in →
             </Link>
-            <a href="#how-it-works" className="px-2 py-2.5 text-[14px] font-semibold text-accent hover:underline">
-              See how it works
-            </a>
           </div>
         </section>
 
         {/* How it works */}
-        <section id="how-it-works" className="mb-16 scroll-mt-8">
+        <section className="mb-16">
           <div className="eyebrow mb-1.5 text-ink2">How a recommendation is made</div>
           <h2 className="display mb-6 text-[26px] leading-[1.12] text-ink">Four steps, every figure traceable</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

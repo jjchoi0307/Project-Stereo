@@ -13,7 +13,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_ANON_KEY, SUPABASE_URL, stateStore, supabaseConfigured } from "./env";
 
-const PROTECTED_PAGES = ["/session", "/audit"];
+const PROTECTED_PAGES = ["/session", "/audit", "/settings"];
 const PROTECTED_APIS = ["/api/sessions", "/api/audit"];
 
 const matches = (path: string, prefixes: string[]) =>
