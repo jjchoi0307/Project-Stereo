@@ -34,6 +34,12 @@ export default async function Header({ authed = true }: { authed?: boolean }) {
         </Link>
         <nav className="ml-auto flex items-center gap-1">
           <Link
+            href="/"
+            className="rounded-sm px-3 py-2 text-[13px] font-medium text-ink2 hover:bg-paper"
+          >
+            Home
+          </Link>
+          <Link
             href="/audit"
             className="rounded-sm px-3 py-2 text-[13px] font-medium text-ink2 hover:bg-paper"
           >
