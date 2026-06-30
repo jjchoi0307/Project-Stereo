@@ -188,9 +188,13 @@ function planToFacts(plan: Plan, profile: ClientProfileInput, ctx: RulesContext)
 
 /** De-identified patient facts the recommendation model may reason over. */
 function patientFacts(profile: ClientProfileInput, ctx: RulesContext): RecommendationPatientFacts {
+  // Emit only the canonical system name; never the patient-typed `label` (free
+  // text that can carry identifiers). An unresolvable/absent systemId collapses
+  // to a generic token — matching the clinical-read de-identification boundary
+  // (lib/sim/deidentify.ts) so both LLM prompts apply the same rule.
   const mustKeepProviders = profile.providerConstraints
     .filter((c) => c.hardRequirement)
-    .map((c) => (c.systemId ? ctx.systemsById.get(c.systemId)?.name ?? c.label : c.label));
+    .map((c) => (c.systemId && ctx.systemsById.get(c.systemId)?.name) || "a required provider");
   return {
     age: profile.age,
     conditions: [...profile.conditions].sort(),
@@ -241,12 +245,4 @@ export async function buildPlanFactsPack(
   }));
 
   return { patient: patientFacts(profile, ctx), candidates, excluded };
-}
-
-/** A stable digest of the pack's plan-data identity, for cache keys. */
-export function packDataSignature(pack: PlanFactsPack): string {
-  return pack.candidates
-    .map((c) => c.planId)
-    .sort()
-    .join(",");
 }

@@ -10,13 +10,20 @@ import RecordSeal from "@/components/ui/RecordSeal";
  * re-run reproduces the ranking, rose ✗ on mismatch, slate · while verifying.
  */
 export default function VerifyBadge({ auditId }: { auditId: string }) {
-  const [state, setState] = useState<"idle" | "running" | "ok" | "fail">("idle");
+  const [state, setState] = useState<"idle" | "running" | "ok" | "fail" | "version">("idle");
 
   const run = () => {
     setState("running");
     fetch(`/api/audit/${auditId}/verify`, { cache: "no-store" })
       .then((r) => r.json())
-      .then((d) => setState(d.reproduced ? "ok" : "fail"))
+      .then((d) => {
+        if (d.reproduced) return setState("ok");
+        // A version difference is not a tamper signal — the record was created
+        // under an earlier dataset/engine, so a live re-run can legitimately
+        // differ. Surface it distinctly rather than as "did not reproduce".
+        if (d.dataVersionMatch === false || d.engineVersionMatch === false) return setState("version");
+        setState("fail");
+      })
       .catch(() => setState("fail"));
   };
 
@@ -46,6 +53,19 @@ export default function VerifyBadge({ auditId }: { auditId: string }) {
         center="SMG"
         caption={
           <span className="block text-[12px] font-semibold text-pos">Ranking reproduced exactly</span>
+        }
+      />
+    );
+  }
+  if (state === "version") {
+    return (
+      <RecordSeal
+        tone="pending"
+        center="SMG"
+        caption={
+          <span className="block text-[12px] font-semibold text-ink">
+            Created under an earlier data/engine version
+          </span>
         }
       />
     );

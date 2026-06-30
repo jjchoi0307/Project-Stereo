@@ -7,8 +7,8 @@
  *      facts plus the conditions/medications that show up in ≥ a threshold of the
  *      seeded synthetic futures (lib/engine/horizonRecommendation.projectExpectedProfile).
  *   2) Runs Today's EXACT recommendation pipeline (`recommendPlans`) on that
- *      projected profile — same ensemble screen, same carrier-diversity cap, same
- *      parallel deep write-ups, same grounding/citation guardrails.
+ *      projected profile — same ensemble screen, same parallel deep write-ups,
+ *      same grounding/citation guardrails (no carrier cap — see recommend.ts).
  *
  * The two horizons run concurrently with each other; the client starts the whole
  * horizon request only after Today has finished, so Today and the horizons never

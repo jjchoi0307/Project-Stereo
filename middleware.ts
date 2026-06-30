@@ -3,6 +3,17 @@ import { updateSession } from "@/lib/supabase/middleware";
 
 const MUTATING = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
+// GET endpoints that perform server-side writes (horizon_cache upserts, audit /
+// access-log entries) and kick off an expensive Claude ensemble. They are
+// normally fetched same-origin by the app, so a cross-site trigger could force
+// costly AI runs or pollute the compliance trail. We apply a conservative origin
+// check to them — blocking only clearly cross-site requests so legitimate
+// same-origin reads (and header-less old browsers) still pass.
+const WRITE_BEARING_GET = [
+  /^\/api\/sessions\/[^/]+\/recommendation(\/horizons)?$/,
+  /^\/api\/audit\/[^/]+\/verify$/,
+];
+
 /**
  * Content-Security-Policy. Strict for the PHI app; the only relaxations are for
  * the "Our Heroes" showcase: the YouTube THUMBNAIL host (img-src i.ytimg.com) and
@@ -33,31 +44,45 @@ function contentSecurityPolicy(): string {
 }
 
 export async function middleware(request: NextRequest) {
-  // CSRF defense-in-depth: reject cross-origin state-changing API calls. Browsers
-  // always send an Origin header on such requests; a legitimate same-origin call
-  // matches the Host. (Server actions have their own framework CSRF protection.)
-  if (MUTATING.has(request.method) && request.nextUrl.pathname.startsWith("/api/")) {
-    const origin = request.headers.get("origin");
-    const reject = () => NextResponse.json({ error: "cross-origin request rejected" }, { status: 403 });
+  // CSRF defense-in-depth: reject cross-origin state-changing API calls.
+  // (Server actions have their own framework CSRF protection.)
+  const path = request.nextUrl.pathname;
+  const origin = request.headers.get("origin");
+  const site = request.headers.get("sec-fetch-site");
+  const reject = () => NextResponse.json({ error: "cross-origin request rejected" }, { status: 403 });
+  // True only when an Origin header is present AND its host differs from ours.
+  const originMismatch = (): boolean => {
+    if (!origin) return false;
+    try {
+      return new URL(origin).host !== request.headers.get("host");
+    } catch {
+      return true;
+    }
+  };
+
+  // State-changing methods: browsers send an Origin header on such requests; a
+  // legitimate same-origin call matches the Host. With no Origin, require the
+  // Fetch-Metadata same-origin signal so a forged request can't bypass by
+  // omitting Origin.
+  if (MUTATING.has(request.method) && path.startsWith("/api/")) {
     if (origin) {
-      let originHost: string | null = null;
-      try {
-        originHost = new URL(origin).host;
-      } catch {
-        originHost = null;
-      }
-      if (originHost !== request.headers.get("host")) return reject();
-    } else {
-      // No Origin header — don't let a forged request bypass the check by simply
-      // omitting it. Require the browser's Fetch-Metadata same-origin signal; a
-      // legitimate same-origin fetch/XHR always sends `sec-fetch-site: same-origin`.
-      const site = request.headers.get("sec-fetch-site");
-      if (site !== "same-origin") return reject();
+      if (originMismatch()) return reject();
+    } else if (site !== "same-origin") {
+      return reject();
     }
   }
+
+  // Write-bearing GETs: block only clearly cross-site requests (Origin host
+  // mismatch, or a Fetch-Metadata site of `same-site`/`cross-site`). Same-origin
+  // fetches, direct navigations (`none`), and header-less old browsers still
+  // pass, so reads are never broken.
+  if (request.method === "GET" && WRITE_BEARING_GET.some((re) => re.test(path))) {
+    if (originMismatch() || (site && site !== "same-origin" && site !== "none")) return reject();
+  }
+
   const response = await updateSession(request);
-  // Apply CSP per-route here (not in next.config) so the YouTube allowance can be
-  // scoped to the auth pages while every other route keeps the strict policy.
+  // CSP is set here (not in next.config) as a single uniform policy; see the
+  // contentSecurityPolicy() note for why the YouTube allowances are global.
   response.headers.set("Content-Security-Policy", contentSecurityPolicy());
   return response;
 }

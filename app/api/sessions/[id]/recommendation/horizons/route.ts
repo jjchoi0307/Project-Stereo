@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 /**
- * AI-powered across-horizon recommendation (5y / 10y). One grounded Claude call
+ * AI-powered across-horizon recommendation (3y / 5y). One grounded Claude call
  * projects the member's likely future health AND recommends the best plan for
  * that projected member at each horizon — fit score, reasons, bullets, citations,
  * all sourced strictly from the 2026 plan files (lib/ai/horizonRecommend.ts).

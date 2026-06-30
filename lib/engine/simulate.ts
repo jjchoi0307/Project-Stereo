@@ -109,19 +109,21 @@ export interface JourneyOutcome {
 
 function evaluate(
   plan: Plan,
-  profile: ClientProfileInput,
   journey: CareJourney,
   ctx: RulesContext,
+  // The profile-derived base sets are identical for every journey × plan in a
+  // run, so they're computed once in simulate() and cloned per call (the event
+  // additions below are what differ). Cloning preserves insertion order, so the
+  // outcome is byte-identical to building them inline here.
+  baseNeededDrugs: ReadonlySet<string>,
+  baseRequiredSystems: ReadonlySet<string>,
 ): JourneyOutcome {
   const b = plan.benefits;
   const formulary = ctx.formularies.get(plan.formularyId);
   const network = ctx.networks.get(plan.networkId);
 
-  const neededDrugs = new Set<string>();
-  for (const m of profile.medications) if (m.drugId) neededDrugs.add(m.drugId);
-  const requiredSystems = new Set<string>(
-    profile.providerConstraints.filter((c) => c.hardRequirement && c.systemId).map((c) => c.systemId!),
-  );
+  const neededDrugs = new Set(baseNeededDrugs);
+  const requiredSystems = new Set(baseRequiredSystems);
 
   let specialistVisits = 0;
   let outpatientVisits = 0;
@@ -260,6 +262,12 @@ export function simulate(
     .filter((c) => c.hardRequirement && c.systemId)
     .map((c) => c.systemId!);
 
+  // Base profile-derived sets, computed once and reused across every journey ×
+  // plan via evaluate() (which clones + layers each journey's events on top).
+  const baseNeededDrugs = new Set<string>();
+  for (const m of profile.medications) if (m.drugId) baseNeededDrugs.add(m.drugId);
+  const baseRequiredSystems = new Set<string>(requiredSystems);
+
   // Generate the shared agent cohort once (same futures for every plan).
   const journeys: CareJourney[] = [];
   for (let i = 0; i < count; i++) journeys.push(generateAgent(i, normalized, requiredSystems, rng));
@@ -272,7 +280,7 @@ export function simulate(
   const perPlan: PlanSimulationSummary[] = [];
   const outcomesByPlan = new Map<string, JourneyOutcome[]>();
   for (const plan of survivingPlans) {
-    const outcomes = journeys.map((j) => evaluate(plan, profile, j, ctx));
+    const outcomes = journeys.map((j) => evaluate(plan, j, ctx, baseNeededDrugs, baseRequiredSystems));
     outcomesByPlan.set(plan.id, outcomes);
     perPlan.push(summarize(plan.id, outcomes));
   }
