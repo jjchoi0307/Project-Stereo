@@ -10,7 +10,7 @@
 import "server-only";
 import type { ClientProfileInput } from "@/lib/domain";
 import { SIM_MODEL, simConfigured } from "@/lib/sim/env";
-import { AI_VERSION } from "@/lib/version";
+import { AI_VERSION, DATA_VERSION } from "@/lib/version";
 import { factsSignature } from "@/lib/engine/factsSignature";
 import { getHorizonPayload, setHorizonPayload } from "@/lib/engine/horizonCacheStore";
 import { guidanceFromConfig, type ImportanceConfig } from "@/lib/config/orgSettings";
@@ -18,7 +18,10 @@ import { aiClinicalRead, type ClinicalRead } from "./clinicalRead";
 
 export function clinicalReadCacheKey(id: string, profile: ClientProfileInput, config: ImportanceConfig): string {
   const cfgSig = Object.values(config).map((v) => (v === "high" ? "H" : "L")).join("");
-  return `clinicalread:${id}:${factsSignature(profile)}:${SIM_MODEL}:${AI_VERSION}:${cfgSig}:h3-5`;
+  // DATA_VERSION is part of the key: the clinical read embeds projected drug
+  // NAMES resolved from the plan-year dataset, so a data bump must invalidate the
+  // cached read (the sibling horizon key already includes DATA_VERSION).
+  return `clinicalread:${id}:${factsSignature(profile)}:${SIM_MODEL}:${DATA_VERSION}:${AI_VERSION}:${cfgSig}:h3-5`;
 }
 
 /** Cached clinical read for a session. Returns null if AI is unconfigured or fails. */

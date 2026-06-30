@@ -15,6 +15,10 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   const store = await getSessionStore();
   const session = await store.get(id);
   if (!session) return NextResponse.json({ error: "session not found" }, { status: 404 });
-  await store.remove(id);
+  // get() can succeed for a caller who can read but not delete (org_admin
+  // oversight); remove() reports whether a row was actually soft-deleted so we
+  // don't return a misleading success.
+  const removed = await store.remove(id);
+  if (!removed) return NextResponse.json({ error: "session not found" }, { status: 404 });
   return NextResponse.json({ ok: true });
 }

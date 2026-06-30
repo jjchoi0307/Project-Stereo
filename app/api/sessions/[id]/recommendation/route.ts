@@ -59,12 +59,17 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
     const rec = await recommendPlans(profile, db);
 
-    const ranked = rec.ranked
-      .map((item) => {
-        const plan = planById.get(item.planId);
-        return plan ? shapeRankedPlan(item, plan, mustKeep) : null;
-      })
-      .filter((x): x is NonNullable<typeof x> => x !== null);
+    // Shape a model ranking into the response, dropping any planId not in the
+    // catalog. Used for both the primary result and the relaxed near-miss.
+    const shapeRanked = (items: typeof rec.ranked) =>
+      items
+        .map((item) => {
+          const plan = planById.get(item.planId);
+          return plan ? shapeRankedPlan(item, plan, mustKeep) : null;
+        })
+        .filter((x): x is NonNullable<typeof x> => x !== null);
+
+    const ranked = shapeRanked(rec.ranked);
 
     const excluded = rec.excluded
       .map((e) => {
@@ -78,12 +83,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     let nearMiss: unknown = null;
     if (ranked.length === 0 && mustKeep) {
       const relaxed = await recommendPlans(profile, db, { ignoreProviderConstraints: true });
-      const nmRanked = relaxed.ranked
-        .map((item) => {
-          const plan = planById.get(item.planId);
-          return plan ? shapeRankedPlan(item, plan, mustKeep) : null;
-        })
-        .filter((x): x is NonNullable<typeof x> => x !== null);
+      const nmRanked = shapeRanked(relaxed.ranked);
       nearMiss = {
         reason: "provider_relaxed",
         requiredProviders: profile.providerConstraints.filter((c) => c.hardRequirement).map((c) => c.label),

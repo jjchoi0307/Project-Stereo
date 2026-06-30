@@ -45,10 +45,21 @@ const MAX_COUNTY = 80;
 export function validateIntake(v: IntakeFormValues): IntakeValidation {
   const fields: IntakeValidation["fields"] = {};
 
+  // Defensive accessors: the public token endpoint may pass arbitrary JSON, so
+  // never call string/array methods on a value before its type is known —
+  // otherwise a malformed body (e.g. age as a number, medications as a string)
+  // throws a TypeError (HTTP 500) instead of returning a clean 400. The
+  // controlled-vocab/type guards further down still record the proper field
+  // error when a value has the wrong type; these helpers just keep the early
+  // checks total.
+  const str = (x: unknown): string => (typeof x === "string" ? x : "");
+  const arr = (x: unknown): unknown[] => (Array.isArray(x) ? x : []);
+
   // age — required
-  if (!v.age.trim()) {
+  const age = str(v.age);
+  if (!age.trim()) {
     fields.age = "Age is required.";
-  } else if (!isInt(v.age) || Number(v.age) < 18 || Number(v.age) > 120) {
+  } else if (!isInt(age) || Number(age) < 18 || Number(age) > 120) {
     fields.age = "Enter an age between 18 and 120.";
   }
 
@@ -56,29 +67,34 @@ export function validateIntake(v: IntakeFormValues): IntakeValidation {
   if (!v.marketRegion) fields.marketRegion = "Select the client's market region.";
 
   // at least one of meds / conditions
-  const hasMeds = v.medications.some((m) => m.trim().length > 0);
-  const hasConditions = v.conditions.length > 0 || v.conditionsFreeText.trim().length > 0;
+  const hasMeds = arr(v.medications).some((m) => typeof m === "string" && m.trim().length > 0);
+  const hasConditions = arr(v.conditions).length > 0 || str(v.conditionsFreeText).trim().length > 0;
   let form: string | undefined;
   if (!hasMeds && !hasConditions) {
     form = "Enter at least one medication or one diagnosed condition.";
   }
 
   // optional-but-must-be-valid
-  if (v.heightCm.trim() && (!isInt(v.heightCm) || Number(v.heightCm) < 80 || Number(v.heightCm) > 250)) {
+  const heightCm = str(v.heightCm);
+  const weightKg = str(v.weightKg);
+  if (heightCm.trim() && (!isInt(heightCm) || Number(heightCm) < 80 || Number(heightCm) > 250)) {
     fields.heightCm = "Height in cm (80–250).";
   }
-  if (v.weightKg.trim() && (!isInt(v.weightKg) || Number(v.weightKg) < 25 || Number(v.weightKg) > 400)) {
+  if (weightKg.trim() && (!isInt(weightKg) || Number(weightKg) < 25 || Number(weightKg) > 400)) {
     fields.weightKg = "Weight in kg (25–400).";
   }
   for (const k of ["acupunctureVisits12mo", "specialistVisits12mo", "priorYearInpatientEvents"] as const) {
-    if (v[k].trim() && !isInt(v[k])) fields[k] = "Whole number only.";
+    const val = str(v[k]);
+    if (val.trim() && !isInt(val)) fields[k] = "Whole number only.";
   }
 
   // lifestyle & well-being — optional, but must be well-formed if provided
-  if (v.avgDailySteps.trim() && (!isInt(v.avgDailySteps) || Number(v.avgDailySteps) < 0 || Number(v.avgDailySteps) > 50000)) {
+  const avgDailySteps = str(v.avgDailySteps);
+  const sleepHoursPerNight = str(v.sleepHoursPerNight);
+  if (avgDailySteps.trim() && (!isInt(avgDailySteps) || Number(avgDailySteps) < 0 || Number(avgDailySteps) > 50000)) {
     fields.avgDailySteps = "Daily steps (0–50000).";
   }
-  if (v.sleepHoursPerNight.trim() && (!isInt(v.sleepHoursPerNight) || Number(v.sleepHoursPerNight) < 0 || Number(v.sleepHoursPerNight) > 24)) {
+  if (sleepHoursPerNight.trim() && (!isInt(sleepHoursPerNight) || Number(sleepHoursPerNight) < 0 || Number(sleepHoursPerNight) > 24)) {
     fields.sleepHoursPerNight = "Hours of sleep (0–24).";
   }
   if (v.sleepQuality !== "" && !SLEEP_QUALITY_VALUES.has(v.sleepQuality as string)) {

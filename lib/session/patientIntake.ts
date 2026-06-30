@@ -50,6 +50,9 @@ export async function issueIntakeToken(sessionId: string, ctx: BrokerContext | n
       existing.intake_token_expires_at &&
       new Date(existing.intake_token_expires_at).getTime() > Date.now()
     ) {
+      // Re-surfacing an existing capability is audit-relevant too (the link
+      // grants anonymous write access), so log the reuse, not just fresh mints.
+      logAccess({ actor: ctx.brokerId, action: "intake.token_issue", sessionId });
       return existing.intake_token as string;
     }
     const token = crypto.randomUUID();
@@ -161,8 +164,11 @@ export async function submitPatientIntake(token: string, values: IntakeFormValue
       return { ok: false, status: 500, error: "Could not save your facts. Please try again." };
     }
     // Mark complete AND burn the capability token (single-use): a leaked or
-    // forwarded link can't be replayed to overwrite the profile afterward.
-    const { error: sErr } = await svc
+    // forwarded link can't be replayed to overwrite the profile afterward. The
+    // `.eq("intake_token", token)` makes the burn the consumption gate — it only
+    // matches while the token is still live, so two concurrent submits can't both
+    // succeed (TOCTOU): the loser updates 0 rows and is rejected as consumed.
+    const { data: burned, error: sErr } = await svc
       .from("sessions")
       .update({
         status: "intake_complete",
@@ -170,10 +176,16 @@ export async function submitPatientIntake(token: string, values: IntakeFormValue
         intake_token_expires_at: null,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", resolved.sessionId);
+      .eq("id", resolved.sessionId)
+      .eq("intake_token", token)
+      .select("id");
     if (sErr) {
       console.error("patient intake session update failed:", sErr.code, sErr.message);
       return { ok: false, status: 500, error: "Could not save your facts. Please try again." };
+    }
+    if (!burned || burned.length === 0) {
+      // The token was already consumed (e.g. a concurrent submit won the race).
+      return { ok: false, status: 404, error: "This intake link is invalid or has expired." };
     }
     logAccess({ actor: "patient", action: "intake.submit", sessionId: resolved.sessionId });
     return { ok: true };

@@ -32,8 +32,11 @@ export interface SessionStore {
   list(): Promise<BrokerSession[]>;
   setProfile(id: string, profile: ClientProfileInput): Promise<BrokerSession | null>;
   /** Remove a session from the broker's list. Soft-delete in supabase mode (the
-   *  audit trail is retained); hard removal in the in-memory dev store. */
-  remove(id: string): Promise<void>;
+   *  audit trail is retained); hard removal in the in-memory dev store. Returns
+   *  true if a session was actually removed, false if nothing matched (e.g. a
+   *  caller who can read but not delete the row) — so the API doesn't report a
+   *  misleading success. */
+  remove(id: string): Promise<boolean>;
 }
 
 class InMemorySessionStore implements SessionStore {
@@ -67,8 +70,8 @@ class InMemorySessionStore implements SessionStore {
     return session;
   }
 
-  async remove(id: string): Promise<void> {
-    this.sessions.delete(id);
+  async remove(id: string): Promise<boolean> {
+    return this.sessions.delete(id);
   }
 }
 

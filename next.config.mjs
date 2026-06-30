@@ -6,10 +6,12 @@
 // confusion; Referrer-Policy avoids leaking URLs; Permissions-Policy disables
 // device APIs we never use.
 //
-// NOTE: the Content-Security-Policy is set in middleware.ts (not here) so it can
-// be scoped per-route — the strict policy applies everywhere except the public
-// auth pages, which additionally allow the YouTube embed for the "Our Heroes"
-// showcase. Keeping the other (uniform) headers here.
+// NOTE: the Content-Security-Policy is set in middleware.ts (not here) as a
+// single uniform policy. It is strict everywhere; it globally permits one image
+// CDN (i.ytimg.com) and one trusted frame origin (youtube-nocookie) for the "Our
+// Heroes" showcase — these are applied to every route (not scoped per-route),
+// because client-side soft navigations don't re-apply a per-route CSP. Keeping
+// the other (uniform) headers here.
 const securityHeaders = [
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
   { key: "X-Frame-Options", value: "DENY" },

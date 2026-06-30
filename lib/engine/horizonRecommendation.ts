@@ -265,7 +265,7 @@ async function recommendOneHorizon(
 }
 
 // Deterministic output → cache by profile facts-version + engine/data version +
-// resolution. Instant 5y↔10y switches and revisits; auto-invalidates when facts
+// resolution. Instant 3y↔5y switches and revisits; auto-invalidates when facts
 // change (capturedAt) or the engine/data version bumps. Bounded, no TTL needed.
 const horizonCache = new Map<string, HorizonsResult>();
 const HORIZON_CACHE_MAX = 200;

@@ -4,6 +4,7 @@ import { getDataStore } from "@/lib/data";
 import { runEngine } from "@/lib/engine/pipeline";
 import { logAccess } from "@/lib/security/accessLog";
 import { getBrokerContext } from "@/lib/supabase/auth";
+import { DATA_VERSION, ENGINE_VERSION } from "@/lib/version";
 
 /**
  * Reproducibility check: re-run the engine from the stored profile snapshot and
@@ -35,10 +36,24 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     actualRanking.length === record.ranking.length &&
     actualRanking.every((p, i) => p === record.ranking[i]);
 
+  // The reproducibility proof is only valid against the dataset + engine the
+  // record was created under. A live re-run after a DATA_VERSION/ENGINE_VERSION
+  // bump can diverge for a record that was perfectly valid at creation — so a
+  // version mismatch is surfaced as its own signal (not a tamper "did not
+  // reproduce"). Legacy records with no pinned version are treated as matching.
+  const dataVersionMatch = !record.dataVersion || record.dataVersion === DATA_VERSION;
+  const engineVersionMatch = !record.engineVersion || record.engineVersion === ENGINE_VERSION;
+  const sameVersion = dataVersionMatch && engineVersionMatch;
+
   return NextResponse.json({
-    reproduced: seedMatch && rankingMatch,
+    // "reproduced exactly" means same-version, same-seed, same-ranking.
+    reproduced: sameVersion && seedMatch && rankingMatch,
     seedMatch,
     rankingMatch,
+    dataVersionMatch,
+    engineVersionMatch,
+    recordedVersions: { data: record.dataVersion ?? null, engine: record.engineVersion ?? null },
+    currentVersions: { data: DATA_VERSION, engine: ENGINE_VERSION },
     expectedRanking: record.ranking,
     actualRanking,
   });
