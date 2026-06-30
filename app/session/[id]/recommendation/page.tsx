@@ -40,7 +40,8 @@ export default async function RecommendationPage({ params }: { params: Promise<{
             <div className="eyebrow mb-1.5 text-accent">Recommendation of record</div>
             <h1 className="display mb-1 text-[33px] font-semibold leading-[1.05] text-ink">Recommendation</h1>
             <p className="text-[13.5px] text-ink2">
-              {client}. The ranking and every number below are deterministic and auditable.
+              {client}. The ranking is the AI-delivered recommendation; every figure is grounded in the 2026
+              plan files, and the result is sealed to a re-verifiable audit record.
             </p>
           </div>
           {/* Clean, plain-language client-facing summary the broker can show or print. */}
