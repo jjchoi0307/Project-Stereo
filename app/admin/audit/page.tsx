@@ -77,7 +77,12 @@ export default async function AdminAuditPage() {
                   <td className="num px-3.5 py-2.5 text-slate-500" title={e.session_id ?? undefined}>{e.session_id ? clientRef(e.session_id) : "—"}</td>
                   <td className="px-3.5 py-2.5 text-slate-600">{planOf(e.metadata) || "—"}</td>
                   <td className="px-3.5 py-2.5">
-                    <span className={e.outcome === "ok" ? "text-emerald-600" : "text-rose-600"}>{e.outcome}</span>
+                    <span
+                      className={e.outcome === "ok" ? "text-emerald-600" : "text-rose-600"}
+                      title={e.outcome === "ok" ? "The action completed successfully" : "The action failed (see server logs)"}
+                    >
+                      {e.outcome === "ok" ? "Success" : "Failed"}
+                    </span>
                   </td>
                 </tr>
               ))
