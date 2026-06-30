@@ -23,13 +23,22 @@ const WRITE_BEARING_GET = [
  * already permit them — otherwise the thumbnail/player is blocked until a hard
  * refresh. An image CDN and a single trusted frame origin can't execute code in
  * our context, so this stays a minimal relaxation; everything else is strict.
- * 'unsafe-eval' is dev-only (Fast Refresh); production stays strict.
+ *
+ * Scripts: production uses a per-request nonce + 'strict-dynamic' (NO
+ * 'unsafe-inline'), so an injected inline <script> can't execute — Next stamps
+ * the nonce onto its own bootstrap (it reads it from the request CSP header) and
+ * strict-dynamic propagates trust to the chunks that bootstrap loads. Dev keeps
+ * 'unsafe-inline' + 'unsafe-eval' for Fast Refresh. Styles keep 'unsafe-inline'
+ * (style injection can't run script and Next emits unhashable inline styles).
  */
-function contentSecurityPolicy(): string {
+function contentSecurityPolicy(nonce: string | null): string {
   const isDev = process.env.NODE_ENV !== "production";
+  const scriptSrc = isDev
+    ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+    : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`;
   const directives = [
     "default-src 'self'",
-    `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
+    scriptSrc,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https://i.ytimg.com",
     "font-src 'self'",
@@ -80,10 +89,23 @@ export async function middleware(request: NextRequest) {
     if (originMismatch() || (site && site !== "same-origin" && site !== "none")) return reject();
   }
 
-  const response = await updateSession(request);
+  // Per-request script nonce (production only; dev keeps 'unsafe-inline' for
+  // Fast Refresh). Forward it on the REQUEST headers so Next reads it and stamps
+  // its bootstrap scripts; the same policy goes on the response for the browser.
+  const isDev = process.env.NODE_ENV !== "production";
+  const nonce = isDev ? null : btoa(crypto.randomUUID());
+  const csp = contentSecurityPolicy(nonce);
+
+  const requestHeaders = new Headers(request.headers);
+  if (nonce) {
+    requestHeaders.set("x-nonce", nonce);
+    requestHeaders.set("content-security-policy", csp);
+  }
+
+  const response = await updateSession(request, requestHeaders);
   // CSP is set here (not in next.config) as a single uniform policy; see the
   // contentSecurityPolicy() note for why the YouTube allowances are global.
-  response.headers.set("Content-Security-Policy", contentSecurityPolicy());
+  response.headers.set("Content-Security-Policy", csp);
   return response;
 }
 
