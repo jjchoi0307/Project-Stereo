@@ -42,5 +42,9 @@ export const ENGINE_VERSION = "engine-1.2.0";
  * 2.3.0: headline annual cost clamped to the plan's [premium, premium+OOP-max]
  *        envelope (clampAnnualCost), and a degraded run (no grounded deep write-up)
  *        now fails retryable + uncached instead of surfacing ungrounded rows.
+ * 2.4.0: the displayed annual cost is now COMPUTED deterministically from grounded
+ *        facts + the member's reported utilization (lib/ai/costCalc.ts) — the model
+ *        no longer produces any dollar figure. Covered cost-share caps at the
+ *        OOP-max; uncovered (off-formulary) exposure is added uncapped.
  */
-export const AI_VERSION = "ai-2.3.0";
+export const AI_VERSION = "ai-2.4.0";
