@@ -5,6 +5,7 @@ import { runEngine } from "@/lib/engine/pipeline";
 import { logAccess } from "@/lib/security/accessLog";
 import { getBrokerContext } from "@/lib/supabase/auth";
 import { DATA_VERSION, ENGINE_VERSION } from "@/lib/version";
+import { verifyAuditRecordHmac } from "@/lib/audit/integrity";
 
 /**
  * Reproducibility check: re-run the engine from the stored profile snapshot and
@@ -45,13 +46,21 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const engineVersionMatch = !record.engineVersion || record.engineVersion === ENGINE_VERSION;
   const sameVersion = dataVersionMatch && engineVersionMatch;
 
+  // Content integrity (independent of the engine re-run): detects tampering of the
+  // stored payload — AI recommendation, citations, PHI snapshot — that wouldn't
+  // change the deterministic ranking. true = intact, false = altered, null =
+  // unsigned/no key (then it doesn't affect the verdict).
+  const contentIntact = verifyAuditRecordHmac(record);
+
   return NextResponse.json({
-    // "reproduced exactly" means same-version, same-seed, same-ranking.
-    reproduced: sameVersion && seedMatch && rankingMatch,
+    // "reproduced exactly" means same-version, same-seed, same-ranking, and — when
+    // the record is signed — content that hasn't been tampered with.
+    reproduced: sameVersion && seedMatch && rankingMatch && contentIntact !== false,
     seedMatch,
     rankingMatch,
     dataVersionMatch,
     engineVersionMatch,
+    contentIntact,
     recordedVersions: { data: record.dataVersion ?? null, engine: record.engineVersion ?? null },
     currentVersions: { data: DATA_VERSION, engine: ENGINE_VERSION },
     expectedRanking: record.ranking,
