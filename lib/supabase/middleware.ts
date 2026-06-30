@@ -19,11 +19,15 @@ const PROTECTED_APIS = ["/api/sessions", "/api/audit"];
 const matches = (path: string, prefixes: string[]) =>
   prefixes.some((p) => (p === "/" ? path === "/" : path === p || path.startsWith(p + "/")));
 
-export async function updateSession(request: NextRequest): Promise<NextResponse> {
-  // Auth is off in memory mode — let everything through untouched.
-  if (stateStore() !== "supabase" || !supabaseConfigured()) return NextResponse.next();
+export async function updateSession(request: NextRequest, requestHeaders: Headers): Promise<NextResponse> {
+  // Forward request-header overrides (the CSP nonce) so Next can read them while
+  // rendering, on every path including the no-auth one.
+  const forward = { request: { headers: requestHeaders } };
 
-  let response = NextResponse.next({ request });
+  // Auth is off in memory mode — let everything through untouched.
+  if (stateStore() !== "supabase" || !supabaseConfigured()) return NextResponse.next(forward);
+
+  let response = NextResponse.next(forward);
   const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     cookies: {
       getAll() {
@@ -31,7 +35,17 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
       },
       setAll(cookiesToSet) {
         cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-        response = NextResponse.next({ request });
+        // Re-derive the forwarded request headers so refreshed auth cookies are
+        // visible to server components on this same request — while keeping the
+        // nonce header. Dropping back to a stale snapshot would forward old
+        // cookies and cause spurious logouts (the bug this block guards against).
+        const merged = new Headers(requestHeaders);
+        const cookieHeader = request.cookies
+          .getAll()
+          .map((c) => `${c.name}=${c.value}`)
+          .join("; ");
+        if (cookieHeader) merged.set("cookie", cookieHeader);
+        response = NextResponse.next({ request: { headers: merged } });
         cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
       },
     },
