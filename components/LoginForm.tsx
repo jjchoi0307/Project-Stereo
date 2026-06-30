@@ -30,26 +30,6 @@ export default function LoginForm({
             : "Welcome back. Pick up your private workspace where you left off."}
         </p>
 
-        {isSignup && (
-          <div className="mb-[18px] rounded-lg border border-line bg-paper px-4 py-3.5">
-            <div className="eyebrow mb-2.5 text-accent">How it works</div>
-            <ol className="space-y-2">
-              {[
-                "Capture a member's facts — type them in, or send a secure link.",
-                "Get a ranked, cited plan recommendation you can defend.",
-                "Save a reproducible record you can re-verify any time.",
-              ].map((step, i) => (
-                <li key={i} className="flex items-start gap-2.5 text-[12.5px] leading-[1.4] text-ink">
-                  <span className="num mt-px flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-accent text-[11px] font-semibold text-white">
-                    {i + 1}
-                  </span>
-                  <span>{step}</span>
-                </li>
-              ))}
-            </ol>
-          </div>
-        )}
-
         {state.notice && (
           <div className="mb-3.5 rounded-sm border border-pos/30 bg-pos/10 px-3 py-2.5 text-[12.5px] leading-[1.45] text-pos">
             {state.notice}
