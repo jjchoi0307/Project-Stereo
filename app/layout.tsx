@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
+import PublicAnalytics from "@/components/PublicAnalytics";
 
 // SMG identity (see DESIGN.md): a friendly, professional humanist sans for all
 // headings + UI — warm and accessible for the Korean-American senior members SMG
@@ -33,7 +34,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${sans.variable} ${mono.variable}`}>
-      <body>{children}</body>
+      <body>
+        {children}
+        <PublicAnalytics />
+      </body>
     </html>
   );
 }
