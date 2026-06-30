@@ -13,6 +13,10 @@ export default function SmgLoader({
   label?: string;
 }) {
   const w = Math.round(size * 0.52); // mark aspect (84×161)
+  // The repeating sweep tile is ~1.6× the mark height: large enough for one clear
+  // band, small enough that a band is always on the mark. The animation shifts by
+  // exactly this px each cycle, so the loop is seamless (see .smg-sweep).
+  const tile = Math.round(size * 1.6);
   const mark = (
     <span className="relative inline-block align-middle" style={{ width: w, height: size }} aria-hidden>
       {/* Dim track — the full mark, always faintly visible */}
@@ -20,7 +24,12 @@ export default function SmgLoader({
       <img src="/smg-mark.png" alt="" className="absolute inset-0 h-full w-full opacity-[0.18]" />
       {/* Bright sweep — same mark, revealed by the traveling mask band */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/smg-mark.png" alt="" className="smg-sweep absolute inset-0 h-full w-full" />
+      <img
+        src="/smg-mark.png"
+        alt=""
+        className="smg-sweep absolute inset-0 h-full w-full"
+        style={{ "--smg-tile": `${tile}px` } as React.CSSProperties}
+      />
     </span>
   );
   // Inline (no label): render just the mark so it sits alongside text.
