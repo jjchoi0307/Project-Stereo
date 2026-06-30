@@ -40,11 +40,20 @@ export const getBrokerContext = cache(async (): Promise<BrokerContext | null> =>
   } = await client.auth.getUser();
   if (!user) return null;
 
-  const broker = await resolveBroker(user.id, user.email ?? "", {
-    name: (user.user_metadata?.full_name as string | undefined)?.trim() || undefined,
-    agency: (user.user_metadata?.agency as string | undefined)?.trim() || undefined,
-  });
-  return { client, brokerId: broker.id, orgId: broker.org_id, role: broker.role };
+  try {
+    const broker = await resolveBroker(user.id, user.email ?? "", {
+      name: (user.user_metadata?.full_name as string | undefined)?.trim() || undefined,
+      agency: (user.user_metadata?.agency as string | undefined)?.trim() || undefined,
+    });
+    return { client, brokerId: broker.id, orgId: broker.org_id, role: broker.role };
+  } catch (e) {
+    // Provisioning can legitimately fail (e.g. ambiguous default org when
+    // SMG_ORG_ID is unset, or a transient DB error). Never let that 500 a page —
+    // treat the caller as not-yet-a-broker so the surface falls back to /home
+    // instead of crashing. The error is logged for the operator to resolve.
+    console.error("getBrokerContext: broker provisioning failed:", (e as Error)?.message);
+    return null;
+  }
 });
 
 /**
