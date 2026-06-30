@@ -59,6 +59,26 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
     const rec = await recommendPlans(profile, db);
 
+    // DEGRADED: no grounded deep write-up succeeded, so every row is an ungrounded
+    // heuristic. Do NOT present it as an authoritative recommendation and do NOT
+    // cache it — surface a retryable failure (mirrors the not-configured path) so
+    // the next load recomputes instead of freezing a bad result into cache + audit.
+    if (rec.degraded) {
+      await recordEvent(await getBrokerContext(), {
+        action: "recommendation.surface",
+        sessionId: id,
+        metadata: { degraded: true, eligibleCount: rec.ranked.length },
+        outcome: "error",
+      });
+      return NextResponse.json(
+        {
+          error: "recommendation temporarily unavailable",
+          detail: "The recommendation couldn't be fully generated just now. Please try again in a moment.",
+        },
+        { status: 503 },
+      );
+    }
+
     // Shape a model ranking into the response, dropping any planId not in the
     // catalog. Used for both the primary result and the relaxed near-miss.
     const shapeRanked = (items: typeof rec.ranked) =>

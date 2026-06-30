@@ -114,6 +114,9 @@ export interface AiRecommendation {
   groundingPackSignature: string;
   /** Ensemble: number of screen runs the top-3 frequency was voted across. */
   ensembleRuns: number;
+  /** True when NO grounded deep write-up succeeded — the ranked rows are
+   *  ungrounded heuristics that must not be presented as authoritative or cached. */
+  degraded?: boolean;
 }
 
 // How many top plans get the full parallel deep write-up (the prominent cards).
@@ -471,6 +474,21 @@ function citationIsGrounded(quote: string, idx: GroundIndex): boolean {
   return tokens.length > 0 && tokens.every((t) => (/^\d+$/.test(t) ? idx.numbers.has(t) : idx.text.includes(t)));
 }
 
+/**
+ * Bound a model-estimated annual cost to the envelope the plan's OWN facts make
+ * mathematically possible: total annual cost cannot be below the annual premium
+ * (you always pay it) nor above premium + the in-network OOP-max (the member's
+ * cost-share is capped there by definition). This deterministically grounds the
+ * headline "predicted annual cost" the member reads — a model figure outside the
+ * envelope is provably wrong, so we clamp it to the nearest valid bound rather
+ * than display a number the plan documents contradict.
+ */
+export function clampAnnualCost(rawTotal: number, monthlyPremium: number, annualOOPMax: number): number {
+  const annualPremium = Math.max(0, Math.round(monthlyPremium * 12));
+  const ceil = annualPremium + Math.max(0, Math.round(annualOOPMax));
+  return Math.min(ceil, Math.max(annualPremium, Math.max(0, Math.round(rawTotal || 0))));
+}
+
 /** Build the AiRankedPlan for a deep-written top plan, with grounding guardrails. */
 export function deepToRanked(facts: PlanFacts, d: DeepResult, topThreeVotes: number): AiRankedPlan {
   // The json_schema output config constrains the happy path, but a refusal-with-text
@@ -504,7 +522,15 @@ export function deepToRanked(facts: PlanFacts, d: DeepResult, topThreeVotes: num
   };
 
   const cost = d.costBreakdown;
-  const total = cost ? Math.max(0, Math.round(Number(cost.estimatedAnnualTotal) || 0)) : 0;
+  // Ground the headline cost to the plan's own [premium, premium+OOP-max] envelope.
+  const rawTotal = cost ? Number(cost.estimatedAnnualTotal) || 0 : 0;
+  const total = cost ? clampAnnualCost(rawTotal, facts.monthlyPremium, facts.annualOOPMax) : 0;
+  if (cost && Math.abs(total - Math.round(rawTotal)) > 1) {
+    console.warn(
+      `deep:${facts.planId}: model annual cost ${Math.round(rawTotal)} outside plan envelope; clamped to ${total}`,
+    );
+  }
+  const itemCeil = clampAnnualCost(Infinity, facts.monthlyPremium, facts.annualOOPMax);
   return {
     planId: facts.planId,
     subScores,
@@ -516,7 +542,7 @@ export function deepToRanked(facts: PlanFacts, d: DeepResult, topThreeVotes: num
       ? {
           items: (cost.items ?? []).map((i) => ({
             label: String(i.label),
-            annualEstimate: Math.max(0, Math.round(Number(i.annualEstimate) || 0)),
+            annualEstimate: Math.min(itemCeil, Math.max(0, Math.round(Number(i.annualEstimate) || 0))),
             basis: String(i.basis),
           })),
           estimatedAnnualTotal: total,
@@ -699,6 +725,12 @@ export async function recommendPlans(
 
   const ranked = [...topRanked, ...tail];
   logTrajectory(traj);
+  // DEGRADED: not a single deep write-up succeeded, so every shown row is an
+  // ungrounded heuristic with no fit bullets, citations, or real cost. The caller
+  // must NOT present these as an authoritative recommendation (and must not cache
+  // them) — surface a retryable failure instead. (candidates>0 here; the empty
+  // case returned earlier.)
+  const degraded = topRanked.length === 0;
   return {
     model,
     topPlanId: ranked[0]?.planId ?? null,
@@ -706,6 +738,7 @@ export async function recommendPlans(
     excluded: pack.excluded,
     groundingPackSignature: fullSignature,
     ensembleRuns,
+    degraded,
   };
 }
 

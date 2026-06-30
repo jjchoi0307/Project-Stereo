@@ -14,7 +14,11 @@
 // Riverside p.50, San Diego p.52, Connections p.24 — not the portfolio title slide p.19).
 // v3: SNP eligibility gating (D-SNP requires dual eligibility; C-SNP requires a
 // qualifying condition) changes the candidate set — invalidate cached recs.
-export const DATA_VERSION = "plans-2026.v3";
+// v4: inpatient parser now reads ALL per-day bands (worst-case non-zero) instead
+// of only the first strict-format band, so several plans' derived inpatient
+// cost-share changed from a silent $0 to their real value — changes simulation
+// exposure for those plans; invalidate cached recs.
+export const DATA_VERSION = "plans-2026.v4";
 // 1.1.0: agent-based correlated simulation (lib/engine/priors.ts), default 500 agents.
 // 1.2.0: de-identified seeding (lib/engine/seed.ts) — cohort keyed to clinical facts, not identity.
 export const ENGINE_VERSION = "engine-1.2.0";
@@ -35,5 +39,8 @@ export const ENGINE_VERSION = "engine-1.2.0";
  * 2.2.0: carrier-blind model input — the ranking/write-up prompts identify plans
  *        only by opaque tokens (no carrier/brand/name/source), so the model cannot
  *        favor a carrier (proven by scripts/test-neutrality.ts).
+ * 2.3.0: headline annual cost clamped to the plan's [premium, premium+OOP-max]
+ *        envelope (clampAnnualCost), and a degraded run (no grounded deep write-up)
+ *        now fails retryable + uncached instead of surfacing ungrounded rows.
  */
-export const AI_VERSION = "ai-2.2.0";
+export const AI_VERSION = "ai-2.3.0";
