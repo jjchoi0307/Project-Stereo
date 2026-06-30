@@ -1,46 +1,54 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 /**
- * Seoul Medical Group brand film for the public homepage. Self-hosted (no
- * third-party player, no embedding restrictions, same-origin under the strict
- * CSP) and click-to-play with sound: the poster paints instantly (~130 KB) and
- * nothing downloads until the visitor chooses to watch (preload="none"), so the
- * 30s spot never taxes a first homepage load. The narrative audio is preserved
- * — unlike a muted autoplay loop — which is the point of a brand film.
+ * Seoul Medical Group brand film for the public homepage. Autoplays muted and
+ * loops the moment the page loads (browsers only permit autoplay when muted),
+ * with an unmute control so visitors can hear the story, and native controls for
+ * pause/scrub (accessibility: auto-playing media must be pausable). Self-hosted
+ * (same-origin under the strict CSP), poster paints instantly.
  */
 export default function BrandVideo() {
-  const [playing, setPlaying] = useState(false);
+  const ref = useRef<HTMLVideoElement>(null);
+  const [muted, setMuted] = useState(true);
+
+  const toggleMute = () => {
+    const v = ref.current;
+    if (!v) return;
+    v.muted = !v.muted;
+    // If autoplay was paused for any reason, unmuting is a user gesture — resume.
+    if (!v.muted && v.paused) v.play().catch(() => {});
+    setMuted(v.muted);
+  };
 
   return (
     <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-line bg-ink shadow-card">
-      {playing ? (
-        <video
-          className="h-full w-full object-cover"
-          src="/smg-brand.mp4"
-          poster="/smg-brand-poster.jpg"
-          controls
-          autoPlay
-          loop
-          playsInline
-          preload="auto"
-        />
-      ) : (
+      <video
+        ref={ref}
+        className="h-full w-full object-cover"
+        src="/smg-brand.mp4"
+        poster="/smg-brand-poster.jpg"
+        autoPlay
+        muted
+        loop
+        playsInline
+        controls
+        preload="auto"
+      />
+      {/* Prominent unmute affordance — muted autoplay means sound is off until
+          the visitor opts in. Hidden once unmuted (native controls remain). */}
+      {muted && (
         <button
           type="button"
-          onClick={() => setPlaying(true)}
-          aria-label="Play the Seoul Medical Group story"
-          className="group relative block h-full w-full"
+          onClick={toggleMute}
+          aria-label="Unmute the video"
+          className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-ink/70 px-3 py-1.5 text-[12px] font-semibold text-white backdrop-blur transition-colors hover:bg-ink/85"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/smg-brand-poster.jpg" alt="" className="h-full w-full object-cover" />
-          <span className="absolute inset-0 bg-ink/15 transition-colors group-hover:bg-ink/25" />
-          <span className="absolute inset-0 grid place-items-center">
-            <span className="grid h-[60px] w-[60px] place-items-center rounded-full bg-white/95 shadow-card transition-transform group-hover:scale-105">
-              <span className="ml-1 h-0 w-0 border-y-[11px] border-l-[18px] border-y-transparent border-l-accent" />
-            </span>
-          </span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3a4.5 4.5 0 00-2.5-4.03v8.06A4.5 4.5 0 0016.5 12z" />
+          </svg>
+          Tap for sound
         </button>
       )}
     </div>
