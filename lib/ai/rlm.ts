@@ -64,12 +64,43 @@ export interface RlmLeafOptions {
 const DEFAULT_LEAF_TIMEOUT_MS = 90_000;
 
 /**
+ * Process-wide (per serverless instance) cap on CONCURRENT Anthropic calls.
+ *
+ * rlmParallel bounds concurrency only WITHIN a single request, so without this a
+ * burst of cold loads — each firing Today + both horizon ensembles on mount —
+ * would put dozens of calls per member in flight at once and trip provider rate
+ * limits (429s) under load. Every leaf acquires a slot before its call and
+ * releases after, so a burst QUEUES (FIFO) instead of stampeding. Tune to the
+ * Anthropic account rate limit via RLM_MAX_CONCURRENCY. (Per-instance; Vercel runs
+ * several instances, and the Anthropic account limit is the cross-instance
+ * backstop — see README/DEPLOY for the rate-limit + Supabase tier guidance.)
+ */
+const MAX_CONCURRENT = Math.max(1, Number(process.env.RLM_MAX_CONCURRENCY) || 6);
+let inFlight = 0;
+const slotQueue: Array<() => void> = [];
+function acquireSlot(): Promise<void> {
+  if (inFlight < MAX_CONCURRENT) {
+    inFlight++;
+    return Promise.resolve();
+  }
+  return new Promise<void>((resolve) => slotQueue.push(resolve));
+}
+function releaseSlot(): void {
+  const next = slotQueue.shift();
+  if (next) next(); // transfer the slot directly to the next waiter (inFlight unchanged)
+  else inFlight--;
+}
+
+/**
  * A single grounded sub-LM call — the RLM completion primitive ("leaf"). Structured
  * JSON output, no extended thinking, temperature 0, hard timeout. Throws on
  * refusal / truncation / empty / invalid JSON / timeout; the caller's synthesize
  * step enforces grounding. Records a step on the trajectory either way.
  */
 export async function rlmLeaf<T>(traj: RlmTrajectory, opts: RlmLeafOptions): Promise<T> {
+  // Acquire a global concurrency slot BEFORE the call (queue wait is excluded from
+  // the per-call timeout below, which only times the actual request).
+  await acquireSlot();
   const start = Date.now();
   let ok = false;
   let model = SIM_MODEL;
@@ -125,6 +156,7 @@ export async function rlmLeaf<T>(traj: RlmTrajectory, opts: RlmLeafOptions): Pro
     return parsed;
   } finally {
     clearTimeout(timer);
+    releaseSlot();
     traj.steps.push({ label: opts.label, kind: "leaf", model, ms: Date.now() - start, ok });
   }
 }

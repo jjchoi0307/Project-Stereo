@@ -56,7 +56,7 @@ export default function VerifyBadge({ auditId }: { auditId: string }) {
         tone="verified"
         center="SMG"
         caption={
-          <span className="block text-[12px] font-semibold text-pos">Ranking reproduced exactly</span>
+          <span className="block text-[12px] font-semibold text-pos">Verified — record intact, backbone reproduced</span>
         }
       />
     );

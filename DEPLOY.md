@@ -50,6 +50,28 @@ ARCHITECTURE.md §2 "Auth provisioning — bootstrap policy to revisit".)
   can run ~30s.
 - The app is all dynamic (`force-dynamic`) server rendering — no static export concerns.
 
+## Scaling (~1000 brokers)
+
+Steady state is cheap — every AI result is cached per facts-version, so a member is
+computed once and re-served until their intake changes. The pressure is the
+**cold-load burst**: each first view fans out the Today ensemble + both horizon
+ensembles, ~30–45 model calls. Guidance:
+
+- **Concurrency cap (in code):** `RLM_MAX_CONCURRENCY` (default 6) caps concurrent
+  Anthropic calls **per serverless instance** — a burst queues instead of
+  stampeding. Tune it to your Anthropic tier ÷ expected concurrent instances.
+- **Anthropic tier:** size the account's requests/min + tokens/min to the expected
+  concurrent cold loads (enrollment-season bursts, not the daily average). The
+  per-instance cap + the SDK's retry/backoff are the in-app guard; the account rate
+  limit is the real ceiling.
+- **Supabase:** enable connection pooling (PgBouncer / Supavisor) — many short
+  RLS-scoped queries per request — and size the plan for the `horizon_cache` write
+  throughput (see `supabase/migrations/0006`).
+- **Vercel:** the recommendation route holds a function for the duration of the
+  ensemble (`maxDuration` up to 300s). Confirm the plan's concurrent-function limit
+  covers peak; consider lazy-loading horizons (compute only when the broker opens the
+  3y/5y view) so a Today view doesn't pay for horizons it may not show.
+
 ## Pre-deploy checklist
 - [ ] **Work through `SECURITY.md` → "Operational requirements"** (the HIPAA items code can't satisfy: rate limiting/WAF, MFA, automatic logoff, backups, retention/disposal, log monitoring, risk analysis/policies/training).
 - [ ] BAAs in place (Vercel + Supabase) **before** any real PHI.
