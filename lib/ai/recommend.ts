@@ -30,6 +30,7 @@ import type { DataStore } from "@/lib/data";
 import { SCORING, ENSEMBLE, TIEBREAK_RULE, CATASTROPHIC_OOP_REFERENCE } from "@/lib/engine/config";
 import { SIM_MODEL } from "@/lib/sim/env";
 import { newTrajectory, rlmLeaf, rlmParallel, logTrajectory, type RlmTrajectory } from "./rlm";
+import { computeAnnualCost } from "./costCalc";
 import {
   buildPlanFactsPack,
   type PlanFacts,
@@ -474,23 +475,13 @@ function citationIsGrounded(quote: string, idx: GroundIndex): boolean {
   return tokens.length > 0 && tokens.every((t) => (/^\d+$/.test(t) ? idx.numbers.has(t) : idx.text.includes(t)));
 }
 
-/**
- * Bound a model-estimated annual cost to the envelope the plan's OWN facts make
- * mathematically possible: total annual cost cannot be below the annual premium
- * (you always pay it) nor above premium + the in-network OOP-max (the member's
- * cost-share is capped there by definition). This deterministically grounds the
- * headline "predicted annual cost" the member reads — a model figure outside the
- * envelope is provably wrong, so we clamp it to the nearest valid bound rather
- * than display a number the plan documents contradict.
- */
-export function clampAnnualCost(rawTotal: number, monthlyPremium: number, annualOOPMax: number): number {
-  const annualPremium = Math.max(0, Math.round(monthlyPremium * 12));
-  const ceil = annualPremium + Math.max(0, Math.round(annualOOPMax));
-  return Math.min(ceil, Math.max(annualPremium, Math.max(0, Math.round(rawTotal || 0))));
-}
-
 /** Build the AiRankedPlan for a deep-written top plan, with grounding guardrails. */
-export function deepToRanked(facts: PlanFacts, d: DeepResult, topThreeVotes: number): AiRankedPlan {
+export function deepToRanked(
+  facts: PlanFacts,
+  d: DeepResult,
+  topThreeVotes: number,
+  patient: RecommendationPatientFacts,
+): AiRankedPlan {
   // The json_schema output config constrains the happy path, but a refusal-with-text
   // or schema-cache edge could slip a malformed-but-parseable object through (same
   // caveat clinicalRead.validateRead guards). subScores drives the fit score, so
@@ -521,16 +512,13 @@ export function deepToRanked(facts: PlanFacts, d: DeepResult, topThreeVotes: num
     catastrophicDownside: Math.max(oopDownside, clamp01(d.subScores.catastrophicDownside)),
   };
 
-  const cost = d.costBreakdown;
-  // Ground the headline cost to the plan's own [premium, premium+OOP-max] envelope.
-  const rawTotal = cost ? Number(cost.estimatedAnnualTotal) || 0 : 0;
-  const total = cost ? clampAnnualCost(rawTotal, facts.monthlyPremium, facts.annualOOPMax) : 0;
-  if (cost && Math.abs(total - Math.round(rawTotal)) > 1) {
-    console.warn(
-      `deep:${facts.planId}: model annual cost ${Math.round(rawTotal)} outside plan envelope; clamped to ${total}`,
-    );
-  }
-  const itemCeil = clampAnnualCost(Infinity, facts.monthlyPremium, facts.annualOOPMax);
+  // COST: computed deterministically from the plan's grounded facts + the member's
+  // OWN reported utilization (lib/ai/costCalc.ts) — NOT from the model. The model
+  // orchestrates and narrates; it never produces a dollar figure, so the headline
+  // cost can't be invented or mis-arithmetic'd. The model's d.costBreakdown is
+  // discarded for the displayed numbers.
+  const grounded = computeAnnualCost(facts, patient);
+  const total = grounded.estimatedAnnualTotal;
   return {
     planId: facts.planId,
     subScores,
@@ -538,16 +526,10 @@ export function deepToRanked(facts: PlanFacts, d: DeepResult, topThreeVotes: num
     fitScore: fitFromSubScores(subScores),
     confidence: d.confidence ?? "moderate",
     reasons,
-    costBreakdown: cost
-      ? {
-          items: (cost.items ?? []).map((i) => ({
-            label: String(i.label),
-            annualEstimate: Math.min(itemCeil, Math.max(0, Math.round(Number(i.annualEstimate) || 0))),
-            basis: String(i.basis),
-          })),
-          estimatedAnnualTotal: total,
-        }
-      : null,
+    costBreakdown: {
+      items: grounded.items,
+      estimatedAnnualTotal: total,
+    },
     estAnnualCost: total,
     catastrophicExposure: clamp01(Number(d.catastrophicExposure)),
     medsCoveredRate: medsRateOf(facts),
@@ -687,7 +669,7 @@ export async function recommendPlans(
     try {
       const facts = factsById.get(id)!;
       const result = await callDeep(traj, todayPatient, facts, tokenById.get(id) ?? id);
-      return { id, ranked: deepToRanked(facts, result, votes.get(id) ?? 0) };
+      return { id, ranked: deepToRanked(facts, result, votes.get(id) ?? 0, todayPatient) };
     } catch (e) {
       console.error("deep write-up failed for", id, (e as Error).message);
       return null;
