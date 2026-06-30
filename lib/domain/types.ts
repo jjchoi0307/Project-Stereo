@@ -454,4 +454,12 @@ export interface AuditRecord {
   preferenceChangedTop: boolean;
   /** The AI-delivered recommendation, preserved verbatim (present once AI is enabled). */
   aiRecommendation?: AuditAiRecommendation | null;
+  /**
+   * HMAC-SHA256 over the canonical serialization of this record's content (every
+   * field except this one), keyed by a server-held secret. Lets `/verify` detect
+   * tampering of the stored payload — including the AI recommendation and PHI
+   * snapshot, which the engine re-run alone can't catch. Null when no signing key
+   * is configured (the check then degrades to reproducibility only).
+   */
+  contentHmac?: string | null;
 }

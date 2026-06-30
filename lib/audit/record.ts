@@ -11,6 +11,7 @@
 import type { AuditAiRecommendation, AuditRecord, ClientProfileInput } from "@/lib/domain";
 import type { EngineRun } from "@/lib/engine/pipeline";
 import { DATA_VERSION, ENGINE_VERSION } from "@/lib/version";
+import { signAuditRecord } from "./integrity";
 
 /** Stable id per facts-version so re-viewing the same recommendation upserts
  *  rather than duplicating, while a correction (new capturedAt) makes a new one. */
@@ -24,7 +25,7 @@ export function buildAuditRecord(
   run: EngineRun,
   ai?: AuditAiRecommendation | null,
 ): AuditRecord {
-  return {
+  const record: AuditRecord = {
     id: auditIdFor(profile),
     createdAt: new Date().toISOString(),
     dataVersion: DATA_VERSION,
@@ -40,4 +41,7 @@ export function buildAuditRecord(
     preferenceChangedTop: run.scoring.preferenceChangedTop,
     aiRecommendation: ai ?? null,
   };
+  // Sign last, over the complete content, so the stored payload is tamper-evident
+  // (no-op when no key is configured — see lib/audit/integrity.ts).
+  return signAuditRecord(record);
 }

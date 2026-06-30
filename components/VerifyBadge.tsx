@@ -10,13 +10,17 @@ import RecordSeal from "@/components/ui/RecordSeal";
  * re-run reproduces the ranking, rose ✗ on mismatch, slate · while verifying.
  */
 export default function VerifyBadge({ auditId }: { auditId: string }) {
-  const [state, setState] = useState<"idle" | "running" | "ok" | "fail" | "version">("idle");
+  const [state, setState] = useState<"idle" | "running" | "ok" | "fail" | "version" | "tampered">("idle");
 
   const run = () => {
     setState("running");
     fetch(`/api/audit/${auditId}/verify`, { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => {
+        // Content HMAC mismatch = the stored record was altered after signing.
+        // This is the strongest negative signal — surface it as tampering, not a
+        // mere reproduction miss.
+        if (d.contentIntact === false) return setState("tampered");
         if (d.reproduced) return setState("ok");
         // A version difference is not a tamper signal — the record was created
         // under an earlier dataset/engine, so a live re-run can legitimately
@@ -53,6 +57,17 @@ export default function VerifyBadge({ auditId }: { auditId: string }) {
         center="SMG"
         caption={
           <span className="block text-[12px] font-semibold text-pos">Ranking reproduced exactly</span>
+        }
+      />
+    );
+  }
+  if (state === "tampered") {
+    return (
+      <RecordSeal
+        tone="broken"
+        center="SMG"
+        caption={
+          <span className="block text-[12px] font-semibold text-neg">Integrity check failed — record altered</span>
         }
       />
     );
