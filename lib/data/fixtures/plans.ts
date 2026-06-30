@@ -85,14 +85,32 @@ function parseCopay(s: string | null): number {
   return d.length ? Math.round(d[0]) : 0;
 }
 
-/** Inpatient per-day share + the number of days it applies before $0. */
-function parseInpatient(s: string): { perDay: number; days: number } {
-  const perDayMatch = s.match(/\$\s*([\d,]+)\s*(?:copay\s*)?(?:per day|\/day)\s*days?\s*(\d+)\s*-\s*(\d+)/i);
-  if (perDayMatch) {
-    const perDay = Number(perDayMatch[1].replace(/,/g, ""));
-    const days = Number(perDayMatch[3]) - Number(perDayMatch[2]) + 1;
-    return { perDay, days: Math.max(1, Math.min(days, 10)) };
+/**
+ * Inpatient per-day share + the number of days it applies before $0.
+ *
+ * Parses EVERY per-day band (plans commonly tier them, e.g. "$0/day days 1-3;
+ * $50/day days 4-7" or "$295 copay per day for days 1-6") and returns the
+ * worst-case NON-ZERO per-day share with the days that band applies. Tolerates
+ * "copay", "for", and "/day" phrasings. Earlier this matched only the first band
+ * in a strict format, so tiered/`for days` plans silently collapsed to $0/day —
+ * understating catastrophic exposure and feeding the AI a citeable-but-wrong $0.
+ */
+export function parseInpatient(s: string): { perDay: number; days: number } {
+  const bands = [
+    ...s.matchAll(
+      /\$\s*([\d,]+)\s*(?:copay\s*)?(?:per\s*day|\/\s*day)(?:\s*(?:for\s*)?days?\s*(\d+)\s*-\s*(\d+))?/gi,
+    ),
+  ].map((m) => ({
+    perDay: Number(m[1].replace(/,/g, "")),
+    days: m[2] && m[3] ? Number(m[3]) - Number(m[2]) + 1 : null,
+  }));
+  const nonZero = bands.filter((b) => b.perDay > 0);
+  if (nonZero.length) {
+    // Worst-case per-day the member can face, with the days that band applies.
+    const worst = nonZero.reduce((a, b) => (b.perDay > a.perDay ? b : a));
+    return { perDay: Math.round(worst.perDay), days: Math.max(1, Math.min(worst.days ?? 5, 10)) };
   }
+  if (bands.length) return { perDay: 0, days: 5 }; // explicitly "$0/day"
   const deductible = s.match(/\$\s*([\d,]+)\s*deductible/i);
   if (deductible) {
     // Spread the benefit-period deductible across a 5-day reference stay.
