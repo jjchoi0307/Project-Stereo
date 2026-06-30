@@ -102,38 +102,42 @@ a:focus-visible {
 /* SMG loader — a loading sweep that travels down the real logo mark (blue at the
    top → green at the bottom) over a dim track copy, looping like a spinner. */
 .smg-sweep {
+  /* One bright band per repeating tile, so a band is always flowing down the
+     mark (no off-screen dead time). The tile height (--smg-tile, in px from the
+     component) drives both the mask size and the per-cycle shift, so moving by
+     exactly one tile is mathematically seamless — no visible restart. */
   -webkit-mask-image: linear-gradient(
     to bottom,
     transparent 0%,
-    rgba(0, 0, 0, 0.15) 22%,
-    #000 40%,
-    #000 48%,
-    rgba(0, 0, 0, 0.15) 66%,
+    rgba(0, 0, 0, 0.16) 18%,
+    #000 38%,
+    #000 50%,
+    rgba(0, 0, 0, 0.16) 70%,
     transparent 88%
   );
   mask-image: linear-gradient(
     to bottom,
     transparent 0%,
-    rgba(0, 0, 0, 0.15) 22%,
-    #000 40%,
-    #000 48%,
-    rgba(0, 0, 0, 0.15) 66%,
+    rgba(0, 0, 0, 0.16) 18%,
+    #000 38%,
+    #000 50%,
+    rgba(0, 0, 0, 0.16) 70%,
     transparent 88%
   );
-  -webkit-mask-size: 100% 220%;
-  mask-size: 100% 220%;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  animation: smgSweep 1.5s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+  -webkit-mask-size: 100% var(--smg-tile, 77px);
+  mask-size: 100% var(--smg-tile, 77px);
+  -webkit-mask-repeat: repeat-y;
+  mask-repeat: repeat-y;
+  animation: smgSweep 1.8s linear infinite;
 }
 @keyframes smgSweep {
-  0% {
-    -webkit-mask-position: 50% 140%;
-    mask-position: 50% 140%;
+  from {
+    -webkit-mask-position: 50% 0;
+    mask-position: 50% 0;
   }
-  100% {
-    -webkit-mask-position: 50% -40%;
-    mask-position: 50% -40%;
+  to {
+    -webkit-mask-position: 50% var(--smg-tile, 77px);
+    mask-position: 50% var(--smg-tile, 77px);
   }
 }
 @media (prefers-reduced-motion: reduce) {

@@ -26,9 +26,12 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       >
         ← Home
       </Link>
-      <div className="grid w-full max-w-[1120px] items-center gap-10 lg:grid-cols-[1.05fr_minmax(400px,0.95fr)] lg:gap-12">
-        {/* Showcase — left on desktop, below the form on mobile (sign-in stays first) */}
-        <section className="order-2 lg:order-1">
+      <div className="grid w-full max-w-[1120px] items-end gap-10 lg:grid-cols-[1.05fr_minmax(400px,0.95fr)] lg:gap-12">
+        {/* Showcase — left on desktop, below the form on mobile (sign-in stays first).
+            Bottom-aligned to the sign-in column; the pad lifts the video so its
+            bottom edge meets the card's bottom (the sign-up link + footer note hang
+            below the card on the right). */}
+        <section className="order-2 lg:order-1 lg:pb-[94px]">
           <HeroVideos episodes={episodes} />
         </section>
 
