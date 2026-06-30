@@ -94,7 +94,7 @@ export default function PublicHome() {
           <div data-fade>
             <BrandVideo />
             <p className="mt-2.5 text-center text-[12px] text-ink2">
-              Our story — caring for our neighbors, first.
+              Our story — we think of you first.
             </p>
           </div>
         </section>
