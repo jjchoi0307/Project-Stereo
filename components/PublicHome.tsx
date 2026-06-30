@@ -75,7 +75,7 @@ export default function PublicHome() {
           <div className="max-w-[620px]">
             <div className="eyebrow mb-3 text-accent">Seoul Medical Group · Broker Plan Recommender</div>
             <h1 className="display text-[38px] leading-[1.08] text-ink sm:text-[44px]">
-              A fact-driven Medicare Advantage recommendation you can trace, line by line.
+              A fact-driven Health Plan recommendation you can trace, line by line.
             </h1>
             <p className="mt-4 text-[15px] leading-[1.6] text-ink2">
               Built for SMG brokers and the members they serve. Capture a member's facts, get a ranked and
