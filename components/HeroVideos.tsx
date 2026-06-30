@@ -47,7 +47,7 @@ export default function HeroVideos({ episodes }: { episodes: Episode[] }) {
         {eager ? (
           <iframe
             key={activeId}
-            className="h-full w-full"
+            className="h-full w-full scale-[1.02]"
             src={`https://www.youtube-nocookie.com/embed/${activeId}?rel=0&modestbranding=1`}
             title={active.title}
             referrerPolicy="strict-origin-when-cross-origin"
