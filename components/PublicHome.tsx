@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import BrandVideo from "@/components/BrandVideo";
 
 /**
  * Public landing page (logged-out front door). Introduces the tool and explains
@@ -70,23 +71,31 @@ export default function PublicHome() {
 
       <main className="mx-auto w-full max-w-[1120px] flex-1 px-7 py-14" data-fade>
         {/* Hero */}
-        <section className="mb-16 max-w-[760px]">
-          <div className="eyebrow mb-3 text-accent">Seoul Medical Group · Broker Plan Recommender</div>
-          <h1 className="display text-[40px] leading-[1.08] text-ink sm:text-[46px]">
-            A fact-driven Medicare Advantage recommendation you can trace, line by line.
-          </h1>
-          <p className="mt-4 max-w-[620px] text-[15px] leading-[1.6] text-ink2">
-            Built for SMG brokers and the members they serve. Capture a member's facts, get a ranked and
-            cited plan recommendation across the 2026 SMG-supported plans — and a reproducible record of
-            exactly how it was reached. Nothing is a black box.
-          </p>
-          <div className="mt-7">
-            <Link
-              href="/login"
-              className="rounded-sm bg-accent px-5 py-2.5 text-[14px] font-semibold text-white hover:bg-accent-strong"
-            >
-              Broker sign in →
-            </Link>
+        <section className="mb-16 grid items-center gap-10 lg:grid-cols-[1fr_minmax(420px,46%)] lg:gap-12">
+          <div className="max-w-[620px]">
+            <div className="eyebrow mb-3 text-accent">Seoul Medical Group · Broker Plan Recommender</div>
+            <h1 className="display text-[38px] leading-[1.08] text-ink sm:text-[44px]">
+              A fact-driven Medicare Advantage recommendation you can trace, line by line.
+            </h1>
+            <p className="mt-4 text-[15px] leading-[1.6] text-ink2">
+              Built for SMG brokers and the members they serve. Capture a member's facts, get a ranked and
+              cited plan recommendation across the 2026 SMG-supported plans — and a reproducible record of
+              exactly how it was reached. Nothing is a black box.
+            </p>
+            <div className="mt-7">
+              <Link
+                href="/login"
+                className="rounded-sm bg-accent px-5 py-2.5 text-[14px] font-semibold text-white hover:bg-accent-strong"
+              >
+                Broker sign in →
+              </Link>
+            </div>
+          </div>
+          <div data-fade>
+            <BrandVideo />
+            <p className="mt-2.5 text-center text-[12px] text-ink2">
+              Our story — caring for our neighbors, first.
+            </p>
           </div>
         </section>
 
