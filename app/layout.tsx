@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, IBM_Plex_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans, IBM_Plex_Mono, Newsreader } from "next/font/google";
 import "./globals.css";
 import PublicAnalytics from "@/components/PublicAnalytics";
 
@@ -20,6 +20,15 @@ const mono = IBM_Plex_Mono({
   variable: "--font-mono",
   display: "swap",
 });
+// Editorial display serif for flagship headlines (hero, section titles) — the
+// premium, non-"AI" register. Light weights + optical sizing read like GS/NYT.
+const serif = Newsreader({
+  subsets: ["latin"],
+  weight: ["300", "400", "500"],
+  style: ["normal", "italic"],
+  variable: "--font-serif",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "SMG Broker Engagement Tool",
@@ -33,7 +42,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${sans.variable} ${mono.variable}`}>
+    <html lang="en" className={`${sans.variable} ${mono.variable} ${serif.variable}`}>
       <body>
         {children}
         <PublicAnalytics />
