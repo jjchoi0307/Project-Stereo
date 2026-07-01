@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import LoginForm from "@/components/LoginForm";
-import HeroBackgroundVideo from "@/components/HeroBackgroundVideo";
+import HeroBackgroundYouTube from "@/components/HeroBackgroundYouTube";
 import { safeNext } from "@/app/login/actions";
 import { getBrokerContext } from "@/lib/supabase/auth";
 
@@ -17,8 +17,8 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-ink px-5 py-12 sm:justify-end sm:px-10 lg:px-20">
-      {/* Full-bleed brand film + scrim (matches the landing hero) */}
-      <HeroBackgroundVideo />
+      {/* Full-bleed YouTube background + scrim (privacy-preserving nocookie player) */}
+      <HeroBackgroundYouTube />
       <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-r from-ink/90 via-ink/55 to-ink/25" />
 
       <Link
