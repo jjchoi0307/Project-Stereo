@@ -20,17 +20,13 @@ export default function LoginForm({
 
   return (
     <>
-      <div className="rounded-xl border border-line bg-surface p-[26px] shadow-card">
-        <h2 className="display mb-1.5 text-[21px] font-semibold leading-[1.15] text-ink">
-          {isSignup ? "Create your account" : "Sign in"}
-        </h2>
+      {isSignup && (
         <p className="mb-[18px] text-[12.5px] leading-[1.5] text-ink2">
-          {isSignup
-            ? "Your account is your private workspace — your clients and audit records are visible only to you."
-            : "Welcome back. Pick up your private workspace where you left off."}
+          Your account is your private workspace — your clients and audit records are visible only to you.
         </p>
+      )}
 
-        {state.notice && (
+      {state.notice && (
           <div className="mb-3.5 rounded-sm border border-pos/30 bg-pos/10 px-3 py-2.5 text-[12.5px] leading-[1.45] text-pos">
             {state.notice}
           </div>
@@ -93,7 +89,6 @@ export default function LoginForm({
             {isSignup ? "Create account" : "Sign in"}
           </button>
         </form>
-      </div>
 
       {allowSignup && (
         <p className="mt-[18px] text-center text-[12.5px] text-ink2">

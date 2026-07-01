@@ -1,7 +1,7 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import Header from "@/components/ui/Header";
 import HeroBackgroundVideo from "@/components/HeroBackgroundVideo";
 
 /**
@@ -32,54 +32,25 @@ const CONTAINER = "mx-auto w-full max-w-[1200px] px-6 sm:px-10";
 export default function PublicHome() {
   return (
     <div className="flex min-h-screen flex-col bg-surface">
-      {/* Masthead — thin, quiet, dark logo on white */}
-      <header className="border-b border-line bg-surface/95 backdrop-blur">
-        <div className={`${CONTAINER} flex h-[64px] items-center gap-6`}>
-          <Link href="/" className="flex items-center">
-            <Image src="/smg-logo.png" alt="Seoul Medical Group" width={150} height={29} priority className="h-[29px] w-auto" />
-          </Link>
-          <span className="hidden font-mono text-[10px] uppercase leading-tight tracking-[.16em] text-ink2 sm:block">
-            Plan Recommender · 2026
-          </span>
-          <nav className="ml-auto flex items-center gap-2">
-            <Link href="/plans" className="rounded-sm px-3 py-2 text-[13px] font-medium text-ink2 hover:text-ink">
-              Plan data
-            </Link>
-            <Link
-              href="/login"
-              className="rounded-sm border border-ink/25 px-4 py-2 text-[13px] font-semibold text-ink transition-colors hover:border-ink hover:bg-ink hover:text-white"
-            >
-              Broker sign in
-            </Link>
-          </nav>
-        </div>
-      </header>
+      <Header />
 
-      {/* Full-bleed hero film with a serif headline set bottom-left */}
-      <section className="relative isolate flex min-h-[calc(100vh-64px)] flex-col overflow-hidden bg-ink text-white">
+      {/* Full-bleed hero film. A strong LEFT scrim darkens only the left third for
+          the headline, leaving the film's center + right content (incl. its own
+          on-screen text) clear — so nothing is cropped or overlapped. */}
+      <section className="relative isolate flex min-h-[calc(100vh-64px)] items-end overflow-hidden bg-ink text-white">
         <HeroBackgroundVideo />
-        {/* Scrim for legibility — heaviest bottom-left where the text sits */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/45"
-        />
-        <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/55 to-transparent" />
-
-        <div className="relative z-10 mt-auto w-full" data-fade>
-          <div className={`${CONTAINER} pb-16 pt-24 sm:pb-24`}>
-            <div className="max-w-[760px]">
-              <div className="eyebrow mb-5 text-white/70">Seoul Medical Group · Broker Plan Recommender</div>
-              <h1 className="font-serif text-[clamp(2rem,5vw,3.75rem)] font-light leading-[1.05] tracking-[-0.015em] text-white">
-                A fact-driven health plan recommendation you can trace, line by line.
+        {/* Bottom-anchored scrim only — darkens the lower band where the headline
+            sits, while the top of the film stays clear (no color cast over it). */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
+        <div className="relative z-10 w-full pb-16 pt-28 sm:pb-24" data-fade>
+          <div className={CONTAINER}>
+            <div className="max-w-[560px]">
+              <h1 className="font-serif text-[clamp(2.6rem,5.5vw,4.25rem)] font-light leading-[1.12] tracking-[-0.015em] text-white [text-wrap:balance]">
+                The right plan,<br />line by line.
               </h1>
-              <p className="mt-6 max-w-[540px] text-[15px] leading-[1.65] text-white/80">
-                Built for SMG brokers and the members they serve. Capture a member's facts, get a ranked and
-                cited recommendation across the 2026 SMG-supported plans — and a reproducible record of exactly
-                how it was reached. Nothing is a black box.
-              </p>
               <Link
                 href="/login"
-                className="mt-9 inline-flex items-center gap-2 border border-white/60 px-6 py-3 text-[14px] font-semibold text-white transition-colors hover:bg-white hover:text-ink"
+                className="mt-9 inline-flex items-center gap-2 border border-white/50 px-6 py-3 text-[14px] font-semibold text-white transition-colors hover:bg-white hover:text-ink"
               >
                 Broker sign in <span aria-hidden>→</span>
               </Link>
@@ -88,14 +59,29 @@ export default function PublicHome() {
         </div>
       </section>
 
+      {/* Lead standfirst — title + plain-language description, set below the film */}
+      <section className="border-b border-line py-12 sm:py-16">
+        <div className={CONTAINER}>
+          <h2 className="font-serif text-[clamp(1.8rem,3vw,2.75rem)] font-light leading-[1.1] tracking-[-0.01em] text-ink">
+            A Health Plan Recommender
+          </h2>
+          <p className="mt-6 max-w-[860px] text-[19px] leading-[1.6] text-ink2 sm:text-[21px]">
+            Built for SMG brokers and the members they serve. It begins with a member's real needs — their
+            health conditions, the medications they take, and the doctors they'd like to keep — then returns a
+            clear, ranked shortlist of the 2026 SMG-supported plans that fit best. Every figure comes straight
+            from the official plan documents, so you can always see exactly how a recommendation was reached.
+          </p>
+        </div>
+      </section>
+
       {/* How a recommendation is made — editorial, aligned, de-boxed */}
-      <section className="border-b border-line py-20 sm:py-28">
+      <section className="border-b border-line py-16 sm:py-20">
         <div className={CONTAINER}>
           <div className="eyebrow mb-3 text-accent">How a recommendation is made</div>
           <h2 className="font-serif text-[clamp(1.6rem,3vw,2.5rem)] font-light leading-[1.12] text-ink">
             Four steps, every figure traceable
           </h2>
-          <div className="mt-14 grid grid-cols-1 gap-x-10 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-10 grid grid-cols-1 gap-x-10 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
             {STEPS.map(([n, title, body]) => (
               <div key={n} className="border-t border-line pt-5">
                 <div className="num mb-4 text-[13px] font-semibold tracking-[.1em] text-accent">{n}</div>
@@ -108,13 +94,13 @@ export default function PublicHome() {
       </section>
 
       {/* Why you can trust it — principles */}
-      <section className="py-20 sm:py-28">
+      <section className="py-16 sm:py-20">
         <div className={CONTAINER}>
           <div className="eyebrow mb-3 text-accent">Why you can trust it</div>
           <h2 className="font-serif text-[clamp(1.6rem,3vw,2.5rem)] font-light leading-[1.12] text-ink">
             Transparent by principle
           </h2>
-          <div className="mt-14 grid grid-cols-1 gap-x-14 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-10 grid grid-cols-1 gap-x-14 gap-y-9 sm:grid-cols-2 lg:grid-cols-3">
             {PRINCIPLES.map(([title, body]) => (
               <div key={title} className="border-l border-accent/40 pl-5">
                 <div className="mb-1.5 text-[14px] font-semibold text-ink">{title}</div>
@@ -134,7 +120,7 @@ export default function PublicHome() {
           </div>
           <Link
             href="/login"
-            className="inline-flex items-center gap-2 bg-accent px-6 py-3 text-[14px] font-semibold text-white transition-colors hover:bg-accent-strong"
+            className="inline-flex items-center gap-2 border border-ink/30 px-6 py-3 text-[14px] font-semibold text-ink transition-colors hover:border-ink hover:bg-ink hover:text-white"
           >
             Broker sign in <span aria-hidden>→</span>
           </Link>

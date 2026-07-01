@@ -48,7 +48,7 @@ export default function PlansCatalog({ rows }: { rows: PlanRow[] }) {
       <div className="mb-5 flex flex-wrap items-end justify-between gap-5">
         <div>
           <div className="eyebrow mb-1.5 text-accent">Plan reference · 2026</div>
-          <h1 className="display mb-1 text-[33px] font-semibold leading-[1.05] text-ink">Plan data</h1>
+          <h1 className="mb-1 font-serif text-[clamp(2rem,3vw,2.5rem)] font-light leading-[1.05] tracking-[-0.01em] text-ink">Plan data</h1>
           <p className="text-[13.5px] leading-[1.5] text-ink2">
             SMG-supported Medicare Advantage plans · 2026, by geography · showing{" "}
             <span className="num">{filtered.length}</span> of <span className="num">{rows.length}</span>. All current

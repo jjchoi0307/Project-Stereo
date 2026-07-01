@@ -29,7 +29,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
           />
           <div className="eyebrow mb-2 text-accent">Seoul Medical Group</div>
           <h1 className="display mb-1.5 text-[26px] font-semibold leading-[1.15] text-ink">Set up your workspace</h1>
-          <p className="num text-[12.5px] text-ink2">Broker Plan Recommender · 2026</p>
+          <p className="num text-[12.5px] text-ink2">Health Plan Recommender · 2026</p>
         </div>
         <LoginForm next={dest} allowSignup initialMode="signup" />
       </div>

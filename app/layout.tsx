@@ -20,8 +20,9 @@ const mono = IBM_Plex_Mono({
   variable: "--font-mono",
   display: "swap",
 });
-// Editorial display serif for flagship headlines (hero, section titles) — the
-// premium, non-"AI" register. Light weights + optical sizing read like GS/NYT.
+// Editorial display serif for the PUBLIC/marketing pages (landing, sign-in) — the
+// premium register. The inside broker tool deliberately stays on the sans (a
+// functional, legible face for a dense data UI).
 const serif = Newsreader({
   subsets: ["latin"],
   weight: ["300", "400", "500"],
