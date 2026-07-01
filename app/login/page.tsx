@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import LoginForm from "@/components/LoginForm";
-import HeroBackgroundYouTube from "@/components/HeroBackgroundYouTube";
+import HeroLoginVideo from "@/components/HeroLoginVideo";
 import { safeNext } from "@/app/login/actions";
 import { getBrokerContext } from "@/lib/supabase/auth";
 
@@ -17,9 +17,9 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-ink px-5 py-12 sm:justify-end sm:px-10 lg:px-20">
-      {/* Full-bleed YouTube background — true color, no scrim (privacy-preserving
-          nocookie player). The sign-in card is opaque, so no darkening is needed. */}
-      <HeroBackgroundYouTube />
+      {/* Full-bleed self-hosted background film — true color, no scrim. The
+          sign-in card is opaque, so no darkening is needed. */}
+      <HeroLoginVideo />
 
       <Link
         href="/"
