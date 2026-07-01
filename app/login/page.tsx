@@ -32,7 +32,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <section className="relative z-10 w-full max-w-[420px] border border-line bg-surface p-8 shadow-card sm:p-10" data-fade>
         <div className="mb-7">
           <Image src="/smg-logo.png" alt="Seoul Medical Group" width={150} height={29} priority className="h-[29px] w-auto" />
-          <div className="eyebrow mt-5 text-accent">Seoul Medical Group</div>
+          <div className="eyebrow mt-6 mb-2.5 text-accent">Seoul Medical Group</div>
           <h1 className="font-serif text-[30px] font-light leading-[1.1] text-ink">Broker sign in</h1>
           <p className="num mt-1.5 text-[12.5px] text-ink2">Health Plan Recommender · 2026</p>
         </div>
