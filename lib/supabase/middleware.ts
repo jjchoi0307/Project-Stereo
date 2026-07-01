@@ -15,6 +15,11 @@ import { SUPABASE_ANON_KEY, SUPABASE_URL, stateStore, supabaseConfigured } from 
 
 const PROTECTED_PAGES = ["/session", "/audit", "/settings"];
 const PROTECTED_APIS = ["/api/sessions", "/api/audit"];
+// Public surfaces that are NEVER gated and are overwhelmingly logged-out. We skip
+// the Supabase session round-trip on these so their TTFB isn't taxed by an auth
+// call (a big win for the dynamic /home). NOT "/", which is the broker workspace
+// for a signed-in user; the session still refreshes on the next gated request.
+const PUBLIC_PAGES = ["/home", "/login", "/signup", "/plans", "/intake"];
 
 const matches = (path: string, prefixes: string[]) =>
   prefixes.some((p) => (p === "/" ? path === "/" : path === p || path.startsWith(p + "/")));
@@ -26,6 +31,10 @@ export async function updateSession(request: NextRequest, requestHeaders: Header
 
   // Auth is off in memory mode — let everything through untouched.
   if (stateStore() !== "supabase" || !supabaseConfigured()) return NextResponse.next(forward);
+
+  // Public, never-gated routes: skip the auth round-trip entirely (keeps their
+  // TTFB low). The CSP/nonce headers are still applied by the caller.
+  if (matches(request.nextUrl.pathname, PUBLIC_PAGES)) return NextResponse.next(forward);
 
   let response = NextResponse.next(forward);
   const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
