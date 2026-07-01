@@ -45,6 +45,13 @@ export default function HeroBackgroundYouTube() {
           referrerPolicy="strict-origin-when-cross-origin"
           className="pointer-events-none absolute left-1/2 top-1/2 h-[56.25vw] min-h-full w-[177.78vh] min-w-full -translate-x-1/2 -translate-y-1/2 border-0"
         />
+        {/* Transparent shield: intercepts EVERY pointer event so the YouTube
+            player never receives a hover or click — its control bar, play/pause
+            and next buttons can't appear. (pointer-events:none on the iframe
+            alone is unreliable across browsers for cross-origin frames.) The
+            sign-in card (z-10) and the mute button (z-20) sit above this layer,
+            so they stay fully interactive. */}
+        <div className="absolute inset-0" />
       </div>
 
       <button
