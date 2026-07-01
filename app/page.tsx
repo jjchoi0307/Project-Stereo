@@ -14,7 +14,7 @@ import PublicHome from "@/components/PublicHome";
 // The bare domain is primarily the public landing (what logged-out visitors and
 // crawlers see); signed-in brokers get the workspace at the same path.
 export const metadata: Metadata = {
-  title: "SMG Broker Plan Recommender",
+  title: "SMG Health Plan Recommender",
   description:
     "A fact-driven, fully traceable health-plan recommendation for Seoul Medical Group brokers and the members they serve.",
 };
