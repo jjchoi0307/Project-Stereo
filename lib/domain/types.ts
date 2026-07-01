@@ -130,6 +130,9 @@ export interface SupplementalBenefits {
  */
 export interface PlanBenefits {
   monthlyPremium: number;
+  /** $/month Part B premium give-back (a.k.a. "Part B rebate"), 0 if none. A real
+   *  reduction in the member's cost — netted against the annual cost in costCalc. */
+  partBGivebackMonthly: number;
   annualOOPMax: number; // in-network MOOP
   annualOOPMaxOutOfNetwork?: number | null;
   partCDeductible?: number | null;

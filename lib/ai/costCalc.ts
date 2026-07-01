@@ -119,5 +119,19 @@ export function computeAnnualCost(facts: PlanFacts, patient: RecommendationPatie
     });
   }
 
-  return { items, estimatedAnnualTotal: premium + cappedCovered + uncovered };
+  // 7. Part B premium give-back — real money returned to the member each month,
+  // so it lowers their true annual cost. Shown as a credit line and netted against
+  // the total (floored at $0 so a give-back that exceeds modeled spend doesn't
+  // display as a negative headline cost).
+  const giveback = round((facts.partBGivebackMonthly ?? 0) * 12);
+  if (giveback > 0) {
+    items.push({
+      label: "Part B premium give-back",
+      annualEstimate: -giveback,
+      basis: `−$${facts.partBGivebackMonthly}/mo returned to the member × 12`,
+    });
+  }
+
+  const total = Math.max(0, round(premium + cappedCovered + uncovered - giveback));
+  return { items, estimatedAnnualTotal: total };
 }

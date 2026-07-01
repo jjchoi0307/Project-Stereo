@@ -36,8 +36,8 @@ export default async function Header() {
           {broker ? (
             <>
               <NavLink href="/">Home</NavLink>
+              <NavLink href="/plans">Plan Library</NavLink>
               <NavLink href="/audit">Audit log</NavLink>
-              <NavLink href="/plans">Plan data</NavLink>
               {isElevated && <NavLink href="/admin/audit">Admin</NavLink>}
               <NavLink href="/settings">Settings</NavLink>
               {ctx && (
@@ -54,7 +54,7 @@ export default async function Header() {
           ) : (
             <>
               <Link href="/plans" className="px-3 py-2 text-[13px] font-medium text-ink2 hover:text-ink">
-                Plan data
+                Plan Library
               </Link>
               <Link href="/login" className={signInBtn}>
                 Broker sign in

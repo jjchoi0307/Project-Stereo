@@ -18,12 +18,12 @@ import { ENSEMBLE, TIEBREAK_RULE } from "@/lib/engine/config";
 /**
  * Signature of the env-tunable knobs that change the RANKING output: the ensemble
  * size and the tiebreak band. Any AI cache key that holds a ranking must include
- * this, so changing ENSEMBLE_RUNS or TIE_BAND_VOTES at deploy time regenerates
+ * this, so changing ENSEMBLE_RUNS or FIT_TIE_MARGIN at deploy time regenerates
  * (without relying on a manual AI_VERSION bump). Shared by the Today and horizon
  * keys so the two can never drift on these inputs.
  */
 export function aiScoringSig(): string {
-  return `e${ENSEMBLE.runs}:t${TIEBREAK_RULE.tieBandVotes}`;
+  return `e${ENSEMBLE.runs}:m${TIEBREAK_RULE.fitTieMargin}`;
 }
 
 /**

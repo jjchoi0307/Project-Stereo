@@ -11,7 +11,10 @@
       "cmsId": "H3815-008",
       "snpType": "none",
       "snpConditions": null,
-      "counties": ["Los Angeles", "Orange"],
+      "counties": [
+        "Los Angeles",
+        "Orange"
+      ],
       "networkId": "net-alignment",
       "formularyId": "form-standard",
       "dataSource": "benefit-highlights",
@@ -39,8 +42,16 @@
       "telehealth": "$0 copay PCP/Mental Health/Psychiatric",
       "partDDeductible": "$0",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$0", "3": "$30", "4": "$75", "5": "33% coinsurance", "6": "$5" },
-      "insulinCap": "$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$0",
+        "3": "$30",
+        "4": "$75",
+        "5": "33% coinsurance",
+        "6": "$5"
+      },
+      "insulinCap": "$35/month per covered insulin",
+      "partBGiveback": 0
     },
     {
       "id": "aln-platinum-instacart-016",
@@ -52,7 +63,11 @@
       "cmsId": "H3815-016",
       "snpType": "none",
       "snpConditions": null,
-      "counties": ["Marin", "San Diego", "San Francisco"],
+      "counties": [
+        "Marin",
+        "San Diego",
+        "San Francisco"
+      ],
       "networkId": "net-alignment",
       "formularyId": "form-standard",
       "dataSource": "benefit-highlights",
@@ -80,8 +95,16 @@
       "telehealth": "$0 copay PCP/Mental Health/Psychiatric",
       "partDDeductible": "$0",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$3", "3": "$30", "4": "$75", "5": "33% coinsurance", "6": "$5" },
-      "insulinCap": "$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$3",
+        "3": "$30",
+        "4": "$75",
+        "5": "33% coinsurance",
+        "6": "$5"
+      },
+      "insulinCap": "$35/month per covered insulin",
+      "partBGiveback": 0
     },
     {
       "id": "aln-smarthmo-013",
@@ -93,7 +116,13 @@
       "cmsId": "H3815-013",
       "snpType": "none",
       "snpConditions": null,
-      "counties": ["Los Angeles", "Orange", "Riverside", "San Bernardino", "San Diego"],
+      "counties": [
+        "Los Angeles",
+        "Orange",
+        "Riverside",
+        "San Bernardino",
+        "San Diego"
+      ],
       "networkId": "net-alignment",
       "formularyId": "form-standard",
       "dataSource": "benefit-highlights",
@@ -111,7 +140,7 @@
       "acupunctureVisits": null,
       "acupuncture": "$0 copay Medicare covered",
       "otc": null,
-      "dental": "Preventive $0; Comprehensive $20-$570",
+      "dental": "Diagnostic & Preventive $0 copay (1 oral exam/6mo, 1 cleaning/6mo, 1 X-ray/3yr, 1 fluoride/6mo); Comprehensive: Restorative $20-$400, Endodontics $25-$350, Periodontics $15-$550, Prosthodontics (removable) $20-$570, Prosthodontics (fixed) $40-$400, Oral & Maxillofacial Surgery $25-$250",
       "vision": "$200 glasses/$100 contacts per year",
       "hearing": "Optional package $195-$1,750 per aid, 2/year",
       "flex": null,
@@ -121,8 +150,16 @@
       "telehealth": "$0 copay PCP/Mental Health/Psychiatric",
       "partDDeductible": "$0",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$0", "3": "$30", "4": "$100", "5": "33% coinsurance", "6": "$5" },
-      "insulinCap": "$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$0",
+        "3": "$30",
+        "4": "$100",
+        "5": "33% coinsurance",
+        "6": "$5"
+      },
+      "insulinCap": "$35/month per covered insulin",
+      "partBGiveback": 164.9
     },
     {
       "id": "aln-harmony-031",
@@ -134,7 +171,12 @@
       "cmsId": "H3815-031",
       "snpType": "none",
       "snpConditions": null,
-      "counties": ["Alameda", "San Francisco", "Santa Clara", "San Mateo"],
+      "counties": [
+        "Alameda",
+        "San Francisco",
+        "Santa Clara",
+        "San Mateo"
+      ],
       "networkId": "net-alignment",
       "formularyId": "form-standard",
       "dataSource": "benefit-highlights",
@@ -152,7 +194,7 @@
       "acupunctureVisits": null,
       "acupuncture": "$0 copay Medicare covered; $0 unlimited routine acupuncture",
       "otc": "$30/month no rollover",
-      "dental": "Preventive $0; Comprehensive $20-$570",
+      "dental": "$0 copay for: 1 Oral Exam every 6 months, 1 Cleaning every 6 months, 1 X-ray every 3 years, 1 Fluoride treatment every 6 months",
       "vision": "$150/year glasses/contacts",
       "hearing": "$195-$1,750 per hearing aid, 2/year",
       "flex": null,
@@ -162,8 +204,16 @@
       "telehealth": "$0 copay PCP/Mental Health/Psychiatric",
       "partDDeductible": "$0",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$3", "3": "$40", "4": "$100", "5": "33% coinsurance", "6": "$5" },
-      "insulinCap": "$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$3",
+        "3": "$40",
+        "4": "$100",
+        "5": "33% coinsurance",
+        "6": "$5"
+      },
+      "insulinCap": "$35/month per covered insulin",
+      "partBGiveback": 0
     },
     {
       "id": "aln-the-one-034",
@@ -175,7 +225,14 @@
       "cmsId": "H3815-034",
       "snpType": "none",
       "snpConditions": null,
-      "counties": ["Los Angeles", "Orange", "Riverside", "San Bernardino", "San Diego", "Santa Clara"],
+      "counties": [
+        "Los Angeles",
+        "Orange",
+        "Riverside",
+        "San Bernardino",
+        "San Diego",
+        "Santa Clara"
+      ],
       "networkId": "net-alignment",
       "formularyId": "form-standard",
       "dataSource": "benefit-highlights",
@@ -203,8 +260,16 @@
       "telehealth": "$0 copay PCP/Mental Health/Psychiatric",
       "partDDeductible": "$0",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$1", "3": "$40", "4": "$100", "5": "33% coinsurance", "6": "$5" },
-      "insulinCap": "$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$1",
+        "3": "$40",
+        "4": "$100",
+        "5": "33% coinsurance",
+        "6": "$5"
+      },
+      "insulinCap": "$35/month per covered insulin",
+      "partBGiveback": 0
     },
     {
       "id": "aln-smartsavings-047",
@@ -216,7 +281,13 @@
       "cmsId": "H3815-047",
       "snpType": "none",
       "snpConditions": null,
-      "counties": ["Los Angeles", "Orange", "Riverside", "San Bernardino", "San Diego"],
+      "counties": [
+        "Los Angeles",
+        "Orange",
+        "Riverside",
+        "San Bernardino",
+        "San Diego"
+      ],
       "networkId": "net-alignment",
       "formularyId": "form-standard",
       "dataSource": "benefit-highlights",
@@ -244,8 +315,16 @@
       "telehealth": "$0 copay PCP/Mental Health/Psychiatric",
       "partDDeductible": "$0",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$0", "3": "$30", "4": "$100", "5": "33% coinsurance", "6": "$5" },
-      "insulinCap": "$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$0",
+        "3": "$30",
+        "4": "$100",
+        "5": "33% coinsurance",
+        "6": "$5"
+      },
+      "insulinCap": "$35/month per covered insulin",
+      "partBGiveback": 150
     },
     {
       "id": "aln-la-premium-giveback-055",
@@ -257,7 +336,9 @@
       "cmsId": "H3815-055",
       "snpType": "none",
       "snpConditions": null,
-      "counties": ["Los Angeles"],
+      "counties": [
+        "Los Angeles"
+      ],
       "networkId": "net-alignment",
       "formularyId": "form-standard",
       "dataSource": "benefit-highlights",
@@ -285,8 +366,16 @@
       "telehealth": "$0 copay PCP/Mental Health/Psychiatric",
       "partDDeductible": "$0",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$0", "3": "$42", "4": "45% coinsurance", "5": "33% coinsurance", "6": "$5" },
-      "insulinCap": "$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$0",
+        "3": "$42",
+        "4": "45% coinsurance",
+        "5": "33% coinsurance",
+        "6": "$5"
+      },
+      "insulinCap": "$35/month per covered insulin",
+      "partBGiveback": 185
     },
     {
       "id": "aln-sd-premium-giveback-056",
@@ -298,7 +387,9 @@
       "cmsId": "H3815-056",
       "snpType": "none",
       "snpConditions": null,
-      "counties": ["San Diego"],
+      "counties": [
+        "San Diego"
+      ],
       "networkId": "net-alignment",
       "formularyId": "form-standard",
       "dataSource": "benefit-highlights",
@@ -326,8 +417,16 @@
       "telehealth": "$0 copay PCP/Mental Health/Psychiatric",
       "partDDeductible": "$615 Tiers 4 & 5",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$0", "3": "$47", "4": "45% coinsurance", "5": "25% coinsurance", "6": "$5" },
-      "insulinCap": "$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$0",
+        "3": "$47",
+        "4": "45% coinsurance",
+        "5": "25% coinsurance",
+        "6": "$5"
+      },
+      "insulinCap": "$35/month per covered insulin",
+      "partBGiveback": 185
     },
     {
       "id": "aln-honor-plus-052",
@@ -339,7 +438,28 @@
       "cmsId": "H3815-052",
       "snpType": "D-SNP",
       "snpConditions": null,
-      "counties": ["Alameda", "Fresno", "Los Angeles", "Madera", "Marin", "Merced", "Orange", "Placer", "Riverside", "Sacramento", "San Bernardino", "San Diego", "San Francisco", "San Joaquin", "San Luis Obispo", "San Mateo", "Santa Clara", "Stanislaus", "Ventura", "Yolo"],
+      "counties": [
+        "Alameda",
+        "Fresno",
+        "Los Angeles",
+        "Madera",
+        "Marin",
+        "Merced",
+        "Orange",
+        "Placer",
+        "Riverside",
+        "Sacramento",
+        "San Bernardino",
+        "San Diego",
+        "San Francisco",
+        "San Joaquin",
+        "San Luis Obispo",
+        "San Mateo",
+        "Santa Clara",
+        "Stanislaus",
+        "Ventura",
+        "Yolo"
+      ],
       "networkId": "net-alignment",
       "formularyId": "form-broad",
       "dataSource": "benefit-highlights",
@@ -367,8 +487,16 @@
       "telehealth": "$0 copay PCP/Mental Health/Psychiatric",
       "partDDeductible": "$615 Tiers 3, 4 & 5",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "25% coinsurance ($0 Full Duals)", "3": "25% coinsurance ($0 Full Duals)", "4": "30% coinsurance ($0 Full Duals)", "5": "25% coinsurance ($0 Full Duals)", "6": "$0" },
-      "insulinCap": "$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "25% coinsurance ($0 Full Duals)",
+        "3": "25% coinsurance ($0 Full Duals)",
+        "4": "30% coinsurance ($0 Full Duals)",
+        "5": "25% coinsurance ($0 Full Duals)",
+        "6": "$0"
+      },
+      "insulinCap": "$35/month per covered insulin",
+      "partBGiveback": 0
     },
     {
       "id": "aln-valorcare-053",
@@ -380,7 +508,13 @@
       "cmsId": "H3815-053",
       "snpType": "none",
       "snpConditions": null,
-      "counties": ["Los Angeles", "Orange", "Riverside", "San Bernardino", "San Diego"],
+      "counties": [
+        "Los Angeles",
+        "Orange",
+        "Riverside",
+        "San Bernardino",
+        "San Diego"
+      ],
       "networkId": "net-alignment",
       "formularyId": "form-standard",
       "dataSource": "benefit-highlights",
@@ -408,8 +542,16 @@
       "telehealth": "$0 copay PCP/Mental Health/Psychiatric",
       "partDDeductible": "$0",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$0", "3": "$30", "4": "$100", "5": "33% coinsurance", "6": "$5" },
-      "insulinCap": "$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$0",
+        "3": "$30",
+        "4": "$100",
+        "5": "33% coinsurance",
+        "6": "$5"
+      },
+      "insulinCap": "$35/month per covered insulin",
+      "partBGiveback": 125
     },
     {
       "id": "aln-balance-ckd-033",
@@ -420,8 +562,13 @@
       "planType": "HMO",
       "cmsId": "H3815-033",
       "snpType": "C-SNP",
-      "snpConditions": ["Chronic Kidney Disease (CKD)"],
-      "counties": ["Los Angeles", "Orange"],
+      "snpConditions": [
+        "Chronic Kidney Disease (CKD)"
+      ],
+      "counties": [
+        "Los Angeles",
+        "Orange"
+      ],
       "networkId": "net-alignment",
       "formularyId": "form-broad",
       "dataSource": "benefit-highlights",
@@ -449,8 +596,16 @@
       "telehealth": "$0 copay PCP/Mental Health/Psychiatric",
       "partDDeductible": "$0",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$0", "3": "$40", "4": "$100", "5": "33% coinsurance", "6": "$5" },
-      "insulinCap": "$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$0",
+        "3": "$40",
+        "4": "$100",
+        "5": "33% coinsurance",
+        "6": "$5"
+      },
+      "insulinCap": "$35/month per covered insulin",
+      "partBGiveback": 0
     },
     {
       "id": "aln-heart-diabetes-care-048",
@@ -461,8 +616,27 @@
       "planType": "HMO",
       "cmsId": "H3815-048",
       "snpType": "C-SNP",
-      "snpConditions": ["Diabetes Mellitus", "Chronic Heart Failure", "Cardiovascular Disorders"],
-      "counties": ["Alameda", "Fresno", "Madera", "Marin", "Merced", "Placer", "Sacramento", "San Francisco", "San Joaquin", "San Luis Obispo", "Santa Clara", "Stanislaus", "Ventura", "Yolo"],
+      "snpConditions": [
+        "Diabetes Mellitus",
+        "Chronic Heart Failure",
+        "Cardiovascular Disorders"
+      ],
+      "counties": [
+        "Alameda",
+        "Fresno",
+        "Madera",
+        "Marin",
+        "Merced",
+        "Placer",
+        "Sacramento",
+        "San Francisco",
+        "San Joaquin",
+        "San Luis Obispo",
+        "Santa Clara",
+        "Stanislaus",
+        "Ventura",
+        "Yolo"
+      ],
       "networkId": "net-alignment",
       "formularyId": "form-broad",
       "dataSource": "benefit-highlights",
@@ -490,8 +664,16 @@
       "telehealth": "$0 copay PCP/Mental Health/Psychiatric",
       "partDDeductible": "$0",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$5", "3": "$30", "4": "50% coinsurance", "5": "33% coinsurance", "6": "$5" },
-      "insulinCap": "$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$5",
+        "3": "$30",
+        "4": "50% coinsurance",
+        "5": "33% coinsurance",
+        "6": "$5"
+      },
+      "insulinCap": "$35/month per covered insulin",
+      "partBGiveback": 0
     },
     {
       "id": "aln-heart-diabetes-care-054",
@@ -502,8 +684,18 @@
       "planType": "HMO",
       "cmsId": "H3815-054",
       "snpType": "C-SNP",
-      "snpConditions": ["Diabetes Mellitus", "Chronic Heart Failure", "Cardiovascular Disorders"],
-      "counties": ["Los Angeles", "Orange", "Riverside", "San Bernardino", "San Diego"],
+      "snpConditions": [
+        "Diabetes Mellitus",
+        "Chronic Heart Failure",
+        "Cardiovascular Disorders"
+      ],
+      "counties": [
+        "Los Angeles",
+        "Orange",
+        "Riverside",
+        "San Bernardino",
+        "San Diego"
+      ],
       "networkId": "net-alignment",
       "formularyId": "form-broad",
       "dataSource": "benefit-highlights",
@@ -531,8 +723,16 @@
       "telehealth": "$0 copay PCP/Mental Health/Psychiatric",
       "partDDeductible": "$0",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$5", "3": "$30", "4": "40% coinsurance", "5": "33% coinsurance", "6": "$5" },
-      "insulinCap": "$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$5",
+        "3": "$30",
+        "4": "40% coinsurance",
+        "5": "33% coinsurance",
+        "6": "$5"
+      },
+      "insulinCap": "$35/month per covered insulin",
+      "partBGiveback": 0
     },
     {
       "id": "aln-heart-diabetes-calplus-039",
@@ -543,8 +743,34 @@
       "planType": "HMO",
       "cmsId": "H3815-039",
       "snpType": "C-SNP",
-      "snpConditions": ["Congestive Heart Failure (CHF)", "Chronic Lung Disorders", "Dementia", "Diabetes", "Stroke"],
-      "counties": ["Alameda", "Fresno", "Los Angeles", "Madera", "Marin", "Merced", "Orange", "Placer", "Riverside", "Sacramento", "San Bernardino", "San Diego", "San Francisco", "San Joaquin", "San Luis Obispo", "Santa Clara", "Stanislaus", "Ventura", "Yolo"],
+      "snpConditions": [
+        "Congestive Heart Failure (CHF)",
+        "Chronic Lung Disorders",
+        "Dementia",
+        "Diabetes",
+        "Stroke"
+      ],
+      "counties": [
+        "Alameda",
+        "Fresno",
+        "Los Angeles",
+        "Madera",
+        "Marin",
+        "Merced",
+        "Orange",
+        "Placer",
+        "Riverside",
+        "Sacramento",
+        "San Bernardino",
+        "San Diego",
+        "San Francisco",
+        "San Joaquin",
+        "San Luis Obispo",
+        "Santa Clara",
+        "Stanislaus",
+        "Ventura",
+        "Yolo"
+      ],
       "networkId": "net-alignment",
       "formularyId": "form-broad",
       "dataSource": "benefit-highlights",
@@ -557,12 +783,12 @@
       "inpatient": "$275/day days 1-6; $0/day days 7-90 ($0 for Full Duals)",
       "emergency": "20% coinsurance (waived if admitted within 48 hours); $0 for Full Duals",
       "urgentCare": "$0 copay",
-      "ambulance": "20% coinsurance; $0 for Full Duals",
+      "ambulance": "20% coinsurance (not waived if admitted); $0 copay for Full Duals",
       "mentalHealth": "20% coinsurance; $0 for Full Duals",
       "acupunctureVisits": 12,
       "acupuncture": "$0 copay Medicare covered; $0 for 12 routine visits/year",
       "otc": "$129/month (no rollover) combined with Essentials Allowance",
-      "dental": "$500/quarter Comprehensive; Medicare-covered 20% ($0 Full Duals)",
+      "dental": "$500 spending allowance per quarter Comprehensive; $0 copay for Restorative Services, Endodontics, Periodontics, Prosthodontics, Oral & Maxillofacial Surgery",
       "vision": "$500 glasses/contacts every 2 years",
       "hearing": "$0 per hearing aid, 2/year",
       "flex": null,
@@ -572,8 +798,16 @@
       "telehealth": "$0 copay PCP/Mental Health/Psychiatric",
       "partDDeductible": "$615 Tiers 3, 4 & 5; $0 with Extra Help",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "25% coinsurance", "3": "25% coinsurance", "4": "31% coinsurance", "5": "25% coinsurance", "6": "$0" },
-      "insulinCap": "$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "25% coinsurance",
+        "3": "25% coinsurance",
+        "4": "31% coinsurance",
+        "5": "25% coinsurance",
+        "6": "$0"
+      },
+      "insulinCap": "$35/month per covered insulin",
+      "partBGiveback": 0
     },
     {
       "id": "aln-heart-diabetes-access-044",
@@ -584,21 +818,31 @@
       "planType": "HMO",
       "cmsId": "H3815-044",
       "snpType": "C-SNP",
-      "snpConditions": ["Congestive Heart Failure (CHF)", "Chronic Lung Disorders", "Dementia", "Diabetes", "Stroke"],
-      "counties": ["Los Angeles", "Riverside", "San Bernardino"],
+      "snpConditions": [
+        "Congestive Heart Failure (CHF)",
+        "Chronic Lung Disorders",
+        "Dementia",
+        "Diabetes",
+        "Stroke"
+      ],
+      "counties": [
+        "Los Angeles",
+        "Riverside",
+        "San Bernardino"
+      ],
       "networkId": "net-alignment",
       "formularyId": "form-broad",
       "dataSource": "benefit-highlights",
       "premium": 12,
       "moopInNetwork": 9250,
       "moopOutOfNetwork": null,
-      "partCDeductible": null,
+      "partCDeductible": 0,
       "pcp": "$0 copay",
       "specialist": "$0 copay",
       "inpatient": "$1,736 deductible/benefit period; $0/day days 1-60; $434/day 61-90 ($0 for Full Duals)",
       "emergency": "20% coinsurance (waived if admitted within 48 hours); $0 for Full Duals",
       "urgentCare": "$0 copay",
-      "ambulance": "20% coinsurance; $0 for Full Duals",
+      "ambulance": "20% coinsurance (not waived if admitted); $0 copay for Full Duals",
       "mentalHealth": "20% coinsurance; $0 for Full Duals",
       "acupunctureVisits": 12,
       "acupuncture": "$0 copay Medicare covered; $0 for 12 routine visits/year",
@@ -613,8 +857,16 @@
       "telehealth": "$0 copay PCP/Mental Health/Psychiatric",
       "partDDeductible": "$615 Tiers 3, 4 & 5; $0 with Extra Help",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "25% coinsurance", "3": "25% coinsurance", "4": "31% coinsurance", "5": "25% coinsurance", "6": "$0" },
-      "insulinCap": "$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "25% coinsurance",
+        "3": "25% coinsurance",
+        "4": "31% coinsurance",
+        "5": "25% coinsurance",
+        "6": "$0"
+      },
+      "insulinCap": "$35/month per covered insulin",
+      "partBGiveback": 1
     },
     {
       "id": "aln-silicon-045",
@@ -625,21 +877,29 @@
       "planType": "HMO",
       "cmsId": "H3815-045",
       "snpType": "C-SNP",
-      "snpConditions": ["Congestive Heart Failure (CHF)", "Chronic Lung Disorders", "Dementia", "Diabetes", "Stroke"],
-      "counties": ["Santa Clara"],
+      "snpConditions": [
+        "Congestive Heart Failure (CHF)",
+        "Chronic Lung Disorders",
+        "Dementia",
+        "Diabetes",
+        "Stroke"
+      ],
+      "counties": [
+        "Santa Clara"
+      ],
       "networkId": "net-alignment",
       "formularyId": "form-broad",
       "dataSource": "benefit-highlights",
       "premium": 12,
       "moopInNetwork": 9250,
       "moopOutOfNetwork": null,
-      "partCDeductible": null,
+      "partCDeductible": 0,
       "pcp": "$0 copay",
       "specialist": "$0 copay",
       "inpatient": "$1,736 deductible/benefit period; $0/day days 1-60; $434/day 61-90 ($0 for Full Duals)",
       "emergency": "20% coinsurance (waived if admitted within 48 hours); $0 for Full Duals",
       "urgentCare": "$0 copay",
-      "ambulance": "20% coinsurance; $0 for Full Duals",
+      "ambulance": "20% coinsurance (not waived if admitted); $0 copay for Full Duals",
       "mentalHealth": "20% coinsurance; $0 for Full Duals",
       "acupunctureVisits": 12,
       "acupuncture": "$0 copay Medicare covered; $0 for 12 routine visits/year",
@@ -654,8 +914,16 @@
       "telehealth": "$0 copay PCP/Mental Health/Psychiatric",
       "partDDeductible": "$615 Tiers 3, 4 & 5; $0 with Extra Help",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "25% coinsurance", "3": "25% coinsurance", "4": "31% coinsurance", "5": "25% coinsurance", "6": "$0" },
-      "insulinCap": "$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "25% coinsurance",
+        "3": "25% coinsurance",
+        "4": "31% coinsurance",
+        "5": "25% coinsurance",
+        "6": "$0"
+      },
+      "insulinCap": "$35/month per covered insulin",
+      "partBGiveback": 5
     },
     {
       "id": "aln-breatheasy-041",
@@ -666,8 +934,33 @@
       "planType": "HMO",
       "cmsId": "H3815-041",
       "snpType": "C-SNP",
-      "snpConditions": ["Congestive Heart Failure (CHF)", "Chronic Lung Disorders", "Dementia", "Diabetes", "Stroke"],
-      "counties": ["Alameda", "Fresno", "Los Angeles", "Madera", "Marin", "Merced", "Orange", "Placer", "Riverside", "Sacramento", "San Bernardino", "San Diego", "San Francisco", "San Joaquin", "Santa Clara", "Stanislaus", "Ventura", "Yolo"],
+      "snpConditions": [
+        "Congestive Heart Failure (CHF)",
+        "Chronic Lung Disorders",
+        "Dementia",
+        "Diabetes",
+        "Stroke"
+      ],
+      "counties": [
+        "Alameda",
+        "Fresno",
+        "Los Angeles",
+        "Madera",
+        "Marin",
+        "Merced",
+        "Orange",
+        "Placer",
+        "Riverside",
+        "Sacramento",
+        "San Bernardino",
+        "San Diego",
+        "San Francisco",
+        "San Joaquin",
+        "Santa Clara",
+        "Stanislaus",
+        "Ventura",
+        "Yolo"
+      ],
       "networkId": "net-alignment",
       "formularyId": "form-broad",
       "dataSource": "benefit-highlights",
@@ -677,10 +970,10 @@
       "partCDeductible": null,
       "pcp": "$0 copay",
       "specialist": "$0 copay",
-      "inpatient": "$1,736 deductible/benefit period; $0/day days 1-60; $434/day 61-90 ($0 for Full Duals)",
+      "inpatient": "$1,736 deductible for each benefit period; $0 copay per day, days 1-60; $434 copay per day, days 61-90; $868 copay per day, in lifetime reserve; Beyond lifetime reserve days: All costs; $0 copay for Full Duals",
       "emergency": "20% coinsurance (waived if admitted within 48 hours); $0 for Full Duals",
       "urgentCare": "$0 copay",
-      "ambulance": "20% coinsurance; $0 for Full Duals",
+      "ambulance": "20% coinsurance (not waived if admitted); $0 copay for Full Duals",
       "mentalHealth": "20% coinsurance; $0 for Full Duals",
       "acupunctureVisits": 24,
       "acupuncture": "$0 copay Medicare covered; $0 for 24 routine visits/year",
@@ -695,8 +988,16 @@
       "telehealth": "$0 copay PCP/Mental Health/Psychiatric",
       "partDDeductible": "$615 Tiers 3, 4 & 5; $0 with Extra Help",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "25% coinsurance", "3": "25% coinsurance", "4": "30% coinsurance", "5": "25% coinsurance", "6": "$0" },
-      "insulinCap": "$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "25% coinsurance",
+        "3": "25% coinsurance",
+        "4": "30% coinsurance",
+        "5": "25% coinsurance",
+        "6": "$0"
+      },
+      "insulinCap": "$35/month per covered insulin",
+      "partBGiveback": 5
     },
     {
       "id": "aln-clarity-042",
@@ -707,8 +1008,33 @@
       "planType": "HMO",
       "cmsId": "H3815-042",
       "snpType": "C-SNP",
-      "snpConditions": ["Congestive Heart Failure (CHF)", "Chronic Lung Disorders", "Dementia", "Diabetes", "Stroke"],
-      "counties": ["Alameda", "Fresno", "Los Angeles", "Madera", "Marin", "Merced", "Orange", "Placer", "Riverside", "Sacramento", "San Bernardino", "San Diego", "San Francisco", "San Joaquin", "Santa Clara", "Stanislaus", "Ventura", "Yolo"],
+      "snpConditions": [
+        "Congestive Heart Failure (CHF)",
+        "Chronic Lung Disorders",
+        "Dementia",
+        "Diabetes",
+        "Stroke"
+      ],
+      "counties": [
+        "Alameda",
+        "Fresno",
+        "Los Angeles",
+        "Madera",
+        "Marin",
+        "Merced",
+        "Orange",
+        "Placer",
+        "Riverside",
+        "Sacramento",
+        "San Bernardino",
+        "San Diego",
+        "San Francisco",
+        "San Joaquin",
+        "Santa Clara",
+        "Stanislaus",
+        "Ventura",
+        "Yolo"
+      ],
       "networkId": "net-alignment",
       "formularyId": "form-broad",
       "dataSource": "benefit-highlights",
@@ -718,10 +1044,10 @@
       "partCDeductible": null,
       "pcp": "$0 copay",
       "specialist": "$0 copay",
-      "inpatient": "$1,736 deductible/benefit period; $0/day days 1-60; $434/day 61-90 ($0 for Full Duals)",
+      "inpatient": "$1,736 deductible for each benefit period; $0 copay per day, days 1-60; $434 copay per day, days 61-90; $868 copay per day, in lifetime reserve; Beyond lifetime reserve days: All costs; $0 copay for Full Duals",
       "emergency": "20% coinsurance (waived if admitted within 48 hours); $0 for Full Duals",
       "urgentCare": "$0 copay",
-      "ambulance": "20% coinsurance; $0 for Full Duals",
+      "ambulance": "20% coinsurance (not waived if admitted); $0 copay for Full Duals",
       "mentalHealth": "20% coinsurance; $0 for Full Duals",
       "acupunctureVisits": 24,
       "acupuncture": "$0 copay Medicare covered; $0 for 24 routine visits/year",
@@ -736,8 +1062,16 @@
       "telehealth": "$0 copay PCP/Mental Health/Psychiatric",
       "partDDeductible": "$615 Tiers 3, 4 & 5; $0 with Extra Help",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "25% coinsurance", "3": "25% coinsurance", "4": "31% coinsurance", "5": "25% coinsurance", "6": "$0" },
-      "insulinCap": "$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "25% coinsurance",
+        "3": "25% coinsurance",
+        "4": "31% coinsurance",
+        "5": "25% coinsurance",
+        "6": "$0"
+      },
+      "insulinCap": "$35/month per covered insulin",
+      "partBGiveback": 5
     },
     {
       "id": "clever-longevity",
@@ -749,7 +1083,13 @@
       "cmsId": "H7607",
       "snpType": "none",
       "snpConditions": null,
-      "counties": ["Los Angeles", "Orange", "San Bernardino", "Riverside", "San Diego"],
+      "counties": [
+        "Los Angeles",
+        "Orange",
+        "San Bernardino",
+        "Riverside",
+        "San Diego"
+      ],
       "networkId": "net-clevercare",
       "formularyId": "form-broad",
       "dataSource": "summary-of-benefits",
@@ -777,8 +1117,16 @@
       "telehealth": "$0 Teladoc medical/mental health; $0 via doctor's office",
       "partDDeductible": "$0",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$0", "3": "$40", "4": "$99", "5": "33% coinsurance", "6": "$0" },
-      "insulinCap": "$35/month per covered insulin, no deductible"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$0",
+        "3": "$40",
+        "4": "$99",
+        "5": "33% coinsurance",
+        "6": "$0"
+      },
+      "insulinCap": "$35/month per covered insulin, no deductible",
+      "partBGiveback": 0
     },
     {
       "id": "clever-value",
@@ -790,7 +1138,13 @@
       "cmsId": "H7607",
       "snpType": "none",
       "snpConditions": null,
-      "counties": ["Los Angeles", "Orange", "San Bernardino", "Riverside", "San Diego"],
+      "counties": [
+        "Los Angeles",
+        "Orange",
+        "San Bernardino",
+        "Riverside",
+        "San Diego"
+      ],
       "networkId": "net-clevercare",
       "formularyId": "form-broad",
       "dataSource": "summary-of-benefits",
@@ -804,7 +1158,7 @@
       "emergency": "$125 copay ($0 if admitted within 72 hours)",
       "urgentCare": "$0 copay",
       "ambulance": "$150 Ground; 20% Air",
-      "mentalHealth": "$25 copay per visit",
+      "mentalHealth": "Inpatient (psychiatric): $175 copay per day for days 1-7; $0 copay per day for days 8-90, per benefit period. Outpatient (group or individual therapy): $25 copay per visit",
       "acupunctureVisits": null,
       "acupuncture": "$0 copay; unlimited in-network routine acupuncture up to $1,000/year",
       "otc": "Flex allowance $90/quarter (annual max $360) incl. OTC + herbal",
@@ -818,8 +1172,16 @@
       "telehealth": "$0 Teladoc medical/mental health; $0 via doctor's office",
       "partDDeductible": "$0",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$0", "3": "$30", "4": "$75", "5": "33% coinsurance", "6": "$0" },
-      "insulinCap": "$35/month per covered insulin, no deductible"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$0",
+        "3": "$30",
+        "4": "$75",
+        "5": "33% coinsurance",
+        "6": "$0"
+      },
+      "insulinCap": "$35/month per covered insulin, no deductible",
+      "partBGiveback": 0
     },
     {
       "id": "clever-breathe-plus",
@@ -830,8 +1192,19 @@
       "planType": "HMO",
       "cmsId": "H7607",
       "snpType": "C-SNP",
-      "snpConditions": ["Asthma", "Chronic bronchitis", "Emphysema", "COPD"],
-      "counties": ["Los Angeles", "Orange", "San Bernardino", "Riverside", "San Diego"],
+      "snpConditions": [
+        "Asthma",
+        "Chronic bronchitis",
+        "Emphysema",
+        "COPD"
+      ],
+      "counties": [
+        "Los Angeles",
+        "Orange",
+        "San Bernardino",
+        "Riverside",
+        "San Diego"
+      ],
       "networkId": "net-clevercare",
       "formularyId": "form-broad",
       "dataSource": "summary-of-benefits",
@@ -859,8 +1232,16 @@
       "telehealth": "$0 Teladoc medical/mental health; $0 via doctor's office",
       "partDDeductible": "$615 (not Tier 6)",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "25% coinsurance", "2": "25% coinsurance", "3": "25% coinsurance", "4": "25% coinsurance", "5": "25% coinsurance", "6": "$0" },
-      "insulinCap": "$35/month per covered insulin, no deductible"
+      "drugTiers": {
+        "1": "25% coinsurance",
+        "2": "25% coinsurance",
+        "3": "25% coinsurance",
+        "4": "25% coinsurance",
+        "5": "25% coinsurance",
+        "6": "$0"
+      },
+      "insulinCap": "$35/month per covered insulin, no deductible",
+      "partBGiveback": 0
     },
     {
       "id": "clever-total-plus",
@@ -871,8 +1252,18 @@
       "planType": "HMO",
       "cmsId": "H7607",
       "snpType": "C-SNP",
-      "snpConditions": ["Diabetes mellitus", "Chronic heart failure (CHF)", "Cardiovascular disorders"],
-      "counties": ["Los Angeles", "Orange", "San Bernardino", "Riverside", "San Diego"],
+      "snpConditions": [
+        "Diabetes mellitus",
+        "Chronic heart failure (CHF)",
+        "Cardiovascular disorders"
+      ],
+      "counties": [
+        "Los Angeles",
+        "Orange",
+        "San Bernardino",
+        "Riverside",
+        "San Diego"
+      ],
       "networkId": "net-clevercare",
       "formularyId": "form-broad",
       "dataSource": "summary-of-benefits",
@@ -900,13 +1291,21 @@
       "telehealth": "$0 Teladoc medical/mental health; $0 via doctor's office",
       "partDDeductible": "$615 (not Tiers 1, 2, 6)",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "10% coinsurance", "3": "25% coinsurance", "4": "25% coinsurance", "5": "25% coinsurance", "6": "$0" },
-      "insulinCap": "$35/month per covered insulin, no deductible"
+      "drugTiers": {
+        "1": "$0",
+        "2": "10% coinsurance",
+        "3": "25% coinsurance",
+        "4": "25% coinsurance",
+        "5": "25% coinsurance",
+        "6": "$0"
+      },
+      "insulinCap": "$35/month per covered insulin, no deductible",
+      "partBGiveback": 0
     },
     {
       "id": "anthem-full-dual-advantage-aligned",
       "sourceFile": "1081748CASENABC_0228.pdf",
-      "sourcePage": 13,
+      "sourcePage": 14,
       "name": "Anthem Full Dual Advantage Aligned (HMO D-SNP)",
       "carrier": "Anthem Blue Cross",
       "planType": "HMO",
@@ -914,7 +1313,9 @@
       "snpType": "D-SNP",
       "snpConditions": null,
       "dsnpDualEligibility": "Full dual eligible (Medicare + full Medi-Cal); $0 premiums, deductibles, and cost sharing",
-      "counties": ["Los Angeles"],
+      "counties": [
+        "Los Angeles"
+      ],
       "networkId": "net-anthem",
       "formularyId": "form-broad",
       "dataSource": "summary-of-benefits",
@@ -940,10 +1341,18 @@
       "ssbciGrocery": "Healthy Foods via Everyday Options ($110/mo combined); Healthy Meals up to 2/day for 90 days",
       "fitness": "SilverSneakers + Active Fitness $25/month",
       "telehealth": "LiveHealth Online $0",
-      "partDDeductible": "$0",
+      "partDDeductible": "$615 Tiers 3-5; $0 with Extra Help",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$0", "3": "$0-$12.65 or 25%", "4": "$0-$12.65 or 25%", "5": "$0-$12.65 or 25%", "6": null },
-      "insulinCap": "$0-$12.65 (Extra Help) or $35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$0",
+        "3": "$0 - $12.65 or 25%*",
+        "4": "$0 - $12.65 or 25%*",
+        "5": "$0 - $12.65 or 25%*",
+        "6": null
+      },
+      "insulinCap": "$0-$12.65 (Extra Help) or $35/month per covered insulin",
+      "partBGiveback": 0
     },
     {
       "id": "anthem-select-hmo-pos",
@@ -955,7 +1364,10 @@
       "cmsId": "H0544-058-000",
       "snpType": "none",
       "snpConditions": null,
-      "counties": ["Los Angeles", "Orange"],
+      "counties": [
+        "Los Angeles",
+        "Orange"
+      ],
       "networkId": "net-anthem",
       "formularyId": "form-standard",
       "dataSource": "summary-of-benefits",
@@ -983,8 +1395,16 @@
       "telehealth": "LiveHealth Online",
       "partDDeductible": "$200 (Tiers 3, 4, 5; not insulin)",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$10", "3": "25% coinsurance", "4": "30% coinsurance", "5": "30% coinsurance", "6": null },
-      "insulinCap": "$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$10",
+        "3": "25% coinsurance",
+        "4": "30% coinsurance",
+        "5": "30% coinsurance",
+        "6": null
+      },
+      "insulinCap": "$35/month per covered insulin",
+      "partBGiveback": 0
     },
     {
       "id": "uhc-aarp-ca-004p",
@@ -996,7 +1416,9 @@
       "cmsId": "H0543-168-000",
       "snpType": "none",
       "snpConditions": null,
-      "counties": ["Los Angeles"],
+      "counties": [
+        "Los Angeles"
+      ],
       "networkId": "net-uhc-socal",
       "formularyId": "form-standard",
       "dataSource": "summary-of-benefits",
@@ -1024,8 +1446,16 @@
       "telehealth": null,
       "partDDeductible": "$0 Tiers 1-2; $355 Tiers 3-5",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$0", "3": "16% coinsurance", "4": "40% coinsurance", "5": "29% coinsurance", "6": null },
-      "insulinCap": "$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$0",
+        "3": "16% coinsurance",
+        "4": "40% coinsurance",
+        "5": "29% coinsurance",
+        "6": null
+      },
+      "insulinCap": "$35/month per covered insulin",
+      "partBGiveback": 0
     },
     {
       "id": "uhc-aarp-ca-44",
@@ -1037,7 +1467,9 @@
       "cmsId": "H0543-255-000",
       "snpType": "none",
       "snpConditions": null,
-      "counties": ["Los Angeles"],
+      "counties": [
+        "Los Angeles"
+      ],
       "networkId": "net-uhc-socal",
       "formularyId": "form-standard",
       "dataSource": "summary-of-benefits",
@@ -1065,8 +1497,16 @@
       "telehealth": null,
       "partDDeductible": "$0 Tiers 1-2; $355 Tiers 3-5",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$0", "3": "17% coinsurance", "4": "40% coinsurance", "5": "29% coinsurance", "6": null },
-      "insulinCap": "$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$0",
+        "3": "17% coinsurance",
+        "4": "40% coinsurance",
+        "5": "29% coinsurance",
+        "6": null
+      },
+      "insulinCap": "$35/month per covered insulin",
+      "partBGiveback": 0
     },
     {
       "id": "uhc-complete-care-ca-18p",
@@ -1077,8 +1517,14 @@
       "planType": "HMO-POS",
       "cmsId": "H0543-217-000",
       "snpType": "C-SNP",
-      "snpConditions": ["Diabetes", "Chronic heart failure", "Cardiovascular disorder"],
-      "counties": ["Los Angeles"],
+      "snpConditions": [
+        "Diabetes",
+        "Chronic heart failure",
+        "Cardiovascular disorder"
+      ],
+      "counties": [
+        "Los Angeles"
+      ],
       "networkId": "net-uhc-socal",
       "formularyId": "form-broad",
       "dataSource": "summary-of-benefits",
@@ -1106,8 +1552,16 @@
       "telehealth": null,
       "partDDeductible": "$0 Tiers 1-2; $355 Tiers 3-5",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$0", "3": "22% coinsurance", "4": "44% coinsurance", "5": "29% coinsurance", "6": null },
-      "insulinCap": "$0"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$0",
+        "3": "22% coinsurance",
+        "4": "44% coinsurance",
+        "5": "29% coinsurance",
+        "6": null
+      },
+      "insulinCap": "$0",
+      "partBGiveback": 0
     },
     {
       "id": "uhc-complete-care-support-ca-1ap",
@@ -1118,15 +1572,21 @@
       "planType": "HMO",
       "cmsId": "H0543-239-000",
       "snpType": "C-SNP",
-      "snpConditions": ["Diabetes", "Chronic heart failure", "Cardiovascular disorder"],
-      "counties": ["Los Angeles"],
+      "snpConditions": [
+        "Diabetes",
+        "Chronic heart failure",
+        "Cardiovascular disorder"
+      ],
+      "counties": [
+        "Los Angeles"
+      ],
       "networkId": "net-uhc-socal",
       "formularyId": "form-broad",
       "dataSource": "summary-of-benefits",
       "premium": 0,
       "moopInNetwork": 9250,
       "moopOutOfNetwork": null,
-      "partCDeductible": null,
+      "partCDeductible": 261,
       "pcp": "0%-20%; referral required",
       "specialist": "0%-20%; referral required",
       "inpatient": "$0-$1,895 per stay for unlimited days",
@@ -1147,8 +1607,16 @@
       "telehealth": null,
       "partDDeductible": "$615 all Part D drugs; $0 with LIS",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "25% coinsurance", "2": "25% coinsurance", "3": "25% coinsurance", "4": "25% coinsurance", "5": "25% coinsurance", "6": null },
-      "insulinCap": "$35/month per covered insulin (varies by LIS)"
+      "drugTiers": {
+        "1": "25% coinsurance",
+        "2": "25% coinsurance",
+        "3": "25% coinsurance",
+        "4": "25% coinsurance",
+        "5": "25% coinsurance",
+        "6": null
+      },
+      "insulinCap": "$35/month per covered insulin (varies by LIS)",
+      "partBGiveback": 0
     },
     {
       "id": "uhc-aarp-ca-005p",
@@ -1160,7 +1628,9 @@
       "cmsId": "H0543-169-000",
       "snpType": "none",
       "snpConditions": null,
-      "counties": ["Orange"],
+      "counties": [
+        "Orange"
+      ],
       "networkId": "net-uhc-socal",
       "formularyId": "form-standard",
       "dataSource": "summary-of-benefits",
@@ -1188,8 +1658,16 @@
       "telehealth": null,
       "partDDeductible": "$0 Tiers 1-2; $355 Tiers 3-5",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$0", "3": "16% coinsurance", "4": "41% coinsurance", "5": "29% coinsurance", "6": null },
-      "insulinCap": "$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$0",
+        "3": "16% coinsurance",
+        "4": "41% coinsurance",
+        "5": "29% coinsurance",
+        "6": null
+      },
+      "insulinCap": "$35/month per covered insulin",
+      "partBGiveback": 0
     },
     {
       "id": "uhc-aarp-ca-43",
@@ -1201,7 +1679,9 @@
       "cmsId": "H0543-254-000",
       "snpType": "none",
       "snpConditions": null,
-      "counties": ["Orange"],
+      "counties": [
+        "Orange"
+      ],
       "networkId": "net-uhc-socal",
       "formularyId": "form-standard",
       "dataSource": "summary-of-benefits",
@@ -1229,8 +1709,16 @@
       "telehealth": null,
       "partDDeductible": "$0 Tiers 1-2; $355 Tiers 3-5",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$0", "3": "18% coinsurance", "4": "40% coinsurance", "5": "29% coinsurance", "6": null },
-      "insulinCap": "$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$0",
+        "3": "18% coinsurance",
+        "4": "40% coinsurance",
+        "5": "29% coinsurance",
+        "6": null
+      },
+      "insulinCap": "$35/month per covered insulin",
+      "partBGiveback": 0
     },
     {
       "id": "uhc-complete-care-ca-19p",
@@ -1241,8 +1729,14 @@
       "planType": "HMO-POS",
       "cmsId": "H0543-218-000",
       "snpType": "C-SNP",
-      "snpConditions": ["Diabetes", "Chronic heart failure", "Cardiovascular disorder"],
-      "counties": ["Orange"],
+      "snpConditions": [
+        "Diabetes",
+        "Chronic heart failure",
+        "Cardiovascular disorder"
+      ],
+      "counties": [
+        "Orange"
+      ],
       "networkId": "net-uhc-socal",
       "formularyId": "form-broad",
       "dataSource": "summary-of-benefits",
@@ -1270,8 +1764,16 @@
       "telehealth": null,
       "partDDeductible": "$0 Tiers 1-2; $355 Tiers 3-5",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$0", "3": "22% coinsurance", "4": "49% coinsurance", "5": "29% coinsurance", "6": null },
-      "insulinCap": "$0"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$0",
+        "3": "22% coinsurance",
+        "4": "49% coinsurance",
+        "5": "29% coinsurance",
+        "6": null
+      },
+      "insulinCap": "$0",
+      "partBGiveback": 0
     },
     {
       "id": "uhc-complete-care-support-ca-2ap",
@@ -1282,15 +1784,21 @@
       "planType": "HMO",
       "cmsId": "H0543-240-000",
       "snpType": "C-SNP",
-      "snpConditions": ["Diabetes", "Chronic heart failure", "Cardiovascular disorder"],
-      "counties": ["Orange"],
+      "snpConditions": [
+        "Diabetes",
+        "Chronic heart failure",
+        "Cardiovascular disorder"
+      ],
+      "counties": [
+        "Orange"
+      ],
       "networkId": "net-uhc-socal",
       "formularyId": "form-broad",
       "dataSource": "summary-of-benefits",
       "premium": 0,
       "moopInNetwork": 9250,
       "moopOutOfNetwork": null,
-      "partCDeductible": null,
+      "partCDeductible": 261,
       "pcp": "0%-20%; referral required",
       "specialist": "0%-20%; referral required",
       "inpatient": "$0-$1,810 per stay for unlimited days",
@@ -1311,8 +1819,16 @@
       "telehealth": null,
       "partDDeductible": "$615 all Part D drugs; $0 with LIS",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "25% coinsurance", "2": "25% coinsurance", "3": "25% coinsurance", "4": "25% coinsurance", "5": "25% coinsurance", "6": null },
-      "insulinCap": "$35/month per covered insulin (varies by LIS)"
+      "drugTiers": {
+        "1": "25% coinsurance",
+        "2": "25% coinsurance",
+        "3": "25% coinsurance",
+        "4": "25% coinsurance",
+        "5": "25% coinsurance",
+        "6": null
+      },
+      "insulinCap": "$35/month per covered insulin (varies by LIS)",
+      "partBGiveback": 0
     },
     {
       "id": "uhc-ucla-principal",
@@ -1324,7 +1840,9 @@
       "cmsId": "H4647",
       "snpType": "none",
       "snpConditions": null,
-      "counties": ["Los Angeles"],
+      "counties": [
+        "Los Angeles"
+      ],
       "networkId": "net-uhc-ucla",
       "formularyId": "form-standard",
       "dataSource": "summary-of-benefits",
@@ -1352,8 +1870,16 @@
       "telehealth": "24/7 virtual telehealth",
       "partDDeductible": "$250 (Tiers 3, 4, 5)",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$0", "3": "$47", "4": "45% coinsurance", "5": "30% coinsurance", "6": null },
-      "insulinCap": "$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$0",
+        "3": "$47",
+        "4": "45% coinsurance",
+        "5": "30% coinsurance",
+        "6": null
+      },
+      "insulinCap": "$35/month per covered insulin",
+      "partBGiveback": 0
     },
     {
       "id": "uhc-ucla-prestige",
@@ -1365,7 +1891,9 @@
       "cmsId": "H4647",
       "snpType": "none",
       "snpConditions": null,
-      "counties": ["Los Angeles"],
+      "counties": [
+        "Los Angeles"
+      ],
       "networkId": "net-uhc-ucla",
       "formularyId": "form-standard",
       "dataSource": "summary-of-benefits",
@@ -1393,8 +1921,16 @@
       "telehealth": "24/7 virtual telehealth",
       "partDDeductible": "$250 (Tiers 3, 4, 5)",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$0", "3": "$47", "4": "45% coinsurance", "5": "30% coinsurance", "6": null },
-      "insulinCap": "$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$0",
+        "3": "$47",
+        "4": "45% coinsurance",
+        "5": "30% coinsurance",
+        "6": null
+      },
+      "insulinCap": "$35/month per covered insulin",
+      "partBGiveback": 0
     },
     {
       "id": "scan-classic",
@@ -1406,7 +1942,14 @@
       "cmsId": null,
       "snpType": "none",
       "snpConditions": null,
-      "counties": ["Los Angeles", "Orange", "Riverside", "San Bernardino", "San Diego", "Ventura"],
+      "counties": [
+        "Los Angeles",
+        "Orange",
+        "Riverside",
+        "San Bernardino",
+        "San Diego",
+        "Ventura"
+      ],
       "networkId": "net-scan",
       "formularyId": "form-standard",
       "dataSource": "rollout-deck",
@@ -1434,8 +1977,16 @@
       "telehealth": "Included",
       "partDDeductible": "$250 (Tiers 3-5)",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$0", "3": "$42", "4": "35% coinsurance", "5": "30% coinsurance", "6": null },
-      "insulinCap": "$0-$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$0",
+        "3": "$42",
+        "4": "35% coinsurance",
+        "5": "30% coinsurance",
+        "6": null
+      },
+      "insulinCap": "$0-$35/month per covered insulin",
+      "partBGiveback": 0
     },
     {
       "id": "scan-prime",
@@ -1447,7 +1998,11 @@
       "cmsId": null,
       "snpType": "none",
       "snpConditions": null,
-      "counties": ["Los Angeles", "Orange", "San Bernardino"],
+      "counties": [
+        "Los Angeles",
+        "Orange",
+        "San Bernardino"
+      ],
       "networkId": "net-scan",
       "formularyId": "form-standard",
       "dataSource": "rollout-deck",
@@ -1475,8 +2030,16 @@
       "telehealth": "Included",
       "partDDeductible": "$250 (Tiers 3-5)",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$0", "3": "$42", "4": "35% coinsurance", "5": "30% coinsurance", "6": null },
-      "insulinCap": "$0-$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$0",
+        "3": "$42",
+        "4": "35% coinsurance",
+        "5": "30% coinsurance",
+        "6": null
+      },
+      "insulinCap": "$0-$35/month per covered insulin",
+      "partBGiveback": 0
     },
     {
       "id": "scan-venture",
@@ -1488,7 +2051,12 @@
       "cmsId": null,
       "snpType": "none",
       "snpConditions": null,
-      "counties": ["Los Angeles", "Orange", "Riverside", "San Bernardino"],
+      "counties": [
+        "Los Angeles",
+        "Orange",
+        "Riverside",
+        "San Bernardino"
+      ],
       "networkId": "net-scan",
       "formularyId": "form-standard",
       "dataSource": "rollout-deck",
@@ -1516,8 +2084,16 @@
       "telehealth": "Included",
       "partDDeductible": "$250 (Tiers 3-5)",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$0", "3": "$42", "4": "35% coinsurance", "5": "30% coinsurance", "6": null },
-      "insulinCap": "$0-$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$0",
+        "3": "$42",
+        "4": "35% coinsurance",
+        "5": "30% coinsurance",
+        "6": null
+      },
+      "insulinCap": "$0-$35/month per covered insulin",
+      "partBGiveback": 55
     },
     {
       "id": "scan-affirm",
@@ -1529,7 +2105,13 @@
       "cmsId": null,
       "snpType": "none",
       "snpConditions": null,
-      "counties": ["Los Angeles", "Orange", "Riverside", "San Bernardino", "San Diego"],
+      "counties": [
+        "Los Angeles",
+        "Orange",
+        "Riverside",
+        "San Bernardino",
+        "San Diego"
+      ],
       "networkId": "net-scan",
       "formularyId": "form-standard",
       "dataSource": "rollout-deck",
@@ -1557,8 +2139,16 @@
       "telehealth": "Included",
       "partDDeductible": "$250 (Tiers 3-5)",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$0", "3": "$42", "4": "35% coinsurance", "5": "30% coinsurance", "6": null },
-      "insulinCap": "$0-$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$0",
+        "3": "$42",
+        "4": "35% coinsurance",
+        "5": "30% coinsurance",
+        "6": null
+      },
+      "insulinCap": "$0-$35/month per covered insulin",
+      "partBGiveback": 0
     },
     {
       "id": "scan-inspired",
@@ -1570,7 +2160,10 @@
       "cmsId": null,
       "snpType": "none",
       "snpConditions": null,
-      "counties": ["Los Angeles", "Orange"],
+      "counties": [
+        "Los Angeles",
+        "Orange"
+      ],
       "networkId": "net-scan",
       "formularyId": "form-standard",
       "dataSource": "rollout-deck",
@@ -1598,8 +2191,16 @@
       "telehealth": "Included",
       "partDDeductible": "$250 (Tiers 3-5)",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$0", "3": "$42", "4": "35% coinsurance", "5": "30% coinsurance", "6": null },
-      "insulinCap": "$0-$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$0",
+        "3": "$42",
+        "4": "35% coinsurance",
+        "5": "30% coinsurance",
+        "6": null
+      },
+      "insulinCap": "$0-$35/month per covered insulin",
+      "partBGiveback": 0
     },
     {
       "id": "scan-allied",
@@ -1611,7 +2212,11 @@
       "cmsId": null,
       "snpType": "none",
       "snpConditions": null,
-      "counties": ["Los Angeles", "San Francisco", "San Mateo"],
+      "counties": [
+        "Los Angeles",
+        "San Francisco",
+        "San Mateo"
+      ],
       "networkId": "net-scan-astrana",
       "formularyId": "form-standard",
       "dataSource": "rollout-deck",
@@ -1639,8 +2244,16 @@
       "telehealth": "Included",
       "partDDeductible": "$250 (Tiers 3-5)",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$0", "3": "$42", "4": "35% coinsurance", "5": "30% coinsurance", "6": null },
-      "insulinCap": "$0-$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$0",
+        "3": "$42",
+        "4": "35% coinsurance",
+        "5": "30% coinsurance",
+        "6": null
+      },
+      "insulinCap": "$0-$35/month per covered insulin",
+      "partBGiveback": 0
     },
     {
       "id": "scan-essential-savings",
@@ -1652,7 +2265,9 @@
       "cmsId": null,
       "snpType": "none",
       "snpConditions": null,
-      "counties": ["Los Angeles"],
+      "counties": [
+        "Los Angeles"
+      ],
       "networkId": "net-scan-astrana",
       "formularyId": "form-standard",
       "dataSource": "rollout-deck",
@@ -1680,8 +2295,16 @@
       "telehealth": "Included",
       "partDDeductible": "$250 (Tiers 3-5)",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$0", "3": "$42", "4": "35% coinsurance", "5": "30% coinsurance", "6": null },
-      "insulinCap": "$0-$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$0",
+        "3": "$42",
+        "4": "35% coinsurance",
+        "5": "30% coinsurance",
+        "6": null
+      },
+      "insulinCap": "$0-$35/month per covered insulin",
+      "partBGiveback": 185
     },
     {
       "id": "scan-desert-choice",
@@ -1693,7 +2316,9 @@
       "cmsId": null,
       "snpType": "none",
       "snpConditions": null,
-      "counties": ["Riverside"],
+      "counties": [
+        "Riverside"
+      ],
       "networkId": "net-scan-heritage",
       "formularyId": "form-standard",
       "dataSource": "rollout-deck",
@@ -1703,14 +2328,14 @@
       "partCDeductible": 0,
       "pcp": "$0 copay",
       "specialist": "$0 copay",
-      "inpatient": "Medicare-covered (deck-level)",
+      "inpatient": "$100 per day (1-3), $0 per day (4-90+), unlimited days",
       "emergency": "Medicare-covered",
       "urgentCare": "$0 copay",
       "ambulance": "Medicare-covered",
       "mentalHealth": "Medicare-covered",
       "acupunctureVisits": null,
       "acupuncture": "Acupuncture included (deck-level)",
-      "otc": "Deck-level",
+      "otc": "$100 per qtr. w/rollover",
       "dental": "$4,000 allowance",
       "vision": "$175/year",
       "hearing": "Hearing benefit included",
@@ -1721,8 +2346,16 @@
       "telehealth": "Included",
       "partDDeductible": "$250 (Tiers 3-5)",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$0", "3": "$42", "4": "35% coinsurance", "5": "30% coinsurance", "6": null },
-      "insulinCap": "$0-$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$0",
+        "3": "$42",
+        "4": "35% coinsurance",
+        "5": "30% coinsurance",
+        "6": null
+      },
+      "insulinCap": "$0-$35/month per covered insulin",
+      "partBGiveback": 0
     },
     {
       "id": "scan-alta",
@@ -1734,7 +2367,9 @@
       "cmsId": null,
       "snpType": "none",
       "snpConditions": null,
-      "counties": ["San Diego"],
+      "counties": [
+        "San Diego"
+      ],
       "networkId": "net-scan",
       "formularyId": "form-standard",
       "dataSource": "rollout-deck",
@@ -1762,8 +2397,16 @@
       "telehealth": "Included",
       "partDDeductible": "$250 (Tiers 3-5)",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$0", "3": "$42", "4": "35% coinsurance", "5": "30% coinsurance", "6": null },
-      "insulinCap": "$0-$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$0",
+        "3": "$42",
+        "4": "35% coinsurance",
+        "5": "30% coinsurance",
+        "6": null
+      },
+      "insulinCap": "$0-$35/month per covered insulin",
+      "partBGiveback": 0
     },
     {
       "id": "scan-select-ucsd",
@@ -1775,7 +2418,9 @@
       "cmsId": null,
       "snpType": "none",
       "snpConditions": null,
-      "counties": ["San Diego"],
+      "counties": [
+        "San Diego"
+      ],
       "networkId": "net-scan-ucsd",
       "formularyId": "form-standard",
       "dataSource": "rollout-deck",
@@ -1803,8 +2448,16 @@
       "telehealth": "Included",
       "partDDeductible": "$250 (Tiers 3-5)",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$0", "3": "$42", "4": "35% coinsurance", "5": "30% coinsurance", "6": null },
-      "insulinCap": "$0-$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$0",
+        "3": "$42",
+        "4": "35% coinsurance",
+        "5": "30% coinsurance",
+        "6": null
+      },
+      "insulinCap": "$0-$35/month per covered insulin",
+      "partBGiveback": 0
     },
     {
       "id": "scan-balance-csnp",
@@ -1815,8 +2468,18 @@
       "planType": "HMO",
       "cmsId": null,
       "snpType": "C-SNP",
-      "snpConditions": ["Diabetes", "Chronic heart failure", "Cardiovascular disorders"],
-      "counties": ["Los Angeles", "Orange", "Riverside", "San Bernardino", "San Diego"],
+      "snpConditions": [
+        "Diabetes",
+        "Chronic heart failure",
+        "Cardiovascular disorders"
+      ],
+      "counties": [
+        "Los Angeles",
+        "Orange",
+        "Riverside",
+        "San Bernardino",
+        "San Diego"
+      ],
       "networkId": "net-scan",
       "formularyId": "form-broad",
       "dataSource": "rollout-deck",
@@ -1844,8 +2507,16 @@
       "telehealth": "Included",
       "partDDeductible": "$250 (Tiers 3-5)",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$0", "3": "$42", "4": "35% coinsurance", "5": "30% coinsurance", "6": null },
-      "insulinCap": "$0-$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$0",
+        "3": "$42",
+        "4": "35% coinsurance",
+        "5": "30% coinsurance",
+        "6": null
+      },
+      "insulinCap": "$0-$35/month per covered insulin",
+      "partBGiveback": 0
     },
     {
       "id": "scan-strive-csnp",
@@ -1856,15 +2527,26 @@
       "planType": "HMO",
       "cmsId": null,
       "snpType": "C-SNP",
-      "snpConditions": ["Diabetes", "Chronic heart failure", "Cardiovascular disorders"],
-      "counties": ["Los Angeles", "Orange", "Riverside", "San Bernardino", "San Diego", "Ventura"],
+      "snpConditions": [
+        "Diabetes",
+        "Chronic heart failure",
+        "Cardiovascular disorders"
+      ],
+      "counties": [
+        "Los Angeles",
+        "Orange",
+        "Riverside",
+        "San Bernardino",
+        "San Diego",
+        "Ventura"
+      ],
       "networkId": "net-scan",
       "formularyId": "form-broad",
       "dataSource": "rollout-deck",
       "premium": 0,
       "moopInNetwork": 9250,
       "moopOutOfNetwork": null,
-      "partCDeductible": 615,
+      "partCDeductible": null,
       "pcp": "$0 copay",
       "specialist": "$0 copay",
       "inpatient": "Fee-for-service deductible (deck-level)",
@@ -1885,8 +2567,16 @@
       "telehealth": "Included",
       "partDDeductible": "$615 (Tiers 3-5)",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$0", "3": "$42", "4": "35% coinsurance", "5": "30% coinsurance", "6": null },
-      "insulinCap": "$0-$35/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$0",
+        "3": "$42",
+        "4": "35% coinsurance",
+        "5": "30% coinsurance",
+        "6": null
+      },
+      "insulinCap": "$0-$35/month per covered insulin",
+      "partBGiveback": 0
     },
     {
       "id": "scan-connections-dsnp",
@@ -1899,7 +2589,12 @@
       "snpType": "D-SNP",
       "snpConditions": null,
       "dsnpDualEligibility": "Full dual (Medicare + Medi-Cal); $0 cost share",
-      "counties": ["Los Angeles", "Riverside", "San Bernardino", "San Diego"],
+      "counties": [
+        "Los Angeles",
+        "Riverside",
+        "San Bernardino",
+        "San Diego"
+      ],
       "networkId": "net-scan",
       "formularyId": "form-broad",
       "dataSource": "rollout-deck",
@@ -1927,8 +2622,16 @@
       "telehealth": "Included",
       "partDDeductible": "$0 with full Medi-Cal",
       "partDOop": "$2,100",
-      "drugTiers": { "1": "$0", "2": "$0", "3": "$0", "4": "$0", "5": "$0", "6": null },
-      "insulinCap": "$0/month per covered insulin"
+      "drugTiers": {
+        "1": "$0",
+        "2": "$0",
+        "3": "$0",
+        "4": "$0",
+        "5": "$0",
+        "6": null
+      },
+      "insulinCap": "$0/month per covered insulin",
+      "partBGiveback": 0
     },
     {
       "id": "humana-gold-plus-021",
@@ -1957,18 +2660,18 @@
       "inpatient": "$0 copay per admit (unlimited days)",
       "emergency": "$150 copay",
       "urgentCare": "$65 copay",
-      "ambulance": "$335 copay per date of service",
-      "mentalHealth": "$25 copay (specialist's office); $35 copay (outpatient hospital)",
+      "ambulance": "Ground: $335 copay per date of service; Air: $1250 copay per date of service",
+      "mentalHealth": "Inpatient: $410 copay per admit (up to 190 lifetime days in a psychiatric hospital); Mental health therapy visits: $35 copay (outpatient hospital), $25 copay (specialist's office), $25 copay (telehealth)",
       "acupunctureVisits": 20,
       "acupuncture": "$0 copay for acupuncture for chronic low back pain, up to 20 visits/year",
-      "otc": null,
+      "otc": "$100 quarterly allowance for OTC health and wellness products via OTC Mail Order provider; unused amount rolls over to next quarter and expires at end of plan year",
       "dental": "Up to $3,000 allowance/year for non-Medicare preventive & comprehensive dental (DENF32); $0 Medicare-covered dental",
       "vision": "$350/year ($450 at PLUS provider) for contacts or eyeglasses-lenses and frames; $0 routine exam 1/yr (VIS701)",
       "hearing": "$0 routine exam 1/yr; $99 Advanced / $399 Premium hearing aid per ear/year (HER947, TruHearing)",
       "flex": null,
       "transportation": "$0 copay, up to 24 one-way trips/year (max 50 miles/trip)",
       "ssbciGrocery": null,
-      "fitness": null,
+      "fitness": "SilverSneakers fitness program (in-network provider must be used)",
       "telehealth": "$0 copay PCP and specialist telehealth",
       "partDDeductible": "$0",
       "partDOop": "$2,100",
@@ -1980,7 +2683,8 @@
         "5": "33%",
         "6": null
       },
-      "insulinCap": "$35/month (up to 30-day supply)"
+      "insulinCap": "$35/month (up to 30-day supply)",
+      "partBGiveback": 0
     },
     {
       "id": "humana-usaa-honor-giveback-121",
@@ -2042,7 +2746,8 @@
         "5": null,
         "6": null
       },
-      "insulinCap": "$35/month for a one-month (up to 30-day) supply of each Part B insulin product"
+      "insulinCap": "$35/month for a one-month (up to 30-day) supply of each Part B insulin product",
+      "partBGiveback": 65
     },
     {
       "id": "humana-gold-plus-giveback-146",
@@ -2094,7 +2799,8 @@
         "5": "33%",
         "6": null
       },
-      "insulinCap": "$35/month for a one-month (up to 30-day) supply of each covered insulin product"
+      "insulinCap": "$35/month for a one-month (up to 30-day) supply of each covered insulin product",
+      "partBGiveback": 105
     }
   ]
 }

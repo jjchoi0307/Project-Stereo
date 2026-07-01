@@ -18,7 +18,13 @@
 // of only the first strict-format band, so several plans' derived inpatient
 // cost-share changed from a silent $0 to their real value — changes simulation
 // exposure for those plans; invalidate cached recs.
-export const DATA_VERSION = "plans-2026.v4";
+// v5: PDF-audit corrections (17-PDF cross-check) — Anthem full-dual source page
+// 13→14 + Part D deductible $615; SCAN Strive partC deductible de-conflated from the
+// Rx deductible; Alignment dental ranges / ambulance qualifiers / 044-045 $0
+// deductible; Clever Value mental-health + page; Humana (H5619) plans verified &
+// corrected (ambulance/mental-health/OTC/fitness). NEW partBGiveback field populated
+// for 11 give-back plans and netted into cost. Invalidate cached recs.
+export const DATA_VERSION = "plans-2026.v5";
 // 1.1.0: agent-based correlated simulation (lib/engine/priors.ts), default 500 agents.
 // 1.2.0: de-identified seeding (lib/engine/seed.ts) — cohort keyed to clinical facts, not identity.
 export const ENGINE_VERSION = "engine-1.2.0";
@@ -46,5 +52,12 @@ export const ENGINE_VERSION = "engine-1.2.0";
  *        facts + the member's reported utilization (lib/ai/costCalc.ts) — the model
  *        no longer produces any dollar figure. Covered cost-share caps at the
  *        OOP-max; uncovered (off-formulary) exposure is added uncapped.
+ * 2.5.0: STABLE ranking — the screen ensemble now returns the five fit sub-scores
+ *        per plan and they are AVERAGED across all runs; selection, ordering, and
+ *        the displayed fit breakdown all derive from that mean (with a fit-margin
+ *        neutral tiebreak). Replaces top-3 vote-banding, which quantized each run
+ *        and let a single un-ensembled deep sample decide the shown #1/#2/#3 order
+ *        (measured 70–82% order-flip between reruns). The deep write-up now only
+ *        NARRATES the averaged scores. Invalidate cached recs.
  */
-export const AI_VERSION = "ai-2.4.0";
+export const AI_VERSION = "ai-2.5.0";
