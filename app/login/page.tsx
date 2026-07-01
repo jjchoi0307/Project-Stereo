@@ -21,7 +21,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   return (
     <main className="relative flex min-h-screen items-center justify-center bg-paper px-5 py-10">
       <Link
-        href="/home"
+        href="/"
         className="absolute left-5 top-5 inline-flex items-center gap-1.5 rounded-sm px-2.5 py-1.5 text-[13px] font-medium text-ink2 hover:bg-surface hover:text-ink"
       >
         ← Home
@@ -38,7 +38,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         {/* Sign in — right on desktop, first on mobile; header centered over the card */}
         <section className="order-1 mx-auto w-full max-w-[420px] lg:order-2" data-fade>
           <div className="mb-7 text-center">
-            <Link href="/home" className="mx-auto mb-4 inline-block">
+            <Link href="/" className="mx-auto mb-4 inline-block">
               <Image
                 src="/smg-logo.png"
                 alt="Seoul Medical Group — back to home"

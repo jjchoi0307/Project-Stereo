@@ -25,7 +25,7 @@ export default async function Header() {
   return (
     <header className="sticky top-0 z-20 border-b border-line bg-surface">
       <div className="mx-auto flex h-[60px] max-w-[1120px] items-center gap-5 px-7">
-        <Link href={broker ? "/" : "/home"} className="flex items-center gap-3">
+        <Link href="/" className="flex items-center gap-3">
           <Image
             src="/smg-logo.png"
             alt="Seoul Medical Group"

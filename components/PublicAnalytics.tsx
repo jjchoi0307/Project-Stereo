@@ -14,7 +14,10 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
  * same-origin so they stay within the strict CSP. Use only under the Vercel BAA;
  * never attach PHI to custom events.
  */
-const PUBLIC_PREFIXES = ["/home", "/login", "/signup", "/plans"];
+// The landing now lives at "/" (which also serves the PHI workspace to signed-in
+// brokers, so it can't be path-gated here) — PublicHome renders its own analytics.
+// These are the remaining public, non-PHI pages.
+const PUBLIC_PREFIXES = ["/login", "/signup", "/plans"];
 
 export default function PublicAnalytics() {
   const pathname = usePathname();

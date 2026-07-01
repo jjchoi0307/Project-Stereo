@@ -6,9 +6,18 @@
  * records, and the plan catalog.
  */
 
+import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import Header from "@/components/ui/Header";
+import PublicHome from "@/components/PublicHome";
+
+// The bare domain is primarily the public landing (what logged-out visitors and
+// crawlers see); signed-in brokers get the workspace at the same path.
+export const metadata: Metadata = {
+  title: "SMG Broker Plan Recommender",
+  description:
+    "A fact-driven, fully traceable health-plan recommendation for Seoul Medical Group brokers and the members they serve.",
+};
 import StartSessionButton from "@/components/StartSessionButton";
 import SessionRow from "@/components/SessionRow";
 import { getSessionStore } from "@/lib/session/store";
@@ -121,9 +130,10 @@ export default async function Home({
   // Resolve the broker once (null in memory mode) and reuse it for the store.
   const ctx = await getBrokerContext();
 
-  // Logged-out visitors (Supabase mode) get the public landing, not the workspace.
-  // Memory/dev mode has no auth, so it always renders the workspace here.
-  if (!ctx && stateStore() === "supabase") redirect("/home");
+  // Logged-out visitors (Supabase mode) get the public landing AT THE ROOT (so the
+  // marketing site lives at the bare domain, not /home). Signed-in brokers get the
+  // workspace below. Memory/dev mode has no auth, so it always renders the workspace.
+  if (!ctx && stateStore() === "supabase") return <PublicHome />;
 
   // Personalize the workspace heading with the broker's first name (from their
   // signup full name, else the email's local part). Null in memory/dev mode.
