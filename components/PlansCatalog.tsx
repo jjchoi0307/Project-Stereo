@@ -16,6 +16,9 @@ export interface PlanRow {
   oopLabel: string;
   benefits: string[];
   tags: string[];
+  /** Hosted carrier source document (anchored to the cited page), or null. */
+  sourceDocUrl: string | null;
+  sourceLabel: string;
 }
 
 export default function PlansCatalog({ rows }: { rows: PlanRow[] }) {
@@ -48,7 +51,7 @@ export default function PlansCatalog({ rows }: { rows: PlanRow[] }) {
       <div className="mb-5 flex flex-wrap items-end justify-between gap-5">
         <div>
           <div className="eyebrow mb-1.5 text-accent">Plan reference · 2026</div>
-          <h1 className="mb-1 font-serif text-[clamp(2rem,3vw,2.5rem)] font-light leading-[1.05] tracking-[-0.01em] text-ink">Plan data</h1>
+          <h1 className="mb-1 font-serif text-[clamp(2rem,3vw,2.5rem)] font-light leading-[1.05] tracking-[-0.01em] text-ink">Plan Library</h1>
           <p className="text-[13.5px] leading-[1.5] text-ink2">
             SMG-supported Medicare Advantage plans · 2026, by geography · showing{" "}
             <span className="num">{filtered.length}</span> of <span className="num">{rows.length}</span>. All current
@@ -101,6 +104,17 @@ export default function PlansCatalog({ rows }: { rows: PlanRow[] }) {
                         </span>
                       ))}
                     </div>
+                  )}
+                  {p.sourceDocUrl && (
+                    <a
+                      href={p.sourceDocUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-accent hover:underline"
+                      title={p.sourceLabel}
+                    >
+                      ↗ View source document (p.{p.sourceLabel.split("· p.")[1] ?? ""})
+                    </a>
                   )}
                 </div>
                 <div className="whitespace-nowrap text-right">

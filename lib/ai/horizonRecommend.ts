@@ -125,7 +125,13 @@ export async function recommendHorizons(
         // Full ranked list (top-3 deep-written cards + the heuristic tail), exactly
         // like Today — the UI shows the top 3 as cards and the rest as a table.
         const ranked = rec.ranked;
-        const recommended = ranked.find((r) => r.deepWritten) ?? ranked[0] ?? null;
+        // The horizon's recommended plan is the top of the STABLE mean-fit order —
+        // the same definition as Today's topPlanId (ranked[0]). Every top card now
+        // carries real ensembled scores even if its narrative write-up failed, so
+        // ranked[0] is always the legitimate #1; picking the first `deepWritten` row
+        // instead could point "changed vs today" at a different plan than the actual
+        // top pick and flag a spurious change.
+        const recommended = ranked[0] ?? null;
 
         return {
           years,

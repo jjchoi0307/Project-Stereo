@@ -49,7 +49,7 @@ console.log("— computeAnnualCost (grounded) —");
 const BASE: PlanFacts = {
   planId: "p1", name: "Test", carrier: "C", planType: "HMO", kind: "MA", snpType: "none",
   sourceFile: "f.pdf", sourcePage: 1,
-  monthlyPremium: 20, annualOOPMax: 5000, pcpCopay: 0, specialistCopay: 40,
+  monthlyPremium: 20, partBGivebackMonthly: 0, annualOOPMax: 5000, pcpCopay: 0, specialistCopay: 40,
   inpatientPerDay: 100, inpatientDays: 5, mentalHealthOutpatientCopay: 0,
   acupunctureVisitsPerYear: 12, acupunctureCopay: 0,
   drugTiers: [

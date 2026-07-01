@@ -6,6 +6,7 @@
 import Header from "@/components/ui/Header";
 import PlansCatalog, { type PlanRow } from "@/components/PlansCatalog";
 import { getDataStore } from "@/lib/data";
+import { planDocUrl } from "@/lib/data/planDocs";
 import type { Plan } from "@/lib/domain";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +26,7 @@ function toRow(p: Plan): PlanRow {
         : `${b.acupunctureVisitsPerYear} acupuncture visits/yr`,
     );
   if (b.insulinMonthlyCap) benefits.push(`$${b.insulinMonthlyCap} insulin cap`);
+  if (b.partBGivebackMonthly > 0) benefits.push(`$${b.partBGivebackMonthly}/mo Part B giveback`);
 
   // Tags from supplemental categories actually present on the plan.
   const tags: string[] = [];
@@ -51,6 +53,10 @@ function toRow(p: Plan): PlanRow {
     oopLabel: "$" + b.annualOOPMax.toLocaleString(),
     benefits,
     tags,
+    // Link straight to the carrier source document at the cited page, so a broker
+    // can open and consult the PDF from the Library (null if the doc isn't hosted).
+    sourceDocUrl: planDocUrl(p.sourceFile, p.sourcePage),
+    sourceLabel: `${p.sourceFile.replace(/\.pdf$/i, "")} · p.${p.sourcePage}`,
   };
 }
 

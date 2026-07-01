@@ -6,6 +6,7 @@ import type { IntakeFormValues } from "@/lib/intake/types";
 import { validateIntake } from "@/lib/intake/validate";
 import { getSessionStore } from "@/lib/session/store";
 import { invalidateSessionCache } from "@/lib/engine/horizonCacheStore";
+import { factsSignature } from "@/lib/engine/factsSignature";
 import type { CaptureSource } from "@/lib/domain";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -61,10 +62,19 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     profile = mergeProvenance(session.profile, profile, capturedBy);
   }
 
+  // Only bust the cache when the recommendation-relevant facts ACTUALLY changed.
+  // The AI caches are content-keyed by factsSignature, so identical facts must
+  // return the identical stored recommendation — otherwise a broker who re-opens
+  // or re-submits the SAME intake triggers a fresh, non-deterministic ensemble and
+  // sees a different top-3 (the exact "same health status, different plans on
+  // rerun" bug). A field outside the signature can't change the recommendation, so
+  // leaving the cache intact is correct there too. When the signature DOES change,
+  // invalidateSessionCache both frees the next load to recompute and prunes the now
+  // orphaned old-signature rows.
+  const prevSig = session.profile ? factsSignature(session.profile) : null;
   const updated = await store.setProfile(id, profile);
-  // Facts changed → drop this session's cached AI outputs (recommendation, horizon
-  // projection, clinical read) so the next load recomputes from the edited facts
-  // instead of replaying a pre-edit result.
-  await invalidateSessionCache(id);
+  if (prevSig !== factsSignature(profile)) {
+    await invalidateSessionCache(id);
+  }
   return NextResponse.json({ session: updated });
 }

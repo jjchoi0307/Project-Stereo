@@ -48,6 +48,7 @@ export interface PlanFacts {
 
   // Core cost figures (numbers the model may cite verbatim).
   monthlyPremium: number;
+  partBGivebackMonthly: number; // $/mo Part B premium give-back (0 if none)
   annualOOPMax: number;
   annualOOPMaxOutOfNetwork?: number | null;
   partCDeductible?: number | null;
@@ -167,6 +168,7 @@ function planToFacts(plan: Plan, profile: ClientProfileInput, ctx: RulesContext)
     sourceFile: plan.sourceFile,
     sourcePage: plan.sourcePage,
     monthlyPremium: plan.benefits.monthlyPremium,
+    partBGivebackMonthly: plan.benefits.partBGivebackMonthly,
     annualOOPMax: plan.benefits.annualOOPMax,
     annualOOPMaxOutOfNetwork: plan.benefits.annualOOPMaxOutOfNetwork ?? null,
     partCDeductible: plan.benefits.partCDeductible ?? null,

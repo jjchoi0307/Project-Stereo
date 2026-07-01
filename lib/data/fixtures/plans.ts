@@ -47,6 +47,7 @@ interface SourcePlan {
   sourceFile: string;
   sourcePage: number;
   premium: number;
+  partBGiveback?: number; // $/mo Part B premium give-back (0/absent = none)
   moopInNetwork: number | null;
   moopOutOfNetwork: number | null;
   partCDeductible: number | null;
@@ -182,6 +183,7 @@ function buildBenefits(p: SourcePlan): PlanBenefits {
   }
   return {
     monthlyPremium: p.premium,
+    partBGivebackMonthly: p.partBGiveback ?? 0,
     annualOOPMax: p.moopInNetwork ?? 0,
     annualOOPMaxOutOfNetwork: p.moopOutOfNetwork,
     partCDeductible: p.partCDeductible,
