@@ -17,13 +17,13 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-ink px-5 py-12 sm:justify-end sm:px-10 lg:px-20">
-      {/* Full-bleed YouTube background + scrim (privacy-preserving nocookie player) */}
+      {/* Full-bleed YouTube background — true color, no scrim (privacy-preserving
+          nocookie player). The sign-in card is opaque, so no darkening is needed. */}
       <HeroBackgroundYouTube />
-      <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-r from-ink/90 via-ink/55 to-ink/25" />
 
       <Link
         href="/"
-        className="absolute left-6 top-6 z-20 inline-flex items-center gap-1.5 text-[13px] font-medium text-white/80 transition-colors hover:text-white"
+        className="absolute left-6 top-6 z-20 inline-flex items-center gap-1.5 text-[13px] font-medium text-white/90 [text-shadow:0_1px_4px_rgba(0,0,0,0.55)] transition-colors hover:text-white"
       >
         ← Home
       </Link>

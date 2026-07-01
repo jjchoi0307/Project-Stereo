@@ -5,6 +5,7 @@ import { mergeProvenance, toProfileInput } from "@/lib/intake/toProfile";
 import type { IntakeFormValues } from "@/lib/intake/types";
 import { validateIntake } from "@/lib/intake/validate";
 import { getSessionStore } from "@/lib/session/store";
+import { invalidateSessionCache } from "@/lib/engine/horizonCacheStore";
 import type { CaptureSource } from "@/lib/domain";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -61,5 +62,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   }
 
   const updated = await store.setProfile(id, profile);
+  // Facts changed → drop this session's cached AI outputs (recommendation, horizon
+  // projection, clinical read) so the next load recomputes from the edited facts
+  // instead of replaying a pre-edit result.
+  await invalidateSessionCache(id);
   return NextResponse.json({ session: updated });
 }
