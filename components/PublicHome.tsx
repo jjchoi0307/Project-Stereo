@@ -1,5 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import BrandVideo from "@/components/BrandVideo";
 
 /**
@@ -47,7 +49,7 @@ export default function PublicHome() {
       {/* Masthead */}
       <header className="border-b border-line bg-surface">
         <div className="mx-auto flex h-[60px] max-w-[1120px] items-center gap-5 px-7">
-          <Link href="/home" className="flex items-center">
+          <Link href="/" className="flex items-center">
             <Image src="/smg-logo.png" alt="Seoul Medical Group" width={156} height={30} priority className="h-[30px] w-auto" />
           </Link>
           <span className="hidden border-l border-line pl-3 font-mono text-[10px] uppercase leading-tight tracking-[.14em] text-ink2 sm:block">
@@ -146,6 +148,11 @@ export default function PublicHome() {
           </Link>
         </div>
       </footer>
+
+      {/* Analytics live here (not the layout) because the landing shares "/" with
+          the PHI workspace — this renders only when the public landing renders. */}
+      <Analytics />
+      <SpeedInsights />
     </div>
   );
 }
