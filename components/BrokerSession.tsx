@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type {
   ClientProfileInput,
   ExclusionLogEntry,
@@ -95,6 +96,7 @@ export default function BrokerSession({
   initialSession: Session;
   reference: IntakeReference;
 }) {
+  const router = useRouter();
   const [session, setSession] = useState<Session>(initialSession);
   const [editing, setEditing] = useState(false);
   const [patientLink, setPatientLink] = useState("");
@@ -188,6 +190,11 @@ export default function BrokerSession({
   const onSubmitted = (s: Session) => {
     setSession(s);
     setEditing(false);
+    // Bust the App Router client cache so downstream server components (the
+    // recommendation route) re-render against the just-saved facts instead of a
+    // cached pre-edit render. The local fetch effects above already re-run on the
+    // new capturedAt; this covers navigation to sibling routes.
+    router.refresh();
   };
 
   // ── Completed: the clinical read ─────────────────────────────────────────

@@ -38,3 +38,25 @@ export async function setHorizonPayload(key: string, payload: unknown): Promise<
     /* best-effort */
   }
 }
+
+/**
+ * Drop every cached AI payload for a session — the recommendation, the horizon
+ * projection, and the clinical read. Called whenever a session's facts are
+ * (re)written so a broker who corrects the intake ALWAYS gets a freshly computed
+ * result, never a pre-edit cache. This is belt-and-suspenders on top of the
+ * content-keyed cache (factsSignature): it also closes any gap where an edited
+ * field isn't part of the signature, and prunes the now-orphaned old-signature
+ * rows so the table doesn't grow unbounded.
+ *
+ * Every key is `${kind}:${sessionId}:${factsSignature}:…`, so matching the
+ * `:${sessionId}:` segment scopes the delete to exactly this session's rows.
+ * Session ids are UUIDs (no LIKE metacharacters), so no escaping is needed.
+ */
+export async function invalidateSessionCache(sessionId: string): Promise<void> {
+  if (!enabled()) return;
+  try {
+    await serviceClient().from("horizon_cache").delete().like("key", `%:${sessionId}:%`);
+  } catch {
+    /* best-effort — a stale row is corrected by the content-keyed miss anyway */
+  }
+}
