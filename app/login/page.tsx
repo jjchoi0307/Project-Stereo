@@ -36,7 +36,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <h1 className="font-serif text-[30px] font-light leading-[1.1] text-ink">Broker sign in</h1>
           <p className="num mt-1.5 text-[12.5px] text-ink2">Health Plan Recommender · 2026</p>
         </div>
-        <LoginForm next={dest} allowSignup={process.env.ALLOW_SIGNUP === "true"} />
+        <LoginForm next={dest} allowSignup={process.env.ALLOW_SIGNUP !== "false"} />
       </section>
     </main>
   );

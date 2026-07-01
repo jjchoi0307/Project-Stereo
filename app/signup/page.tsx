@@ -12,8 +12,9 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
 
   // Already signed in → skip the form.
   if (await getBrokerContext()) redirect(dest);
-  // Self-signup is gated (HIPAA access control). If it's off, send to sign in.
-  if (process.env.ALLOW_SIGNUP !== "true") redirect(`/login${next ? `?next=${encodeURIComponent(next)}` : ""}`);
+  // Self-signup is ON by default (new accounts get the least-privileged "broker"
+  // role — own clients only). Set ALLOW_SIGNUP=false to gate it behind invites.
+  if (process.env.ALLOW_SIGNUP === "false") redirect(`/login${next ? `?next=${encodeURIComponent(next)}` : ""}`);
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-paper px-5 py-10">

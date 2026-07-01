@@ -55,10 +55,11 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
 }
 
 export async function signUp(_prev: AuthState, formData: FormData): Promise<AuthState> {
-  // Access establishment is controlled (HIPAA §164.308(a)(4)): self-signup is OFF
-  // unless explicitly enabled. Otherwise anyone could self-provision an org_admin
-  // account. Enable only for demo/dev, or replace with an invite flow.
-  if (process.env.ALLOW_SIGNUP !== "true") {
+  // Self-signup is ON by default. New accounts are provisioned with the
+  // least-privileged "broker" role (own clients only) — org_admin/security are
+  // granted solely to hand-listed emails (ORG_ADMIN_EMAILS/SECURITY_EMAILS), so
+  // self-signup can't escalate. Set ALLOW_SIGNUP=false to gate behind invites.
+  if (process.env.ALLOW_SIGNUP === "false") {
     return { error: "Sign-ups are disabled. Ask your administrator to create your account." };
   }
   const email = String(formData.get("email") ?? "").trim();
