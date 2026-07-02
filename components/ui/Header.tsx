@@ -53,9 +53,7 @@ export default async function Header() {
             </>
           ) : (
             <>
-              <Link href="/plans" className="px-3 py-2 text-[13px] font-medium text-ink2 hover:text-ink">
-                Plan Library
-              </Link>
+              {/* Plan Library is broker-only (confidential plan facts) — no public link. */}
               <Link href="/login" className={signInBtn}>
                 Broker sign in
               </Link>

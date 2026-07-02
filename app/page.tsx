@@ -348,7 +348,7 @@ export default async function Home({
                   className="flex items-center justify-between rounded-xl border border-line bg-surface px-5 py-4 shadow-card hover:border-accent/40"
                 >
                   <div>
-                    <div className="text-[14px] font-semibold text-ink">Plan data</div>
+                    <div className="text-[14px] font-semibold text-ink">Plan Library</div>
                     <div className="text-[12px] text-ink2">Browse the 2026 SMG-supported plans</div>
                   </div>
                   <span className="num text-[13px] font-semibold text-accent">{plans.length} →</span>

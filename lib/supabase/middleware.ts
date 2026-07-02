@@ -4,22 +4,25 @@
  * isn't configured, so local dev without auth is unaffected.
  *
  * Public surfaces (never gated): / (public landing), /home, /login,
- * /intake/[token] (anonymous patient self-entry), /plans, static assets. The
- * broker workspace at / redirects logged-out visitors to /home itself (so the
- * landing renders rather than bouncing to /login). Everything else requires a
- * session.
+ * /intake/[token] (anonymous patient self-entry), static assets. The broker
+ * workspace at / redirects logged-out visitors to /home itself (so the landing
+ * renders rather than bouncing to /login). Everything else requires a session.
+ *
+ * The Plan Library (/plans) and the carrier source documents (/api/plan-docs) are
+ * BROKER-ONLY — the plan facts and PDFs are confidential and must never render on
+ * the public site.
  */
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_ANON_KEY, SUPABASE_URL, stateStore, supabaseConfigured } from "./env";
 
-const PROTECTED_PAGES = ["/session", "/audit", "/settings"];
-const PROTECTED_APIS = ["/api/sessions", "/api/audit"];
+const PROTECTED_PAGES = ["/session", "/audit", "/settings", "/plans"];
+const PROTECTED_APIS = ["/api/sessions", "/api/audit", "/api/plan-docs"];
 // Public surfaces that are NEVER gated and are overwhelmingly logged-out. We skip
 // the Supabase session round-trip on these so their TTFB isn't taxed by an auth
 // call (a big win for the dynamic /home). NOT "/", which is the broker workspace
 // for a signed-in user; the session still refreshes on the next gated request.
-const PUBLIC_PAGES = ["/home", "/login", "/signup", "/plans", "/intake"];
+const PUBLIC_PAGES = ["/home", "/login", "/signup", "/intake"];
 
 const matches = (path: string, prefixes: string[]) =>
   prefixes.some((p) => (p === "/" ? path === "/" : path === p || path.startsWith(p + "/")));

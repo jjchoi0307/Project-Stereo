@@ -16,8 +16,10 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
  */
 // The landing now lives at "/" (which also serves the PHI workspace to signed-in
 // brokers, so it can't be path-gated here) — PublicHome renders its own analytics.
-// These are the remaining public, non-PHI pages.
-const PUBLIC_PREFIXES = ["/login", "/signup", "/plans"];
+// These are the remaining public, non-PHI pages. NOTE: /plans (the Plan Library) is
+// intentionally excluded — it is now broker-only and confidential, so it carries no
+// public third-party beacon.
+const PUBLIC_PREFIXES = ["/login", "/signup"];
 
 export default function PublicAnalytics() {
   const pathname = usePathname();
