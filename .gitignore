@@ -34,3 +34,5 @@ reference/**/__pycache__/
 reference/**/*.pyc
 reference/**/.venv/
 .mcp.json
+.vercel
+.env*
